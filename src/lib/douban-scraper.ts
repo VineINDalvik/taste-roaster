@@ -276,13 +276,47 @@ async function scrapeStatuses(
   return statuses;
 }
 
-export async function scrapeDoubanUser(userId: string): Promise<DoubanData> {
+/**
+ * Quick mode: 3 pages/type (~45 items each), no reviews/diaries/statuses.
+ * Fast enough for free tier, gives AI enough signal for basic analysis.
+ */
+export async function scrapeDoubanQuick(userId: string): Promise<DoubanData> {
+  const profile = await scrapeProfile(userId);
+
+  const [books, movies, music] = await Promise.all([
+    scrapeCollection(userId, "book", 5).catch(() => [] as WorkItem[]),
+    scrapeCollection(userId, "movie", 5).catch(() => [] as WorkItem[]),
+    scrapeCollection(userId, "music", 5).catch(() => [] as WorkItem[]),
+  ]);
+
+  const totalItems = books.length + movies.length + music.length;
+
+  if (totalItems === 0) {
+    throw new Error("未获取到任何数据，该用户可能设置了隐私保护");
+  }
+
+  return {
+    profile,
+    books,
+    movies,
+    music,
+    reviews: [],
+    diaries: [],
+    statuses: [],
+  };
+}
+
+/**
+ * Full mode: up to 150 pages/type, includes reviews, diaries, statuses.
+ * Used for premium deep analysis.
+ */
+export async function scrapeDoubanFull(userId: string): Promise<DoubanData> {
   const profile = await scrapeProfile(userId);
 
   const [books, movies, music, reviews, diaries, statuses] = await Promise.all([
-    scrapeCollection(userId, "book").catch(() => [] as WorkItem[]),
-    scrapeCollection(userId, "movie").catch(() => [] as WorkItem[]),
-    scrapeCollection(userId, "music").catch(() => [] as WorkItem[]),
+    scrapeCollection(userId, "book", 150).catch(() => [] as WorkItem[]),
+    scrapeCollection(userId, "movie", 150).catch(() => [] as WorkItem[]),
+    scrapeCollection(userId, "music", 150).catch(() => [] as WorkItem[]),
     scrapeReviews(userId).catch(
       () => [] as { title: string; content: string; type: string; rating?: number }[]
     ),
@@ -295,12 +329,8 @@ export async function scrapeDoubanUser(userId: string): Promise<DoubanData> {
   ]);
 
   const totalItems =
-    books.length +
-    movies.length +
-    music.length +
-    reviews.length +
-    diaries.length +
-    statuses.length;
+    books.length + movies.length + music.length +
+    reviews.length + diaries.length + statuses.length;
 
   if (totalItems === 0) {
     throw new Error("未获取到任何数据，该用户可能设置了隐私保护");

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { v4 as uuidv4 } from "uuid";
-import { scrapeDoubanUser } from "@/lib/douban-scraper";
+import { scrapeDoubanQuick } from "@/lib/douban-scraper";
 import { generateBasicReport } from "@/lib/analyzer";
 import type { TasteInput } from "@/lib/types";
 
@@ -18,7 +18,7 @@ export async function POST(req: NextRequest) {
 
     const cleanId = doubanId.trim().replace(/^https?:\/\/.*\/people\//, "").replace(/\/$/, "");
 
-    const doubanData = await scrapeDoubanUser(cleanId);
+    const doubanData = await scrapeDoubanQuick(cleanId);
 
     const input: TasteInput = {
       doubanId: cleanId,

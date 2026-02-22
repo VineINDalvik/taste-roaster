@@ -1,11 +1,13 @@
 "use client";
 
-import { useEffect, useState, use } from "react";
+import { useEffect, useState, useRef, use } from "react";
 import Link from "next/link";
 import dynamic from "next/dynamic";
 import ShareCard from "@/components/ShareCard";
 
-const TasteGraph = dynamic(() => import("@/components/TasteGraph"), { ssr: false });
+const TasteGraph = dynamic(() => import("@/components/TasteGraph"), {
+  ssr: false,
+});
 
 interface MonthSnapshot {
   month: string;
@@ -57,10 +59,40 @@ interface ReportData {
   blindSpots?: string;
   recommendations?: RecommendationItem[];
   graph?: {
-    nodes: { id: string; label: string; type: string; size: number; x: number; y: number; vx: number; vy: number }[];
+    nodes: {
+      id: string;
+      label: string;
+      type: string;
+      size: number;
+      x: number;
+      y: number;
+      vx: number;
+      vy: number;
+    }[];
     edges: { source: string; target: string; weight: number }[];
   };
 }
+
+const UNLOCK_MESSAGES = [
+  "正在全量扫描书影音数据...",
+  "深入挖掘你的评论和日记...",
+  "AI 正在阅读你写过的每一篇影评...",
+  "分析你的阅读品味进化轨迹...",
+  "对比同类型用户画像...",
+  "构建品味知识图谱...",
+  "生成个性化推荐...",
+  "AI 正在打磨最犀利的点评...",
+  "快好了，最后的深度分析...",
+];
+
+const FUN_FACTS = [
+  "你知道吗？豆瓣评分最高的中文书是《红楼梦》",
+  "数据显示：标记超过500部电影的人只占豆瓣用户的3%",
+  "有趣的是：凌晨标记书影音的人品味普遍更小众",
+  "豆瓣最早的用户编号只有4位数",
+  "看文艺片多的人通常也更喜欢读非虚构类书籍",
+  "音乐品味是三者中最能反映人格特质的",
+];
 
 export default function ResultPage({
   params,
@@ -71,7 +103,10 @@ export default function ResultPage({
   const [report, setReport] = useState<ReportData | null>(null);
   const [loading, setLoading] = useState(true);
   const [unlocking, setUnlocking] = useState(false);
+  const [unlockStep, setUnlockStep] = useState(0);
+  const [funFact, setFunFact] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const stepInterval = useRef<NodeJS.Timeout>(undefined);
 
   useEffect(() => {
     const stored = localStorage.getItem(`taste-report-${id}`);
@@ -93,11 +128,25 @@ export default function ResultPage({
       return;
     }
     setUnlocking(true);
+    setUnlockStep(0);
+    setFunFact(FUN_FACTS[Math.floor(Math.random() * FUN_FACTS.length)]);
+
+    stepInterval.current = setInterval(() => {
+      setUnlockStep((prev) => {
+        if (prev < UNLOCK_MESSAGES.length - 1) return prev + 1;
+        return prev;
+      });
+      if (Math.random() < 0.3) {
+        setFunFact(FUN_FACTS[Math.floor(Math.random() * FUN_FACTS.length)]);
+      }
+    }, 4000);
+
     try {
       const res = await fetch(`/api/premium/${id}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          id: report.id,
           input: report.input,
           label: report.label,
           roast: report.roast,
@@ -118,15 +167,29 @@ export default function ResultPage({
         timelineText: data.timelineText,
         crossDomain: data.crossDomain,
         personality: data.personality,
-              blindSpots: data.blindSpots,
-              recommendations: data.recommendations,
-              graph: data.graph,
-            };
+        blindSpots: data.blindSpots,
+        recommendations: data.recommendations,
+        graph: data.graph,
+        bookCount: data.fullCounts?.bookCount ?? report.bookCount,
+        movieCount: data.fullCounts?.movieCount ?? report.movieCount,
+        musicCount: data.fullCounts?.musicCount ?? report.musicCount,
+        reviewCount: data.fullCounts?.reviewCount ?? 0,
+        diaryCount: data.fullCounts?.diaryCount ?? 0,
+        statusCount: data.fullCounts?.statusCount ?? 0,
+        itemCount:
+          (data.fullCounts?.bookCount ?? 0) +
+          (data.fullCounts?.movieCount ?? 0) +
+          (data.fullCounts?.musicCount ?? 0) +
+          (data.fullCounts?.reviewCount ?? 0) +
+          (data.fullCounts?.diaryCount ?? 0) +
+          (data.fullCounts?.statusCount ?? 0),
+      };
       setReport(updated);
       localStorage.setItem(`taste-report-${id}`, JSON.stringify(updated));
     } catch (err) {
       alert(err instanceof Error ? err.message : "解锁失败");
     } finally {
+      clearInterval(stepInterval.current);
       setUnlocking(false);
     }
   };
@@ -169,6 +232,7 @@ export default function ResultPage({
           ← 重新鉴定
         </Link>
 
+        {/* Share Card */}
         <div className="animate-fade-in-up">
           <ShareCard
             label={report.label}
@@ -186,53 +250,93 @@ export default function ResultPage({
           <StatBlock value={report.movieCount} label="部电影" />
           <StatBlock value={report.musicCount} label="首音乐" />
         </div>
-        {(report.reviewCount || report.diaryCount || report.statusCount) && (
-          <div className="grid grid-cols-3 gap-3 animate-fade-in-up animate-delay-100">
-            <StatBlock value={report.reviewCount ?? 0} label="篇评论" />
-            <StatBlock value={report.diaryCount ?? 0} label="篇日记" />
-            <StatBlock value={report.statusCount ?? 0} label="条动态" />
+        {report.isPremium &&
+          (report.reviewCount || report.diaryCount || report.statusCount) && (
+            <div className="grid grid-cols-3 gap-3 animate-fade-in-up animate-delay-100">
+              <StatBlock value={report.reviewCount ?? 0} label="篇评论" />
+              <StatBlock value={report.diaryCount ?? 0} label="篇日记" />
+              <StatBlock value={report.statusCount ?? 0} label="条动态" />
+            </div>
+          )}
+
+        {/* Free hint */}
+        {!report.isPremium && (
+          <div className="text-center text-xs text-gray-500 animate-fade-in-up animate-delay-100">
+            以上基于近期 {report.itemCount} 条记录快速分析
           </div>
         )}
 
-        {/* Premium */}
+        {/* Unlock / Premium */}
         {!report.isPremium ? (
-          <div className="animate-fade-in-up animate-delay-200">
-            <div className="card-glass rounded-2xl p-6 text-center space-y-4">
-              <div className="text-2xl">🔒</div>
-              <h3 className="text-lg font-bold text-white">
-                解锁完整品味报告
-              </h3>
-              <ul className="text-sm text-gray-400 space-y-1 text-left max-w-xs mx-auto">
-                <li>&bull; 书 / 影 / 音 分品类深度毒评</li>
-                <li>&bull; 近 6 月品味时间线 + 每月毒舌点评</li>
-                <li>&bull; AI 人格画像透视</li>
-                <li>&bull; 品味盲区 + 10 部 AI 精准推荐</li>
-              </ul>
-              <button
-                onClick={handleUnlock}
-                disabled={unlocking}
-                className="w-full py-3 rounded-xl accent-gradient text-white font-medium hover:opacity-90 transition-opacity disabled:opacity-50"
-              >
-                {unlocking ? "AI 正在深度分析..." : "解锁完整报告 ¥9.9"}
-              </button>
-              <p className="text-xs text-gray-500">MVP 体验期免费解锁</p>
+          unlocking ? (
+            <UnlockingOverlay
+              step={unlockStep}
+              funFact={funFact}
+            />
+          ) : (
+            <div className="animate-fade-in-up animate-delay-200">
+              <div className="card-glass rounded-2xl p-6 text-center space-y-4">
+                <div className="text-2xl">🔓</div>
+                <h3 className="text-lg font-bold text-white">
+                  解锁完整品味报告
+                </h3>
+                <ul className="text-sm text-gray-400 space-y-1.5 text-left max-w-xs mx-auto">
+                  <li className="flex items-start gap-2">
+                    <span className="text-[#e94560]">✦</span>
+                    全量数据深度分析（含评论、日记、动态）
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="text-[#e94560]">✦</span>
+                    近 6 月品味时间线 + 每月毒舌点评
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="text-[#e94560]">✦</span>
+                    品味星图（知识图谱可视化）
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="text-[#e94560]">✦</span>
+                    AI 人格画像 + 10 部精准推荐
+                  </li>
+                </ul>
+                <button
+                  onClick={handleUnlock}
+                  className="w-full py-3 rounded-xl accent-gradient text-white font-medium hover:opacity-90 transition-opacity"
+                >
+                  解锁完整报告 ¥6.9
+                </button>
+                <p className="text-xs text-gray-500">
+                  MVP 体验期免费 · 全量扫描约需 30-60 秒
+                </p>
+              </div>
             </div>
-          </div>
+          )
         ) : (
           <div className="space-y-6 animate-fade-in-up animate-delay-200">
             <h2 className="text-xl font-bold text-white flex items-center gap-2">
               <span className="text-[#f5c518]">★</span> 完整品味报告
             </h2>
 
-            <PremiumSection icon="📚" title="阅读品味" content={report.bookAnalysis} />
-            <PremiumSection icon="🎬" title="观影品味" content={report.movieAnalysis} />
-            <PremiumSection icon="🎵" title="音乐品味" content={report.musicAnalysis} />
+            <PremiumSection
+              icon="📚"
+              title="阅读品味"
+              content={report.bookAnalysis}
+            />
+            <PremiumSection
+              icon="🎬"
+              title="观影品味"
+              content={report.movieAnalysis}
+            />
+            <PremiumSection
+              icon="🎵"
+              title="音乐品味"
+              content={report.musicAnalysis}
+            />
 
             {/* Timeline */}
             {report.timelineMonths && report.timelineMonths.length > 0 && (
               <div className="card-glass rounded-xl p-5 space-y-4">
                 <h3 className="text-sm font-bold text-[#e94560]">
-                  📅 近 6 月品味时间线
+                  📅 品味时间线
                 </h3>
                 <div className="space-y-4">
                   {report.timelineMonths.map((m) => (
@@ -287,18 +391,46 @@ export default function ResultPage({
               </div>
             )}
 
-            <PremiumSection icon="🔗" title="跨领域关联" content={report.crossDomain} />
-            <PremiumSection icon="🧠" title="人格画像透视" content={report.personality} />
-            <PremiumSection icon="🎯" title="品味盲区" content={report.blindSpots} />
+            <PremiumSection
+              icon="🔗"
+              title="跨领域关联"
+              content={report.crossDomain}
+            />
+            <PremiumSection
+              icon="🧠"
+              title="人格画像透视"
+              content={report.personality}
+            />
+            <PremiumSection
+              icon="🎯"
+              title="品味盲区"
+              content={report.blindSpots}
+            />
 
-            {/* Taste Graph */}
+            {/* Graph */}
             {report.graph && report.graph.nodes.length > 0 && (
               <TasteGraph
                 nodes={report.graph.nodes.map((n, i) => ({
                   ...n,
-                  type: n.type as "book" | "movie" | "music" | "keyword" | "genre" | "person",
-                  x: 200 + Math.cos((i / report.graph!.nodes.length) * Math.PI * 2) * 100,
-                  y: 200 + Math.sin((i / report.graph!.nodes.length) * Math.PI * 2) * 100,
+                  type: n.type as
+                    | "book"
+                    | "movie"
+                    | "music"
+                    | "keyword"
+                    | "genre"
+                    | "person",
+                  x:
+                    200 +
+                    Math.cos(
+                      (i / report.graph!.nodes.length) * Math.PI * 2
+                    ) *
+                      100,
+                  y:
+                    200 +
+                    Math.sin(
+                      (i / report.graph!.nodes.length) * Math.PI * 2
+                    ) *
+                      100,
                   vx: 0,
                   vy: 0,
                 }))}
@@ -358,6 +490,42 @@ export default function ResultPage({
         </div>
       </div>
     </main>
+  );
+}
+
+function UnlockingOverlay({ step, funFact }: { step: number; funFact: string }) {
+  return (
+    <div className="card-glass rounded-2xl p-8 text-center space-y-6 animate-fade-in-up">
+      <div className="relative w-24 h-24 mx-auto">
+        <div className="absolute inset-0 rounded-full border-2 border-white/10" />
+        <div className="absolute inset-0 rounded-full border-2 border-t-[#e94560] border-r-[#e94560] animate-spin" />
+        <div className="absolute inset-3 rounded-full border-2 border-white/5" />
+        <div
+          className="absolute inset-3 rounded-full border-2 border-t-[#f5c518] animate-spin"
+          style={{ animationDirection: "reverse", animationDuration: "1.5s" }}
+        />
+        <div className="absolute inset-0 flex items-center justify-center text-2xl">
+          🧠
+        </div>
+      </div>
+      <div className="space-y-3">
+        <p className="text-white font-medium text-sm">
+          {UNLOCK_MESSAGES[step]}
+        </p>
+        <div className="w-56 mx-auto h-1.5 bg-white/10 rounded-full overflow-hidden">
+          <div
+            className="h-full accent-gradient rounded-full transition-all duration-1000 ease-out"
+            style={{ width: `${((step + 1) / UNLOCK_MESSAGES.length) * 100}%` }}
+          />
+        </div>
+        <p className="text-xs text-gray-500">全量分析中 · 约需 30-60 秒</p>
+      </div>
+      <div className="pt-3 border-t border-white/5">
+        <p className="text-[11px] text-gray-500 italic leading-relaxed">
+          💡 {funFact}
+        </p>
+      </div>
+    </div>
   );
 }
 
