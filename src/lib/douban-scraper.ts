@@ -277,17 +277,17 @@ async function scrapeStatuses(
 }
 
 /**
- * Quick mode: 3 pages/type (~45 items each), no reviews/diaries/statuses.
- * Fast enough for free tier, gives AI enough signal for basic analysis.
+ * Quick mode: 5 pages/type sequential to avoid rate limiting.
  */
 export async function scrapeDoubanQuick(userId: string): Promise<DoubanData> {
   const profile = await scrapeProfile(userId);
 
-  const [books, movies, music] = await Promise.all([
-    scrapeCollection(userId, "book", 5).catch(() => [] as WorkItem[]),
-    scrapeCollection(userId, "movie", 5).catch(() => [] as WorkItem[]),
-    scrapeCollection(userId, "music", 5).catch(() => [] as WorkItem[]),
-  ]);
+  // Sequential to avoid Douban rate limiting
+  const books = await scrapeCollection(userId, "book", 5).catch(() => [] as WorkItem[]);
+  await sleep(500);
+  const movies = await scrapeCollection(userId, "movie", 5).catch(() => [] as WorkItem[]);
+  await sleep(500);
+  const music = await scrapeCollection(userId, "music", 5).catch(() => [] as WorkItem[]);
 
   const totalItems = books.length + movies.length + music.length;
 
@@ -295,28 +295,25 @@ export async function scrapeDoubanQuick(userId: string): Promise<DoubanData> {
     throw new Error("未获取到任何数据，该用户可能设置了隐私保护");
   }
 
-  return {
-    profile,
-    books,
-    movies,
-    music,
-    reviews: [],
-    diaries: [],
-    statuses: [],
-  };
+  return { profile, books, movies, music, reviews: [], diaries: [], statuses: [] };
 }
 
 /**
- * Full mode: up to 150 pages/type, includes reviews, diaries, statuses.
- * Used for premium deep analysis.
+ * Full mode: up to 150 pages/type sequential, then reviews/diaries/statuses.
  */
 export async function scrapeDoubanFull(userId: string): Promise<DoubanData> {
   const profile = await scrapeProfile(userId);
 
-  const [books, movies, music, reviews, diaries, statuses] = await Promise.all([
-    scrapeCollection(userId, "book", 150).catch(() => [] as WorkItem[]),
-    scrapeCollection(userId, "movie", 150).catch(() => [] as WorkItem[]),
-    scrapeCollection(userId, "music", 150).catch(() => [] as WorkItem[]),
+  // Sequential to avoid Douban rate limiting
+  const books = await scrapeCollection(userId, "book", 150).catch(() => [] as WorkItem[]);
+  await sleep(1000);
+  const movies = await scrapeCollection(userId, "movie", 150).catch(() => [] as WorkItem[]);
+  await sleep(1000);
+  const music = await scrapeCollection(userId, "music", 150).catch(() => [] as WorkItem[]);
+  await sleep(1000);
+
+  // These are lighter, can run in parallel
+  const [reviews, diaries, statuses] = await Promise.all([
     scrapeReviews(userId).catch(
       () => [] as { title: string; content: string; type: string; rating?: number }[]
     ),

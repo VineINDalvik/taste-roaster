@@ -103,6 +103,8 @@ export default function ResultPage({
   const [report, setReport] = useState<ReportData | null>(null);
   const [loading, setLoading] = useState(true);
   const [unlocking, setUnlocking] = useState(false);
+  const [shareUnlocking, setShareUnlocking] = useState(false);
+  const [shareUnlocked, setShareUnlocked] = useState(false);
   const [unlockStep, setUnlockStep] = useState(0);
   const [funFact, setFunFact] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -112,7 +114,11 @@ export default function ResultPage({
     const stored = localStorage.getItem(`taste-report-${id}`);
     if (stored) {
       try {
-        setReport(JSON.parse(stored));
+        const parsed = JSON.parse(stored);
+        setReport(parsed);
+        if (parsed.personality || parsed.crossDomain) {
+          setShareUnlocked(true);
+        }
       } catch {
         setError("报告数据损坏");
       }
@@ -121,6 +127,57 @@ export default function ResultPage({
     }
     setLoading(false);
   }, [id]);
+
+  const handleShareUnlock = async () => {
+    if (!report?.input) return;
+
+    // Step 1: Trigger the share action (copy link + download card)
+    const url = window.location.href;
+    if (navigator.clipboard?.writeText) {
+      await navigator.clipboard.writeText(url).catch(() => {});
+    } else {
+      const ta = document.createElement("textarea");
+      ta.value = url;
+      ta.style.position = "fixed";
+      ta.style.opacity = "0";
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand("copy");
+      document.body.removeChild(ta);
+    }
+
+    // Step 2: Generate share-unlock content (personality + crossDomain)
+    setShareUnlocking(true);
+    try {
+      const res = await fetch(`/api/share-unlock/${id}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          id: report.id,
+          input: report.input,
+          label: report.label,
+          roast: report.roast,
+          summary: report.summary,
+          radarData: report.radarData,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+
+      const updated: ReportData = {
+        ...report,
+        personality: data.personality,
+        crossDomain: data.crossDomain,
+      };
+      setReport(updated);
+      setShareUnlocked(true);
+      localStorage.setItem(`taste-report-${id}`, JSON.stringify(updated));
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "解锁失败");
+    } finally {
+      setShareUnlocking(false);
+    }
+  };
 
   const handleUnlock = async () => {
     if (!report?.input) {
@@ -266,19 +323,54 @@ export default function ResultPage({
           </div>
         )}
 
-        {/* Unlock / Premium */}
+        {/* Share-unlock section (middle tier) */}
+        {!report.isPremium && !shareUnlocked && (
+          <div className="animate-fade-in-up animate-delay-200">
+            <div className="card-glass rounded-2xl p-6 text-center space-y-4">
+              <div className="text-2xl">📤</div>
+              <h3 className="text-lg font-bold text-white">
+                分享解锁深度分析
+              </h3>
+              <p className="text-sm text-gray-400">
+                分享给朋友，免费解锁「人格画像」+「跨领域关联」
+              </p>
+              <button
+                onClick={handleShareUnlock}
+                disabled={shareUnlocking}
+                className="w-full py-3 rounded-xl bg-gradient-to-r from-[#667eea] to-[#764ba2] text-white font-medium hover:opacity-90 transition-opacity disabled:opacity-50"
+              >
+                {shareUnlocking
+                  ? "AI 正在分析..."
+                  : "分享并解锁 (免费)"}
+              </button>
+              <p className="text-xs text-gray-500">
+                链接已自动复制到剪贴板
+              </p>
+            </div>
+          </div>
+        )}
+
+        {/* Share-unlocked content */}
+        {!report.isPremium && shareUnlocked && (
+          <div className="space-y-4 animate-fade-in-up animate-delay-200">
+            <h2 className="text-lg font-bold text-white flex items-center gap-2">
+              <span className="text-[#667eea]">✦</span> 分享解锁内容
+            </h2>
+            <PremiumSection icon="🧠" title="人格画像透视" content={report.personality} />
+            <PremiumSection icon="🔗" title="跨领域关联" content={report.crossDomain} />
+          </div>
+        )}
+
+        {/* Full premium unlock */}
         {!report.isPremium ? (
           unlocking ? (
-            <UnlockingOverlay
-              step={unlockStep}
-              funFact={funFact}
-            />
+            <UnlockingOverlay step={unlockStep} funFact={funFact} />
           ) : (
-            <div className="animate-fade-in-up animate-delay-200">
+            <div className="animate-fade-in-up animate-delay-300">
               <div className="card-glass rounded-2xl p-6 text-center space-y-4">
-                <div className="text-2xl">🔓</div>
+                <div className="text-2xl">🔒</div>
                 <h3 className="text-lg font-bold text-white">
-                  解锁完整品味报告
+                  {shareUnlocked ? "解锁完整报告" : "直接购买完整报告"}
                 </h3>
                 <ul className="text-sm text-gray-400 space-y-1.5 text-left max-w-xs mx-auto">
                   <li className="flex items-start gap-2">
@@ -287,15 +379,15 @@ export default function ResultPage({
                   </li>
                   <li className="flex items-start gap-2">
                     <span className="text-[#e94560]">✦</span>
-                    近 6 月品味时间线 + 每月毒舌点评
+                    书 / 影 / 音 分品类毒评
                   </li>
                   <li className="flex items-start gap-2">
                     <span className="text-[#e94560]">✦</span>
-                    品味星图（知识图谱可视化）
+                    品味时间线 + 品味星图
                   </li>
                   <li className="flex items-start gap-2">
                     <span className="text-[#e94560]">✦</span>
-                    AI 人格画像 + 10 部精准推荐
+                    10 部 AI 精准推荐
                   </li>
                 </ul>
                 <button
