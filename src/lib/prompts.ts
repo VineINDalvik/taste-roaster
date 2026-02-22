@@ -76,6 +76,7 @@ export const MBTI_ANALYSIS_PROMPT = `你是一位文化心理学家，擅长通�
 - 如果某维度很接近50/50，也要做出判断，但在evidence中说明"接近中立"
 - 评论风格犀利但有洞察，不是泛泛而谈
 - 如果有评论/日记数据，必须参考其中的语言风格和观点来辅助判定
+- 所有输出内容必须全部使用中文，不要夹杂任何英文（MBTI四个字母除外）
 - 只返回JSON`;
 
 export const PREMIUM_ANALYSIS_PROMPT = `你是文化心理学家。基于之前的MBTI分析，现在给出深度品味报告。
@@ -119,6 +120,7 @@ export const PREMIUM_ANALYSIS_PROMPT = `你是文化心理学家。基于之前�
 - 所有分析必须紧密围绕MBTI类型展开
 - 要有真正的洞察，不是套话
 - personality部分是重头戏，要让用户觉得"你怎么这么了解我"
+- 所有输出内容必须全部使用中文，不要夹杂任何英文（MBTI四个字母除外）
 - 只返回JSON`;
 
 export const TIMELINE_PROMPT = `你是文化心理学家。分析这位{mbtiType}用户近几个月的品味变化。
@@ -149,6 +151,7 @@ MBTI：{mbtiType} · {mbtiTitle}
 - 每个月都要分析，数据少也要推断
 - mood要从作品选择中读出生活状态
 - 结合MBTI特征来解读变化规律
+- 所有输出内容必须全部使用中文，不要夹杂任何英文（MBTI四个字母除外）
 - 只返回JSON`;
 
 export const RECOMMENDATION_PROMPT = `你是文化心理学家+品味顾问。根据这位{mbtiType}用户的品味画像推荐作品。
@@ -181,6 +184,7 @@ MBTI：{mbtiType} · {mbtiTitle}
 - 书/影/音各至少推荐2个
 - 推荐要精准匹配MBTI特质，不是大众热门
 - matchScore: 80+=核心匹配, 50-80=可能惊艳, <50=舒适区挑战
+- 所有输出内容必须全部使用中文，不要夹杂任何英文（MBTI四个字母除外）
 - 只返回JSON`;
 
 export const COMPARE_PROMPT = `你是文化心理学家，擅长通过品味数据分析两个人的文化人格匹配度。你的风格犀利、有趣、有洞察力。
@@ -226,6 +230,7 @@ export const COMPARE_PROMPT = `你是文化心理学家，擅长通过品味数�
 - recommendTogether 推荐3-5个作品，必须是两人都没看过的
 - 犀利但友善，让两个人看了都觉得精准
 - matchScore: 90+=灵魂伴侣, 70-89=品味知己, 50-69=互补搭档, 30-49=平行世界, <30=文化反义词
+- 所有输出内容必须全部使用中文，不要夹杂任何英文（MBTI四个字母除外）
 - 只返回JSON`;
 
 export function formatItems(
