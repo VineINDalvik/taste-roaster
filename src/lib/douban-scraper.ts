@@ -211,6 +211,16 @@ function extractCountFromTitle($: cheerio.CheerioAPI): number {
   return match ? parseInt(match[1]) : 0;
 }
 
+/**
+ * Extract user display name from collection page title as fallback.
+ * "阿北读过的书(115)" → "阿北"
+ */
+function extractNameFromCollectionTitle($: cheerio.CheerioAPI): string {
+  const title = $("title").text().trim();
+  const match = title.match(/^(.+?)(?:读过|看过|听过|想读|想看|想听|在读|在看|在听)/);
+  return match ? match[1].trim() : "";
+}
+
 // ─── Deterministic Sampling ─────────────────────────────────────
 
 /**
@@ -277,17 +287,18 @@ async function scrapeCollectionSampled(
   userId: string,
   type: "book" | "movie" | "music",
   targetItems: number = 100
-): Promise<{ items: WorkItem[]; realCount: number }> {
+): Promise<{ items: WorkItem[]; realCount: number; nameHint: string }> {
   const domain = getDomain(type);
   const url0 = `https://${domain}/people/${userId}/collect?start=0&sort=time&mode=list`;
   const html = await fetchPage(url0);
   const $0 = cheerio.load(html);
 
   const realCount = extractCountFromTitle($0);
+  const nameHint = extractNameFromCollectionTitle($0);
   const page0Items = parseListItems($0);
 
   if (page0Items.length === 0) {
-    return { items: [], realCount };
+    return { items: [], realCount, nameHint };
   }
 
   const totalPages = Math.ceil(realCount / PAGE_SIZE) || 1;
@@ -298,6 +309,7 @@ async function scrapeCollectionSampled(
     return {
       items: deterministicSelect(allItems, targetItems),
       realCount: realCount || allItems.length,
+      nameHint,
     };
   }
 
@@ -339,7 +351,7 @@ async function scrapeCollectionSampled(
 
   // Deterministic selection: score all items → stable sort → take top N
   const selected = deterministicSelect(allItems, targetItems);
-  return { items: selected, realCount: realCount || allItems.length };
+  return { items: selected, realCount: realCount || allItems.length, nameHint };
 }
 
 async function scrapeCollectionFull(
@@ -392,14 +404,21 @@ async function scrapeCollectionFull(
 
 // ─── Profile ────────────────────────────────────────────────────
 
+const BAD_NAMES = ["登录豆瓣", "登录", "豆瓣", "403 Forbidden", "页面不存在", ""];
+
 async function scrapeProfile(userId: string): Promise<DoubanProfile> {
   const html = await fetchPage(`https://www.douban.com/people/${userId}/`);
   const $ = cheerio.load(html);
 
-  const name =
+  let name =
     $("title").text().split("的豆瓣")[0]?.trim() ||
     $(".info h1").text().trim() ||
-    userId;
+    "";
+
+  if (!name || BAD_NAMES.includes(name) || name.includes("登录")) {
+    name = userId;
+  }
+
   const avatar =
     $(".basic-info img").attr("src") ||
     $("#db-usr-profile .pic img").attr("src") ||
@@ -504,18 +523,25 @@ export async function scrapeDoubanQuick(userId: string): Promise<DoubanData> {
   const profile = await scrapeProfile(userId);
 
   const bookResult = await scrapeCollectionSampled(userId, "book", 100)
-    .catch(() => ({ items: [] as WorkItem[], realCount: 0 }));
+    .catch(() => ({ items: [] as WorkItem[], realCount: 0, nameHint: "" }));
   profile.realCounts.books = bookResult.realCount;
   await sleep(800);
 
   const movieResult = await scrapeCollectionSampled(userId, "movie", 100)
-    .catch(() => ({ items: [] as WorkItem[], realCount: 0 }));
+    .catch(() => ({ items: [] as WorkItem[], realCount: 0, nameHint: "" }));
   profile.realCounts.movies = movieResult.realCount;
   await sleep(800);
 
   const musicResult = await scrapeCollectionSampled(userId, "music", 100)
-    .catch(() => ({ items: [] as WorkItem[], realCount: 0 }));
+    .catch(() => ({ items: [] as WorkItem[], realCount: 0, nameHint: "" }));
   profile.realCounts.music = musicResult.realCount;
+
+  // Fix name: if profile name is bad (e.g. "登录豆瓣"), use name from collection title
+  if (profile.name === userId || BAD_NAMES.includes(profile.name)) {
+    const fallback =
+      bookResult.nameHint || movieResult.nameHint || musicResult.nameHint;
+    if (fallback) profile.name = fallback;
+  }
 
   const totalItems =
     bookResult.items.length + movieResult.items.length + musicResult.items.length;
