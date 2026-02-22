@@ -211,6 +211,66 @@ function extractCountFromTitle($: cheerio.CheerioAPI): number {
   return match ? parseInt(match[1]) : 0;
 }
 
+// ─── Deterministic Sampling ─────────────────────────────────────
+
+/**
+ * Stable hash for tiebreaking — always returns the same number for the same string.
+ */
+function stableHash(s: string): number {
+  let h = 0;
+  for (let i = 0; i < s.length; i++) {
+    h = ((h << 5) - h + s.charCodeAt(i)) | 0;
+  }
+  return h;
+}
+
+/**
+ * Score an item for deterministic selection priority.
+ *
+ * Higher score = more informative for MBTI analysis.
+ * - Longer comments carry more personality signal
+ * - Polarized ratings (1/5 star) reveal stronger preferences than neutral 3-star
+ * - Having a date helps timeline construction
+ */
+function scoreItem(item: WorkItem): number {
+  let score = 0;
+
+  // Comment length: 0-40 points (200+ chars = max)
+  const commentLen = item.comment?.length ?? 0;
+  score += Math.min(commentLen / 5, 40);
+
+  // Rating polarity: extreme ratings reveal personality
+  // |rating - 3|: 5→2, 4→1, 3→0, 2→1, 1→2
+  // 0-30 points
+  if (item.rating != null) {
+    score += Math.abs(item.rating - 3) * 15;
+    score += 5; // bonus for having a rating at all
+  }
+
+  // Date presence: 0-10 points (useful for timeline)
+  if (item.date) score += 10;
+
+  return score;
+}
+
+/**
+ * Deterministic selection: score → sort → take top N.
+ * Same input always produces the same output.
+ */
+function deterministicSelect(items: WorkItem[], limit: number): WorkItem[] {
+  if (items.length <= limit) return items;
+
+  return [...items]
+    .sort((a, b) => {
+      const sa = scoreItem(a);
+      const sb = scoreItem(b);
+      if (sa !== sb) return sb - sa;
+      // Stable tiebreak: hash of title
+      return stableHash(a.title) - stableHash(b.title);
+    })
+    .slice(0, limit);
+}
+
 // ─── Collection Scraping ────────────────────────────────────────
 
 async function scrapeCollectionSampled(
@@ -235,28 +295,38 @@ async function scrapeCollectionSampled(
   const allItems = [...page0Items];
 
   if (totalPages <= 1) {
-    return { items: allItems, realCount: realCount || allItems.length };
+    return {
+      items: deterministicSelect(allItems, targetItems),
+      realCount: realCount || allItems.length,
+    };
   }
 
-  // Sample: pages 1,2 (recent), middle 2, last 2
-  const additionalPages: number[] = [];
-  if (totalPages <= 7) {
-    for (let i = 1; i < totalPages; i++) additionalPages.push(i);
+  // Fixed page selection formula — purely based on totalPages, fully deterministic.
+  // Fetch: recent pages (0-3) + evenly spaced middle pages + last pages.
+  // Goal: build a large pool to score from.
+  const pagesToFetch: number[] = [];
+  if (totalPages <= 10) {
+    for (let i = 1; i < totalPages; i++) pagesToFetch.push(i);
   } else {
-    additionalPages.push(1, 2);
-    const mid = Math.floor(totalPages / 2);
-    additionalPages.push(mid - 1, mid);
-    additionalPages.push(totalPages - 2, totalPages - 1);
+    // Recent: pages 1,2,3
+    pagesToFetch.push(1, 2, 3);
+    // Evenly spaced middle: 4 pages at 20%, 40%, 60%, 80% positions
+    for (const pct of [0.2, 0.4, 0.6, 0.8]) {
+      pagesToFetch.push(Math.floor(totalPages * pct));
+    }
+    // Last 2 pages
+    pagesToFetch.push(totalPages - 2, totalPages - 1);
   }
 
-  const uniquePages = [...new Set(additionalPages)]
+  const uniquePages = [...new Set(pagesToFetch)]
     .filter((p) => p > 0 && p < totalPages)
     .sort((a, b) => a - b);
 
+  // Always fetch ALL designated pages — don't break early.
+  // This ensures the pool is consistent across runs.
   for (const page of uniquePages) {
-    if (allItems.length >= targetItems) break;
     try {
-      await sleep(800 + Math.random() * 400);
+      await sleep(800);
       const start = page * PAGE_SIZE;
       const pageUrl = `https://${domain}/people/${userId}/collect?start=${start}&sort=time&mode=list`;
       const pageHtml = await fetchPage(pageUrl);
@@ -268,11 +338,13 @@ async function scrapeCollectionSampled(
         }
       }
     } catch {
-      // Skip failed pages
+      // Skip failed pages but continue with others
     }
   }
 
-  return { items: allItems, realCount: realCount || allItems.length };
+  // Deterministic selection: score all items → stable sort → take top N
+  const selected = deterministicSelect(allItems, targetItems);
+  return { items: selected, realCount: realCount || allItems.length };
 }
 
 async function scrapeCollectionFull(

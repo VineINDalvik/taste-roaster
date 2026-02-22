@@ -21,12 +21,36 @@ interface TruncatedInput {
   };
 }
 
-function sortByDateDesc<T extends { date?: string }>(items: T[]): T[] {
+/**
+ * Same stable hash and scoring as douban-scraper.ts — ensures truncation
+ * preserves the same high-value items that were selected during scraping.
+ */
+function stableHash(s: string): number {
+  let h = 0;
+  for (let i = 0; i < s.length; i++) {
+    h = ((h << 5) - h + s.charCodeAt(i)) | 0;
+  }
+  return h;
+}
+
+function scoreWorkItem(item: WorkItem): number {
+  let score = 0;
+  const commentLen = item.comment?.length ?? 0;
+  score += Math.min(commentLen / 5, 40);
+  if (item.rating != null) {
+    score += Math.abs(item.rating - 3) * 15;
+    score += 5;
+  }
+  if (item.date) score += 10;
+  return score;
+}
+
+function sortByPriority(items: WorkItem[]): WorkItem[] {
   return [...items].sort((a, b) => {
-    if (!a.date && !b.date) return 0;
-    if (!a.date) return 1;
-    if (!b.date) return -1;
-    return b.date.localeCompare(a.date);
+    const sa = scoreWorkItem(a);
+    const sb = scoreWorkItem(b);
+    if (sa !== sb) return sb - sa;
+    return stableHash(a.title) - stableHash(b.title);
   });
 }
 
@@ -119,14 +143,14 @@ export function truncateForTokenBudget(input: TasteInput): TruncatedInput {
     return { input: result, wasTruncated: true, originalCounts };
   }
 
-  // Phase 4: Sort by date, keep only recent items. Progressively reduce.
+  // Phase 4: Keep highest-priority items. Progressively reduce.
   const caps = [500, 300, 200, 100];
   for (const cap of caps) {
     result = {
       ...result,
-      books: sortByDateDesc(result.books).slice(0, cap),
-      movies: sortByDateDesc(result.movies).slice(0, cap),
-      music: sortByDateDesc(result.music).slice(0, cap),
+      books: sortByPriority(result.books).slice(0, cap),
+      movies: sortByPriority(result.movies).slice(0, cap),
+      music: sortByPriority(result.music).slice(0, cap),
       reviews: (result.reviews ?? []).slice(0, Math.floor(cap / 5)),
       statuses: (result.statuses ?? []).slice(0, 10),
     };
