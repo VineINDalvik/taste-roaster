@@ -15,7 +15,7 @@ export default function Home() {
       {/* Hero */}
       <div className="text-center max-w-lg mx-auto space-y-6 animate-fade-in-up">
         <div className="text-sm tracking-widest text-[#667eea] font-medium">
-          文化 MBTI 鉴定
+          豆瓣书影音人格
         </div>
         <h1 className="text-4xl sm:text-5xl font-bold text-white leading-tight">
           你的品味
@@ -34,14 +34,14 @@ export default function Home() {
           href="/upload"
           className="inline-block px-8 py-4 rounded-2xl accent-gradient text-white font-bold text-lg hover:opacity-90 transition-opacity pulse-glow"
         >
-          测测我的文化 MBTI
+          测测我的书影音人格
         </Link>
       </div>
 
       {/* MBTI examples */}
       <div className="mt-12 max-w-md mx-auto animate-fade-in-up animate-delay-300">
         <p className="text-center text-xs text-gray-500 mb-4">
-          过往用户的文化 MBTI...
+          过往用户的书影音人格...
         </p>
         <div className="grid grid-cols-2 gap-2">
           {MBTI_EXAMPLES.map((ex) => (

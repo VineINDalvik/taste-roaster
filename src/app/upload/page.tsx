@@ -10,7 +10,7 @@ const PROGRESS_MESSAGES = [
   "采样ta听过的音乐...",
   "AI 正在分析 MBTI 四维度...",
   "从品味中推导人格类型...",
-  "生成文化 MBTI 报告...",
+  "生成书影音人格报告...",
 ];
 
 export default function UploadPage() {
@@ -71,7 +71,7 @@ export default function UploadPage() {
           <p className="text-sm text-gray-400">
             AI 将采样你的书影音数据
             <br />
-            推导你的文化 MBTI 人格
+            推导你的书影音人格
           </p>
         </div>
 

@@ -328,7 +328,7 @@ export default function CompareResultPage({
             测测另一个人
           </Link>
           <p className="text-xs text-gray-500">
-            文化 MBTI · 品味即人格
+            豆瓣书影音人格 · 品味即人格
           </p>
         </div>
       </div>
@@ -481,7 +481,7 @@ function CompareCard({
           <div className="flex items-center justify-between text-[10px] text-gray-600 border-t border-white/5 pt-3">
             <span>{getMatchLabel(comparison.matchScore)}</span>
             <span className="text-[#667eea]">
-              测测你们的文化 MBTI →
+              测测你们的书影音人格 →
             </span>
           </div>
         </div>

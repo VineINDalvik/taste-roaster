@@ -85,7 +85,7 @@ const UNLOCK_MESSAGES = [
 ];
 
 const FUN_FACTS = [
-  "INTJ 是豆瓣上最常见的文化MBTI——理性派果然爱数据",
+  "INTJ 是豆瓣上最常见的书影音人格——理性派果然爱数据",
   "数据显示：ENFP 用户的书影音品类最杂食",
   "INFJ 用户平均每部电影写的短评最长",
   "看文艺片多的人80%测出来是 xNxP",
@@ -573,7 +573,7 @@ export default function ResultPage({
               品味双人对比
             </h3>
             <p className="text-sm text-gray-400">
-              邀请另一个人来测，看看你们的文化 MBTI 有多配
+              邀请另一个人来测，看看你们的书影音人格有多配
             </p>
             <Link
               href={`/compare?from=${id}`}
@@ -593,7 +593,7 @@ export default function ResultPage({
             再测一个人
           </Link>
           <p className="text-xs text-gray-500">
-            分享链接给朋友，看看谁是什么文化 MBTI
+            分享链接给朋友，看看谁是什么书影音人格
           </p>
         </div>
       </div>
