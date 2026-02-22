@@ -59,6 +59,12 @@ function CompareContent() {
     }
 
     const myReport = JSON.parse(stored);
+
+    // Use the best available count: prefer realCounts (from page title), fallback to bookCount field
+    const myBookCount = myReport.realCounts?.books || myReport.bookCount || myReport.input?.books?.length || 0;
+    const myMovieCount = myReport.realCounts?.movies || myReport.movieCount || myReport.input?.movies?.length || 0;
+    const myMusicCount = myReport.realCounts?.music || myReport.musicCount || myReport.input?.music?.length || 0;
+
     setIsLoading(true);
     setError(null);
     setProgressIdx(0);
@@ -78,6 +84,10 @@ function CompareContent() {
       });
 
       setProgressIdx(4);
+
+      const bBookCount = reportB.realCounts?.books || reportB.bookCount || reportB.input?.books?.length || 0;
+      const bMovieCount = reportB.realCounts?.movies || reportB.movieCount || reportB.input?.movies?.length || 0;
+      const bMusicCount = reportB.realCounts?.music || reportB.musicCount || reportB.input?.music?.length || 0;
 
       // Step 2: Lightweight comparison (~5s)
       const result = await safeFetchJson("/api/compare", {
@@ -101,9 +111,9 @@ function CompareContent() {
             musicTitles: (myReport.input?.music ?? [])
               .slice(0, 30)
               .map((m: { title: string }) => m.title),
-            bookCount: myReport.bookCount,
-            movieCount: myReport.movieCount,
-            musicCount: myReport.musicCount,
+            bookCount: myBookCount,
+            movieCount: myMovieCount,
+            musicCount: myMusicCount,
           },
           personB: {
             name: reportB.doubanName || doubanIdB.trim(),
@@ -122,9 +132,9 @@ function CompareContent() {
             musicTitles: (reportB.input?.music ?? [])
               .slice(0, 30)
               .map((m: { title: string }) => m.title),
-            bookCount: reportB.bookCount,
-            movieCount: reportB.movieCount,
-            musicCount: reportB.musicCount,
+            bookCount: bBookCount,
+            movieCount: bMovieCount,
+            musicCount: bMusicCount,
           },
         }),
       });
