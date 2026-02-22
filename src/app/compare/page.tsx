@@ -5,12 +5,13 @@ import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 
 const PROGRESS_MESSAGES = [
-  "正在分析对方的豆瓣数据...",
+  "正在爬取对方的豆瓣数据...",
+  "采样对方读过的书...",
+  "采样对方看过的电影...",
   "推导对方的文化 MBTI...",
   "寻找你们的品味交集...",
-  "分析你们的化学反应...",
   "AI 正在犀利点评你们的匹配度...",
-  "生成双人对比报告中...",
+  "生成双人对比报告...",
 ];
 
 function CompareContent() {
@@ -37,6 +38,17 @@ function CompareContent() {
     }
   }, [fromId]);
 
+  async function safeFetchJson(url: string, options: RequestInit) {
+    const res = await fetch(url, options);
+    const ct = res.headers.get("content-type") ?? "";
+    if (!ct.includes("application/json")) {
+      throw new Error("服务器超时或返回异常，请稍后重试");
+    }
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || "请求失败");
+    return data;
+  }
+
   const handleCompare = async () => {
     if (!doubanIdB.trim() || !fromId) return;
 
@@ -55,27 +67,67 @@ function CompareContent() {
       setProgressIdx((prev) =>
         prev < PROGRESS_MESSAGES.length - 1 ? prev + 1 : prev
       );
-    }, 4000);
+    }, 3500);
 
     try {
-      const res = await fetch("/api/compare", {
+      // Step 1: Analyze person B (reuse /api/analyze, ~20s)
+      const reportB = await safeFetchJson("/api/analyze", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ doubanId: doubanIdB.trim() }),
+      });
+
+      setProgressIdx(4);
+
+      // Step 2: Lightweight comparison (~5s)
+      const result = await safeFetchJson("/api/compare", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          doubanIdB: doubanIdB.trim(),
-          reportA: {
-            id: myReport.id,
-            input: myReport.input,
-            mbti: myReport.mbti,
-            roast: myReport.roast,
+          personA: {
+            name: myReport.doubanName || myReport.input?.doubanId || "你",
+            mbtiType: myReport.mbti.type,
+            mbtiTitle: myReport.mbti.title,
+            dimensions: myReport.mbti.dimensions,
             radarData: myReport.radarData,
             summary: myReport.summary,
+            roast: myReport.roast,
+            bookTitles: (myReport.input?.books ?? [])
+              .slice(0, 30)
+              .map((b: { title: string }) => b.title),
+            movieTitles: (myReport.input?.movies ?? [])
+              .slice(0, 30)
+              .map((m: { title: string }) => m.title),
+            musicTitles: (myReport.input?.music ?? [])
+              .slice(0, 30)
+              .map((m: { title: string }) => m.title),
+            bookCount: myReport.bookCount,
+            movieCount: myReport.movieCount,
+            musicCount: myReport.musicCount,
+          },
+          personB: {
+            name: reportB.doubanName || doubanIdB.trim(),
+            mbtiType: reportB.mbti.type,
+            mbtiTitle: reportB.mbti.title,
+            dimensions: reportB.mbti.dimensions,
+            radarData: reportB.radarData,
+            summary: reportB.summary,
+            roast: reportB.roast,
+            bookTitles: (reportB.input?.books ?? [])
+              .slice(0, 30)
+              .map((b: { title: string }) => b.title),
+            movieTitles: (reportB.input?.movies ?? [])
+              .slice(0, 30)
+              .map((m: { title: string }) => m.title),
+            musicTitles: (reportB.input?.music ?? [])
+              .slice(0, 30)
+              .map((m: { title: string }) => m.title),
+            bookCount: reportB.bookCount,
+            movieCount: reportB.movieCount,
+            musicCount: reportB.musicCount,
           },
         }),
       });
-
-      const result = await res.json();
-      if (!res.ok) throw new Error(result.error || "对比失败");
 
       localStorage.setItem(
         `taste-compare-${result.compareId}`,
@@ -156,7 +208,7 @@ function CompareContent() {
 
             <div className="card-glass rounded-xl p-4 text-center">
               <p className="text-xs text-gray-500">
-                对方的豆瓣标记需为公开状态 · 分析约需 20-30 秒
+                对方的豆瓣标记需为公开状态 · 分析约需 25-35 秒
               </p>
             </div>
           </div>

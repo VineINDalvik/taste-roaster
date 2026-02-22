@@ -1,119 +1,122 @@
 import { NextRequest, NextResponse } from "next/server";
 import { v4 as uuidv4 } from "uuid";
-import { scrapeDoubanQuick } from "@/lib/douban-scraper";
-import {
-  generateBasicReport,
-  generateComparison,
-} from "@/lib/analyzer";
-import type { TasteInput, TasteReport } from "@/lib/types";
+import { generateComparison } from "@/lib/analyzer";
+import type { TasteReport, CulturalMBTI, RadarData } from "@/lib/types";
 
-export const maxDuration = 60;
+export const maxDuration = 30;
 
+interface PersonSummary {
+  name: string;
+  mbtiType: string;
+  mbtiTitle: string;
+  dimensions: CulturalMBTI["dimensions"];
+  radarData: RadarData;
+  summary: string;
+  roast: string;
+  bookTitles: string[];
+  movieTitles: string[];
+  musicTitles: string[];
+  bookCount: number;
+  movieCount: number;
+  musicCount: number;
+}
+
+/**
+ * Lightweight compare: both persons already analyzed.
+ * Only generates AI comparison (~5s).
+ */
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { doubanIdB, reportA } = body as {
-      doubanIdB: string;
-      reportA: {
-        id: string;
-        input: TasteInput;
-        mbti: TasteReport["mbti"];
-        roast: string;
-        radarData: TasteReport["radarData"];
-        summary: string;
-      };
+    const { personA, personB } = body as {
+      personA: PersonSummary;
+      personB: PersonSummary;
     };
 
-    if (!doubanIdB?.trim()) {
+    if (!personA?.mbtiType || !personB?.mbtiType) {
       return NextResponse.json(
-        { error: "请输入对方的豆瓣 ID" },
-        { status: 400 }
-      );
-    }
-    if (!reportA?.input || !reportA?.mbti?.type) {
-      return NextResponse.json(
-        { error: "缺少你的报告数据" },
+        { error: "缺少双方的 MBTI 数据" },
         { status: 400 }
       );
     }
 
-    const cleanIdB = doubanIdB
-      .trim()
-      .replace(/^https?:\/\/.*\/people\//, "")
-      .replace(/\/$/, "");
-
-    // Scrape person B
-    const doubanDataB = await scrapeDoubanQuick(cleanIdB);
-
-    const inputB: TasteInput = {
-      doubanId: cleanIdB,
-      doubanName: doubanDataB.profile.name,
-      books: doubanDataB.books,
-      movies: doubanDataB.movies,
-      music: doubanDataB.music,
-      reviews: doubanDataB.reviews,
-      diaries: doubanDataB.diaries,
-      statuses: doubanDataB.statuses,
-      source: "douban",
-    };
-
-    // Generate MBTI for person B
-    const basicB = await generateBasicReport(
-      inputB,
-      doubanDataB.profile.realCounts
-    );
-
-    const fullReportA: TasteReport = {
-      id: reportA.id,
+    // Build minimal TasteReport for comparison
+    const reportA: TasteReport = {
+      id: "a",
       createdAt: new Date().toISOString(),
-      input: reportA.input,
-      mbti: reportA.mbti,
-      roast: reportA.roast,
-      radarData: reportA.radarData,
-      summary: reportA.summary,
+      input: {
+        doubanId: "",
+        doubanName: personA.name,
+        books: personA.bookTitles.map((t) => ({ title: t })),
+        movies: personA.movieTitles.map((t) => ({ title: t })),
+        music: personA.musicTitles.map((t) => ({ title: t })),
+        reviews: [],
+        diaries: [],
+        statuses: [],
+        source: "douban",
+      },
+      mbti: {
+        type: personA.mbtiType,
+        title: personA.mbtiTitle,
+        dimensions: personA.dimensions,
+        summary: personA.summary,
+      },
+      roast: personA.roast,
+      radarData: personA.radarData,
+      summary: personA.summary,
       isPremium: false,
     };
 
-    const fullReportB: TasteReport = {
-      id: uuidv4(),
+    const reportB: TasteReport = {
+      id: "b",
       createdAt: new Date().toISOString(),
-      input: inputB,
-      mbti: basicB.mbti,
-      roast: basicB.roast,
-      radarData: basicB.radar,
-      summary: basicB.summary,
+      input: {
+        doubanId: "",
+        doubanName: personB.name,
+        books: personB.bookTitles.map((t) => ({ title: t })),
+        movies: personB.movieTitles.map((t) => ({ title: t })),
+        music: personB.musicTitles.map((t) => ({ title: t })),
+        reviews: [],
+        diaries: [],
+        statuses: [],
+        source: "douban",
+      },
+      mbti: {
+        type: personB.mbtiType,
+        title: personB.mbtiTitle,
+        dimensions: personB.dimensions,
+        summary: personB.summary,
+      },
+      roast: personB.roast,
+      radarData: personB.radarData,
+      summary: personB.summary,
       isPremium: false,
     };
 
-    // Generate comparison
-    const comparison = await generateComparison(fullReportA, fullReportB);
-
+    const comparison = await generateComparison(reportA, reportB);
     const compareId = uuidv4();
 
     return NextResponse.json({
       compareId,
       personA: {
-        name: reportA.input.doubanName || reportA.input.doubanId,
-        mbtiType: reportA.mbti.type,
-        mbtiTitle: reportA.mbti.title,
-        dimensions: reportA.mbti.dimensions,
-        radarData: reportA.radarData,
-        bookCount: reportA.input.books.length,
-        movieCount: reportA.input.movies.length,
-        musicCount: reportA.input.music.length,
+        name: personA.name,
+        mbtiType: personA.mbtiType,
+        mbtiTitle: personA.mbtiTitle,
+        dimensions: personA.dimensions,
+        radarData: personA.radarData,
+        bookCount: personA.bookCount,
+        movieCount: personA.movieCount,
+        musicCount: personA.musicCount,
       },
       personB: {
-        name: inputB.doubanName || cleanIdB,
-        mbtiType: basicB.mbti.type,
-        mbtiTitle: basicB.mbti.title,
-        dimensions: basicB.mbti.dimensions,
-        radarData: basicB.radar,
-        bookCount:
-          doubanDataB.profile.realCounts.books || inputB.books.length,
-        movieCount:
-          doubanDataB.profile.realCounts.movies || inputB.movies.length,
-        musicCount:
-          doubanDataB.profile.realCounts.music || inputB.music.length,
+        name: personB.name,
+        mbtiType: personB.mbtiType,
+        mbtiTitle: personB.mbtiTitle,
+        dimensions: personB.dimensions,
+        radarData: personB.radarData,
+        bookCount: personB.bookCount,
+        movieCount: personB.movieCount,
+        musicCount: personB.musicCount,
       },
       comparison,
     });
