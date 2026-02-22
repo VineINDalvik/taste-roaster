@@ -24,6 +24,14 @@ async function fetchPage(url: string): Promise<string> {
   return res.text();
 }
 
+function getDomain(type: "book" | "movie" | "music"): string {
+  return type === "book"
+    ? "book.douban.com"
+    : type === "movie"
+      ? "movie.douban.com"
+      : "music.douban.com";
+}
+
 export interface DoubanProfile {
   id: string;
   name: string;
@@ -42,34 +50,216 @@ export interface DoubanData {
   statuses: { content: string; date?: string }[];
 }
 
+const PAGE_SIZE = 15;
+
 /**
- * Extract real "已读/已看/已听" counts from the user's profile sidebar.
- * Douban shows "看过123部" / "读过456本" / "听过789张" on profile pages.
- * Also checks book/movie/music sub-domain profile pages.
+ * Fetch page 0 of a collection to get the real total count from the paginator.
+ * Douban's paginator has `data-total-page` or we can count from the last page link.
+ * Also extracts items from page 0 itself.
  */
-async function scrapeRealCounts(userId: string): Promise<RealCounts> {
-  const counts: RealCounts = { books: 0, movies: 0, music: 0 };
+async function fetchFirstPageAndCount(
+  userId: string,
+  type: "book" | "movie" | "music"
+): Promise<{ totalPages: number; totalItems: number; items: WorkItem[]; html: string }> {
+  const domain = getDomain(type);
+  const url = `https://${domain}/people/${userId}/collect?start=0&sort=time&mode=list`;
+  const html = await fetchPage(url);
+  const $ = cheerio.load(html);
 
-  try {
-    const html = await fetchPage(`https://www.douban.com/people/${userId}/`);
-    const $ = cheerio.load(html);
-
-    // Profile sidebar has links like "读过(123)" or shows "看过123部"
-    const text = $("body").text();
-
-    // Pattern: 读过(\d+) or 看过(\d+) or 听过(\d+)
-    const bookMatch = text.match(/读过[^\d]*?(\d+)/);
-    const movieMatch = text.match(/看过[^\d]*?(\d+)/);
-    const musicMatch = text.match(/听过[^\d]*?(\d+)/);
-
-    if (bookMatch) counts.books = parseInt(bookMatch[1]);
-    if (movieMatch) counts.movies = parseInt(movieMatch[1]);
-    if (musicMatch) counts.music = parseInt(musicMatch[1]);
-  } catch {
-    // Fallback: will use scraped counts instead
+  // Method 1: data-total-page attribute on the current page span
+  let totalPages = 0;
+  const totalPageAttr = $(".paginator .thispage").attr("data-total-page");
+  if (totalPageAttr) {
+    totalPages = parseInt(totalPageAttr) || 0;
   }
 
-  return counts;
+  // Method 2: last numbered page link in paginator
+  if (totalPages === 0) {
+    $(".paginator a").each((_, el) => {
+      const pageNum = parseInt($(el).text().trim());
+      if (!isNaN(pageNum) && pageNum > totalPages) {
+        totalPages = pageNum;
+      }
+    });
+  }
+
+  // Method 3: if no paginator at all, there's only 1 page (or 0)
+  if (totalPages === 0) {
+    const listItems = $(".list-view .item");
+    totalPages = listItems.length > 0 ? 1 : 0;
+  }
+
+  // Method 4: look for "（共N个）" text in page header/title
+  let totalItems = 0;
+  const headerText = $("h1, .usr-collect-hd, #db-usr-profile h1").text();
+  const countInHeader = headerText.match(/(\d+)/);
+  if (countInHeader) {
+    totalItems = parseInt(countInHeader[1]);
+  }
+
+  // Also try the filter bar text like "共XXX个"
+  if (totalItems === 0) {
+    const bodyText = $("body").text();
+    const totalMatch = bodyText.match(/共(\d+)个/);
+    if (totalMatch) {
+      totalItems = parseInt(totalMatch[1]);
+    }
+  }
+
+  // Calculate from pages if direct count not found
+  if (totalItems === 0 && totalPages > 0) {
+    // Last page might have fewer items, but totalPages * pageSize is a good estimate
+    // We'll refine with actual last page if needed
+    totalItems = totalPages * PAGE_SIZE;
+  }
+
+  // Extract items from this first page
+  const items = parseListItems($);
+
+  return { totalPages, totalItems, items, html };
+}
+
+function parseListItems($: cheerio.CheerioAPI): WorkItem[] {
+  const items: WorkItem[] = [];
+  $(".list-view .item").each((_, el) => {
+    const titleEl = $(el).find(".title a").first();
+    const title = (titleEl.text().trim() || titleEl.attr("title") || "")
+      .replace(/\s+/g, " ")
+      .trim();
+    if (!title) return;
+
+    const ratingClass = $(el).find("[class*='rating']").attr("class") || "";
+    const ratingMatch = ratingClass.match(/rating(\d)-t/);
+    const rating = ratingMatch ? parseInt(ratingMatch[1]) : undefined;
+
+    const dateText = $(el).find(".date").text().trim();
+    const dateMatch = dateText.match(/\d{4}-\d{2}-\d{2}/);
+    const date = dateMatch ? dateMatch[0] : undefined;
+
+    const comment = $(el).find(".comment").text().trim() || undefined;
+
+    items.push({ title, rating, date, comment });
+  });
+  return items;
+}
+
+/**
+ * Scrape a single page of collection items.
+ */
+async function scrapeOnePage(
+  userId: string,
+  type: "book" | "movie" | "music",
+  pageNum: number
+): Promise<WorkItem[]> {
+  const domain = getDomain(type);
+  const start = pageNum * PAGE_SIZE;
+  const url = `https://${domain}/people/${userId}/collect?start=${start}&sort=time&mode=list`;
+  const html = await fetchPage(url);
+  const $ = cheerio.load(html);
+  return parseListItems($);
+}
+
+/**
+ * Smart sampled scrape: gets real count from page 0 paginator,
+ * then samples pages across time periods.
+ */
+async function scrapeCollectionSampled(
+  userId: string,
+  type: "book" | "movie" | "music",
+  targetItems: number = 100
+): Promise<{ items: WorkItem[]; realCount: number }> {
+  const { totalPages, totalItems, items: page0Items } =
+    await fetchFirstPageAndCount(userId, type);
+
+  if (totalPages === 0 || page0Items.length === 0) {
+    return { items: [], realCount: totalItems };
+  }
+
+  const seenTitles = new Set(page0Items.map((i) => i.title));
+  const allItems = [...page0Items];
+
+  if (totalPages <= 1) {
+    return { items: allItems, realCount: totalItems || allItems.length };
+  }
+
+  // Decide which additional pages to sample
+  const additionalPages: number[] = [];
+  if (totalPages <= 7) {
+    for (let i = 1; i < totalPages; i++) additionalPages.push(i);
+  } else {
+    // Pages 1,2 (recent), middle 2, last 2 (oldest)
+    additionalPages.push(1, 2);
+    const mid = Math.floor(totalPages / 2);
+    additionalPages.push(mid - 1, mid);
+    const last = totalPages - 1;
+    additionalPages.push(last - 1, last);
+  }
+
+  const uniquePages = [...new Set(additionalPages)]
+    .filter((p) => p > 0 && p < totalPages)
+    .sort((a, b) => a - b);
+
+  for (const page of uniquePages) {
+    if (allItems.length >= targetItems) break;
+
+    try {
+      await sleep(600 + Math.random() * 400);
+      const pageItems = await scrapeOnePage(userId, type, page);
+      for (const item of pageItems) {
+        if (!seenTitles.has(item.title)) {
+          seenTitles.add(item.title);
+          allItems.push(item);
+        }
+      }
+    } catch {
+      // Skip failed pages, don't abort
+    }
+  }
+
+  return { items: allItems, realCount: totalItems || allItems.length };
+}
+
+/**
+ * Full sequential scrape for premium mode.
+ */
+async function scrapeCollectionFull(
+  userId: string,
+  type: "book" | "movie" | "music",
+  maxPages: number = 150
+): Promise<{ items: WorkItem[]; realCount: number }> {
+  const { totalPages, totalItems, items: page0Items } =
+    await fetchFirstPageAndCount(userId, type);
+
+  if (totalPages === 0 || page0Items.length === 0) {
+    return { items: [], realCount: totalItems };
+  }
+
+  const seenTitles = new Set(page0Items.map((i) => i.title));
+  const allItems = [...page0Items];
+  const pagesToScrape = Math.min(totalPages, maxPages);
+
+  for (let page = 1; page < pagesToScrape; page++) {
+    try {
+      await sleep(600 + Math.random() * 400);
+      const pageItems = await scrapeOnePage(userId, type, page);
+      if (pageItems.length === 0) break;
+
+      let foundNew = false;
+      for (const item of pageItems) {
+        if (!seenTitles.has(item.title)) {
+          seenTitles.add(item.title);
+          allItems.push(item);
+          foundNew = true;
+        }
+      }
+      if (!foundNew) break;
+    } catch {
+      if (page === 1) break;
+      break;
+    }
+  }
+
+  return { items: allItems, realCount: Math.max(totalItems, allItems.length) };
 }
 
 async function scrapeProfile(userId: string): Promise<DoubanProfile> {
@@ -90,185 +280,20 @@ async function scrapeProfile(userId: string): Promise<DoubanProfile> {
     $(".user-info .intro")?.text().trim() ||
     "";
 
-  // Extract real counts from same page
-  const bodyText = $("body").text();
-  const counts: RealCounts = { books: 0, movies: 0, music: 0 };
-  const bookMatch = bodyText.match(/读过[^\d]*?(\d+)/);
-  const movieMatch = bodyText.match(/看过[^\d]*?(\d+)/);
-  const musicMatch = bodyText.match(/听过[^\d]*?(\d+)/);
-  if (bookMatch) counts.books = parseInt(bookMatch[1]);
-  if (movieMatch) counts.movies = parseInt(movieMatch[1]);
-  if (musicMatch) counts.music = parseInt(musicMatch[1]);
-
-  return { id: userId, name, avatar, intro, realCounts: counts };
-}
-
-/**
- * Scrape collection with sampled pages for better time-spread representation.
- * Instead of pages 0,1,2,3,4 (all recent), samples from different periods.
- */
-async function scrapeCollectionSampled(
-  userId: string,
-  type: "book" | "movie" | "music",
-  totalCount: number,
-  targetItems: number = 100
-): Promise<WorkItem[]> {
-  const domain =
-    type === "book"
-      ? "book.douban.com"
-      : type === "movie"
-        ? "movie.douban.com"
-        : "music.douban.com";
-
-  const items: WorkItem[] = [];
-  const seenTitles = new Set<string>();
-  const pageSize = 15;
-  const totalPages = Math.ceil(totalCount / pageSize);
-
-  // Calculate which pages to fetch for a representative sample
-  const pagesToFetch: number[] = [];
-  if (totalPages <= 7) {
-    for (let i = 0; i < totalPages; i++) pagesToFetch.push(i);
-  } else {
-    // Sample: first 3 pages (recent), middle 2, last 2 (oldest)
-    pagesToFetch.push(0, 1, 2);
-    const mid = Math.floor(totalPages / 2);
-    pagesToFetch.push(mid - 1, mid);
-    pagesToFetch.push(totalPages - 2, totalPages - 1);
-  }
-
-  // Deduplicate and sort
-  const uniquePages = [...new Set(pagesToFetch)].sort((a, b) => a - b);
-
-  for (const page of uniquePages) {
-    if (items.length >= targetItems) break;
-
-    const start = page * pageSize;
-    const url = `https://${domain}/people/${userId}/collect?start=${start}&sort=time&mode=list`;
-
-    try {
-      const html = await fetchPage(url);
-      const $ = cheerio.load(html);
-      const listItems = $(".list-view .item");
-      if (listItems.length === 0) continue;
-
-      listItems.each((_, el) => {
-        const titleEl = $(el).find(".title a").first();
-        const title = (titleEl.text().trim() || titleEl.attr("title") || "")
-          .replace(/\s+/g, " ")
-          .trim();
-
-        if (!title || seenTitles.has(title)) return;
-        seenTitles.add(title);
-
-        const ratingClass = $(el).find("[class*='rating']").attr("class") || "";
-        const ratingMatch = ratingClass.match(/rating(\d)-t/);
-        const rating = ratingMatch ? parseInt(ratingMatch[1]) : undefined;
-
-        const dateText = $(el).find(".date").text().trim();
-        const dateMatch = dateText.match(/\d{4}-\d{2}-\d{2}/);
-        const date = dateMatch ? dateMatch[0] : undefined;
-
-        const comment = $(el).find(".comment").text().trim() || undefined;
-
-        items.push({ title, rating, date, comment });
-      });
-
-      await sleep(600 + Math.random() * 400);
-    } catch {
-      if (page === uniquePages[0]) {
-        throw new Error(
-          `无法访问${type === "book" ? "读书" : type === "movie" ? "电影" : "音乐"}页面`
-        );
-      }
-    }
-  }
-
-  return items;
-}
-
-/**
- * Full sequential scrape for premium mode.
- */
-async function scrapeCollectionFull(
-  userId: string,
-  type: "book" | "movie" | "music",
-  maxPages: number = 150
-): Promise<WorkItem[]> {
-  const domain =
-    type === "book"
-      ? "book.douban.com"
-      : type === "movie"
-        ? "movie.douban.com"
-        : "music.douban.com";
-
-  const items: WorkItem[] = [];
-  const seenTitles = new Set<string>();
-  const pageSize = 15;
-
-  for (let page = 0; page < maxPages; page++) {
-    const start = page * pageSize;
-    const url = `https://${domain}/people/${userId}/collect?start=${start}&sort=time&mode=list`;
-
-    try {
-      const html = await fetchPage(url);
-      const $ = cheerio.load(html);
-      const listItems = $(".list-view .item");
-      if (listItems.length === 0) break;
-
-      let foundNew = false;
-      listItems.each((_, el) => {
-        const titleEl = $(el).find(".title a").first();
-        const title = (titleEl.text().trim() || titleEl.attr("title") || "")
-          .replace(/\s+/g, " ")
-          .trim();
-
-        if (!title || seenTitles.has(title)) return;
-        seenTitles.add(title);
-        foundNew = true;
-
-        const ratingClass = $(el).find("[class*='rating']").attr("class") || "";
-        const ratingMatch = ratingClass.match(/rating(\d)-t/);
-        const rating = ratingMatch ? parseInt(ratingMatch[1]) : undefined;
-
-        const dateText = $(el).find(".date").text().trim();
-        const dateMatch = dateText.match(/\d{4}-\d{2}-\d{2}/);
-        const date = dateMatch ? dateMatch[0] : undefined;
-
-        const comment = $(el).find(".comment").text().trim() || undefined;
-
-        items.push({ title, rating, date, comment });
-      });
-
-      if (!foundNew) break;
-      const hasNext = $(".paginator .next a").length > 0;
-      if (!hasNext) break;
-
-      await sleep(600 + Math.random() * 400);
-    } catch {
-      if (page === 0)
-        throw new Error(
-          `无法访问${type === "book" ? "读书" : type === "movie" ? "电影" : "音乐"}页面`
-        );
-      break;
-    }
-  }
-
-  return items;
+  return {
+    id: userId,
+    name,
+    avatar,
+    intro,
+    realCounts: { books: 0, movies: 0, music: 0 },
+  };
 }
 
 async function scrapeReviews(
   userId: string,
   maxPages: number = 20
-): Promise<
-  { title: string; content: string; type: string; rating?: number }[]
-> {
-  const reviews: {
-    title: string;
-    content: string;
-    type: string;
-    rating?: number;
-  }[] = [];
+): Promise<{ title: string; content: string; type: string; rating?: number }[]> {
+  const reviews: { title: string; content: string; type: string; rating?: number }[] = [];
 
   for (let page = 0; page < maxPages; page++) {
     const start = page * 10;
@@ -277,7 +302,6 @@ async function scrapeReviews(
         `https://www.douban.com/people/${userId}/reviews?start=${start}`
       );
       const $ = cheerio.load(html);
-
       const reviewItems = $(".review-item, .tlst, .ilst");
       if (reviewItems.length === 0 && page === 0) break;
 
@@ -287,7 +311,6 @@ async function scrapeReviews(
         const typeText = $(el).find(".type, .category").text().trim();
         const ratingClass = $(el).find("[class*='rating']").attr("class") || "";
         const ratingMatch = ratingClass.match(/rating(\d)/);
-
         if (title) {
           reviews.push({
             title,
@@ -305,7 +328,6 @@ async function scrapeReviews(
       break;
     }
   }
-
   return reviews;
 }
 
@@ -322,7 +344,6 @@ async function scrapeDiaries(
         `https://www.douban.com/people/${userId}/notes?start=${start}`
       );
       const $ = cheerio.load(html);
-
       const noteItems = $(
         ".note-container .note-header-container, .klist .list-item, .article-list .item"
       );
@@ -343,7 +364,6 @@ async function scrapeDiaries(
       break;
     }
   }
-
   return diaries;
 }
 
@@ -351,21 +371,16 @@ async function scrapeStatuses(
   userId: string
 ): Promise<{ content: string; date?: string }[]> {
   const statuses: { content: string; date?: string }[] = [];
-
   try {
     const html = await fetchPage(
       `https://www.douban.com/people/${userId}/statuses`
     );
     const $ = cheerio.load(html);
-
     $(".status-item, .new-status, .saying").each((_, el) => {
       const content =
-        $(el)
-          .find(".status-content, .saying-text, blockquote")
-          .text()
-          .trim() || $(el).find("p").text().trim();
+        $(el).find(".status-content, .saying-text, blockquote").text().trim() ||
+        $(el).find("p").text().trim();
       const date = $(el).find(".created_at, .pubtime, span.date").text().trim();
-
       if (content && content.length > 5) {
         statuses.push({ content: content.slice(0, 300), date: date || undefined });
       }
@@ -373,37 +388,40 @@ async function scrapeStatuses(
   } catch {
     // statuses page might not be accessible
   }
-
   return statuses;
 }
 
 /**
- * Quick mode: sampled pages for representative data, sequential to avoid rate limiting.
- * Returns real counts from profile + sampled items for analysis.
+ * Quick mode: gets real counts from paginator, samples ~100 items per type.
  */
 export async function scrapeDoubanQuick(userId: string): Promise<DoubanData> {
   const profile = await scrapeProfile(userId);
-  const rc = profile.realCounts;
 
-  // Sequential with sampling across time periods
-  const books = await scrapeCollectionSampled(userId, "book", rc.books || 75, 100)
-    .catch(() => [] as WorkItem[]);
+  // Sequential: each fetchFirstPageAndCount + sample is one type at a time
+  const bookResult = await scrapeCollectionSampled(userId, "book", 100)
+    .catch(() => ({ items: [] as WorkItem[], realCount: 0 }));
+  profile.realCounts.books = bookResult.realCount;
+
   await sleep(500);
-  const movies = await scrapeCollectionSampled(userId, "movie", rc.movies || 75, 100)
-    .catch(() => [] as WorkItem[]);
+
+  const movieResult = await scrapeCollectionSampled(userId, "movie", 100)
+    .catch(() => ({ items: [] as WorkItem[], realCount: 0 }));
+  profile.realCounts.movies = movieResult.realCount;
+
   await sleep(500);
-  const music = await scrapeCollectionSampled(userId, "music", rc.music || 75, 100)
-    .catch(() => [] as WorkItem[]);
+
+  const musicResult = await scrapeCollectionSampled(userId, "music", 100)
+    .catch(() => ({ items: [] as WorkItem[], realCount: 0 }));
+  profile.realCounts.music = musicResult.realCount;
+
+  const books = bookResult.items;
+  const movies = movieResult.items;
+  const music = musicResult.items;
 
   const totalItems = books.length + movies.length + music.length;
   if (totalItems === 0) {
     throw new Error("未获取到任何数据，该用户可能设置了隐私保护");
   }
-
-  // Use scraped counts as fallback if profile counts were 0
-  if (rc.books === 0) profile.realCounts.books = books.length;
-  if (rc.movies === 0) profile.realCounts.movies = movies.length;
-  if (rc.music === 0) profile.realCounts.music = music.length;
 
   return { profile, books, movies, music, reviews: [], diaries: [], statuses: [] };
 }
@@ -414,11 +432,22 @@ export async function scrapeDoubanQuick(userId: string): Promise<DoubanData> {
 export async function scrapeDoubanFull(userId: string): Promise<DoubanData> {
   const profile = await scrapeProfile(userId);
 
-  const books = await scrapeCollectionFull(userId, "book", 150).catch(() => [] as WorkItem[]);
+  const bookResult = await scrapeCollectionFull(userId, "book", 150)
+    .catch(() => ({ items: [] as WorkItem[], realCount: 0 }));
+  profile.realCounts.books = bookResult.realCount;
+
   await sleep(1000);
-  const movies = await scrapeCollectionFull(userId, "movie", 150).catch(() => [] as WorkItem[]);
+
+  const movieResult = await scrapeCollectionFull(userId, "movie", 150)
+    .catch(() => ({ items: [] as WorkItem[], realCount: 0 }));
+  profile.realCounts.movies = movieResult.realCount;
+
   await sleep(1000);
-  const music = await scrapeCollectionFull(userId, "music", 150).catch(() => [] as WorkItem[]);
+
+  const musicResult = await scrapeCollectionFull(userId, "music", 150)
+    .catch(() => ({ items: [] as WorkItem[], realCount: 0 }));
+  profile.realCounts.music = musicResult.realCount;
+
   await sleep(1000);
 
   const [reviews, diaries, statuses] = await Promise.all([
@@ -434,17 +463,20 @@ export async function scrapeDoubanFull(userId: string): Promise<DoubanData> {
   ]);
 
   const totalItems =
-    books.length + movies.length + music.length +
+    bookResult.items.length + movieResult.items.length + musicResult.items.length +
     reviews.length + diaries.length + statuses.length;
 
   if (totalItems === 0) {
     throw new Error("未获取到任何数据，该用户可能设置了隐私保护");
   }
 
-  // Update real counts with actual scraped counts
-  profile.realCounts.books = Math.max(profile.realCounts.books, books.length);
-  profile.realCounts.movies = Math.max(profile.realCounts.movies, movies.length);
-  profile.realCounts.music = Math.max(profile.realCounts.music, music.length);
-
-  return { profile, books, movies, music, reviews, diaries, statuses };
+  return {
+    profile,
+    books: bookResult.items,
+    movies: movieResult.items,
+    music: musicResult.items,
+    reviews,
+    diaries,
+    statuses,
+  };
 }
