@@ -1,7 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
-import { generatePremiumReport } from "@/lib/analyzer";
+import {
+  generatePremiumReport,
+  generateRecommendations,
+} from "@/lib/analyzer";
 import type { TasteReport, TasteInput, CulturalMBTI } from "@/lib/types";
 
+/**
+ * Share-unlock: generates cross-domain, personality, blindSpots, recommendations.
+ * Uses existing sampled data, no re-scraping.
+ */
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
@@ -31,11 +38,16 @@ export async function POST(req: NextRequest) {
       isPremium: false,
     };
 
-    const premium = await generatePremiumReport(fullReport);
+    const [premium, recommendations] = await Promise.all([
+      generatePremiumReport(fullReport),
+      generateRecommendations(fullReport),
+    ]);
 
     return NextResponse.json({
-      personality: premium.personality,
       crossDomain: premium.crossDomain,
+      personality: premium.personality,
+      blindSpots: premium.blindSpots,
+      recommendations: recommendations.filter((r) => !r.alreadyConsumed),
     });
   } catch (error) {
     console.error("Share unlock error:", error);

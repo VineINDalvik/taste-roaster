@@ -4,7 +4,6 @@ import {
   PREMIUM_ANALYSIS_PROMPT,
   TIMELINE_PROMPT,
   RECOMMENDATION_PROMPT,
-  GRAPH_PROMPT,
   formatItems,
   formatReviews,
   formatDiaries,
@@ -303,42 +302,85 @@ export async function generateRecommendations(
   );
 }
 
-export async function generateGraph(
-  report: TasteReport
+export async function generateComparison(
+  reportA: TasteReport,
+  reportB: TasteReport
 ): Promise<{
-  nodes: { id: string; label: string; type: string; size: number }[];
-  edges: { source: string; target: string; weight: number }[];
+  matchScore: number;
+  matchTitle: string;
+  overview: string;
+  similarities: { point: string; detail: string }[];
+  differences: { point: string; detail: string }[];
+  chemistry: string;
+  sharedWorks: string[];
+  recommendTogether: { title: string; type: string; reason: string }[];
 }> {
+  const { COMPARE_PROMPT } = await import("./prompts");
   const openai = getOpenAI();
 
-  const bookSample = report.input.books.slice(0, 20).map((b) => b.title).join("、") || "无";
-  const movieSample = report.input.movies.slice(0, 20).map((m) => m.title).join("、") || "无";
-  const musicSample = report.input.music.slice(0, 20).map((m) => m.title).join("、") || "无";
-
   const data = {
-    userName: report.input.doubanName || report.input.doubanId || "匿名用户",
-    mbtiType: report.mbti.type,
-    bookSample,
-    movieSample,
-    musicSample,
+    nameA: reportA.input.doubanName || reportA.input.doubanId || "用户A",
+    mbtiTypeA: reportA.mbti.type,
+    mbtiTitleA: reportA.mbti.title,
+    summaryA: reportA.summary,
+    booksA:
+      reportA.input.books
+        .slice(0, 30)
+        .map((b) => b.title)
+        .join("、") || "无",
+    moviesA:
+      reportA.input.movies
+        .slice(0, 30)
+        .map((m) => m.title)
+        .join("、") || "无",
+    musicA:
+      reportA.input.music
+        .slice(0, 30)
+        .map((m) => m.title)
+        .join("、") || "无",
+    nameB: reportB.input.doubanName || reportB.input.doubanId || "用户B",
+    mbtiTypeB: reportB.mbti.type,
+    mbtiTitleB: reportB.mbti.title,
+    summaryB: reportB.summary,
+    booksB:
+      reportB.input.books
+        .slice(0, 30)
+        .map((b) => b.title)
+        .join("、") || "无",
+    moviesB:
+      reportB.input.movies
+        .slice(0, 30)
+        .map((m) => m.title)
+        .join("、") || "无",
+    musicB:
+      reportB.input.music
+        .slice(0, 30)
+        .map((m) => m.title)
+        .join("、") || "无",
   };
 
-  const prompt = fillTemplate(GRAPH_PROMPT, data);
+  const prompt = fillTemplate(COMPARE_PROMPT, data);
 
   const response = await openai.chat.completions.create({
     model: "gpt-4o-mini",
     messages: [{ role: "user", content: prompt }],
     max_tokens: 3000,
-    temperature: 0.7,
+    temperature: 0.85,
   });
 
   const text = response.choices[0]?.message?.content ?? "{}";
   const jsonMatch = text.match(/\{[\s\S]*\}/);
-  if (!jsonMatch) return { nodes: [], edges: [] };
+  if (!jsonMatch) throw new Error("Failed to parse comparison");
 
   const parsed = JSON.parse(jsonMatch[0]);
   return {
-    nodes: parsed.nodes ?? [],
-    edges: parsed.edges ?? [],
+    matchScore: parsed.matchScore ?? 50,
+    matchTitle: parsed.matchTitle ?? "品味探索中",
+    overview: parsed.overview ?? "",
+    similarities: parsed.similarities ?? [],
+    differences: parsed.differences ?? [],
+    chemistry: parsed.chemistry ?? "",
+    sharedWorks: parsed.sharedWorks ?? [],
+    recommendTogether: parsed.recommendTogether ?? [],
   };
 }

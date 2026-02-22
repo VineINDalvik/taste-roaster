@@ -183,27 +183,50 @@ MBTI：{mbtiType} · {mbtiTitle}
 - matchScore: 80+=核心匹配, 50-80=可能惊艳, <50=舒适区挑战
 - 只返回JSON`;
 
-export const GRAPH_PROMPT = `分析以下用户的书影音数据，提取关键词和关联关系，构建品味知识图谱。
+export const COMPARE_PROMPT = `你是文化心理学家，擅长通过品味数据分析两个人的文化人格匹配度。你的风格犀利、有趣、有洞察力。
 
-用户：{userName}（{mbtiType}）
-读过的书（部分）：{bookSample}
-看过的电影（部分）：{movieSample}
-听过的音乐（部分）：{musicSample}
+**用户 A：**
+- 名字：{nameA}
+- 文化MBTI：{mbtiTypeA} · {mbtiTitleA}
+- 品味概述：{summaryA}
+- 读过的书（部分）：{booksA}
+- 看过的电影（部分）：{moviesA}
+- 听过的音乐（部分）：{musicA}
 
-返回JSON：
+**用户 B：**
+- 名字：{nameB}
+- 文化MBTI：{mbtiTypeB} · {mbtiTitleB}
+- 品味概述：{summaryB}
+- 读过的书（部分）：{booksB}
+- 看过的电影（部分）：{moviesB}
+- 听过的音乐（部分）：{musicB}
+
+分析这两个人的文化品味匹配度，返回JSON：
 
 {
-  "nodes": [
-    { "id": "唯一id", "label": "显示名称(最多8字)", "type": "keyword/genre/person/book/movie/music", "size": 3-10 }
+  "matchScore": 0-100,
+  "matchTitle": "匹配称号(6-12字，有趣的比喻，如'灵魂共振体''平行宇宙访客''文化反义词')",
+  "overview": "整体匹配度解读(80-120字，从MBTI角度分析两人组合的化学反应)",
+  "similarities": [
+    { "point": "相同点标题(4-8字)", "detail": "解释(30-60字，引用具体共同作品或偏好)" }
   ],
-  "edges": [
-    { "source": "节点id", "target": "节点id", "weight": 1-5 }
+  "differences": [
+    { "point": "不同点标题(4-8字)", "detail": "解释(30-60字，对比两人的差异)" }
+  ],
+  "chemistry": "化学反应分析(100-150字，如果这两个人一起选书/选电影/选音乐会发生什么？犀利又有趣的预测)",
+  "sharedWorks": ["两人都看过/读过/听过的作品名称列表"],
+  "recommendTogether": [
+    { "title": "作品名", "type": "book/movie/music", "reason": "为什么适合两人一起看/读/听(20-40字)" }
   ]
 }
 
-节点类型：keyword(主题关键词), genre(类型/流派), person(导演/作者/音乐人,最多5个), book/movie/music(代表作品,每类最多5个)
-
-要求：30-50个节点，体现品味核心特征，每个节点至少1条边，只返回JSON`;
+要求：
+- similarities 至少3条，differences 至少3条
+- sharedWorks 从两人的数据中找真正的交集
+- recommendTogether 推荐3-5个作品，必须是两人都没看过的
+- 犀利但友善，让两个人看了都觉得精准
+- matchScore: 90+=灵魂伴侣, 70-89=品味知己, 50-69=互补搭档, 30-49=平行世界, <30=文化反义词
+- 只返回JSON`;
 
 export function formatItems(
   items: { title: string; rating?: number; date?: string; comment?: string }[]
