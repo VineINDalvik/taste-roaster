@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useCallback } from "react";
+import { useRef, useCallback, useState } from "react";
 
 interface MBTIDimension {
   letter: string;
@@ -175,11 +175,14 @@ export default function ShareCard({
   musicCount,
 }: ShareCardProps) {
   const cardRef = useRef<HTMLDivElement>(null);
+  const [previewSrc, setPreviewSrc] = useState<string | null>(null);
+  const [generating, setGenerating] = useState(false);
 
-  const handleDownload = useCallback(async () => {
+  const handleSaveCard = useCallback(async () => {
     const card = cardRef.current;
     if (!card) return;
 
+    setGenerating(true);
     try {
       const { default: html2canvas } = await import("html2canvas");
       const canvas = await html2canvas(card, {
@@ -187,12 +190,21 @@ export default function ShareCard({
         backgroundColor: null,
         useCORS: true,
       });
-      const link = document.createElement("a");
-      link.download = `书影音MBTI-${mbtiType}.png`;
-      link.href = canvas.toDataURL("image/png");
-      link.click();
+
+      const isMobile = /iPhone|iPad|Android|Mobile/i.test(navigator.userAgent);
+
+      if (isMobile) {
+        setPreviewSrc(canvas.toDataURL("image/png"));
+      } else {
+        const link = document.createElement("a");
+        link.download = `书影音MBTI-${mbtiType}.png`;
+        link.href = canvas.toDataURL("image/png");
+        link.click();
+      }
     } catch {
-      alert("下载失败，请截图保存");
+      alert("生成失败，请直接截图保存");
+    } finally {
+      setGenerating(false);
     }
   }, [mbtiType]);
 
@@ -217,6 +229,31 @@ export default function ShareCard({
 
   return (
     <div className="space-y-4">
+      {/* Image Preview Overlay — mobile long-press to save */}
+      {previewSrc && (
+        <div
+          className="fixed inset-0 z-50 bg-black/90 flex flex-col items-center justify-center p-4"
+          onClick={() => setPreviewSrc(null)}
+        >
+          <p className="text-white text-sm mb-3 animate-pulse">
+            👆 长按图片保存到相册
+          </p>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={previewSrc}
+            alt="分享卡片"
+            className="max-w-full max-h-[80vh] rounded-xl shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          />
+          <button
+            className="mt-4 px-6 py-2 rounded-xl bg-white/10 text-white text-sm"
+            onClick={() => setPreviewSrc(null)}
+          >
+            关闭
+          </button>
+        </div>
+      )}
+
       <div
         ref={cardRef}
         className="relative overflow-hidden rounded-2xl mx-auto max-w-sm"
@@ -307,10 +344,11 @@ export default function ShareCard({
       {/* Action buttons */}
       <div className="flex gap-3 max-w-sm mx-auto">
         <button
-          onClick={handleDownload}
-          className="flex-1 py-3 rounded-xl accent-gradient text-white font-medium text-sm hover:opacity-90 transition-opacity"
+          onClick={handleSaveCard}
+          disabled={generating}
+          className="flex-1 py-3 rounded-xl accent-gradient text-white font-medium text-sm hover:opacity-90 transition-opacity disabled:opacity-50"
         >
-          保存卡片
+          {generating ? "生成中..." : "保存卡片"}
         </button>
         <button
           onClick={handleCopyLink}
