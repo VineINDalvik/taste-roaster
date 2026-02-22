@@ -110,6 +110,16 @@ function deriveMbtiType(dims: {
   ).toUpperCase();
 }
 
+function fixMbtiInText(
+  text: string | undefined,
+  aiType: string | undefined,
+  correctType: string
+): string {
+  if (!text) return "";
+  if (!aiType || aiType === correctType) return text;
+  return text.replaceAll(aiType, correctType).replaceAll(aiType.toLowerCase(), correctType);
+}
+
 export default function ResultPage({
   params,
 }: {
@@ -130,6 +140,12 @@ export default function ResultPage({
     if (!report?.mbti?.dimensions) return report?.mbti?.type || "????";
     return deriveMbtiType(report.mbti.dimensions);
   }, [report?.mbti]);
+
+  const aiType = report?.mbti?.type;
+  const ft = useCallback(
+    (text: string | undefined) => fixMbtiInText(text, aiType, mbtiType),
+    [aiType, mbtiType]
+  );
 
   const isDeepUnlocked = !!(
     report?.personality ||
@@ -325,11 +341,11 @@ export default function ResultPage({
         <div className="animate-fade-in-up">
           <ShareCard
             mbtiType={mbtiType}
-            mbtiTitle={report.mbti.title}
+            mbtiTitle={ft(report.mbti.title)}
             dimensions={report.mbti.dimensions}
-            roast={report.roast}
+            roast={ft(report.roast)}
             radarData={report.radarData}
-            summary={report.summary}
+            summary={ft(report.summary)}
             itemCount={report.itemCount}
             doubanName={report.doubanName}
             bookCount={report.bookCount}
@@ -352,7 +368,7 @@ export default function ResultPage({
             </div>
             {report.mbti.summary && (
               <p className="text-xs text-gray-300 leading-relaxed pt-2 border-t border-white/10">
-                {report.mbti.summary}
+                {ft(report.mbti.summary)}
               </p>
             )}
           </div>
@@ -383,17 +399,17 @@ export default function ResultPage({
               <AnalysisSection
                 icon="📚"
                 title={`${mbtiType} 的阅读品味`}
-                content={report.bookAnalysis}
+                content={ft(report.bookAnalysis)}
               />
               <AnalysisSection
                 icon="🎬"
                 title={`${mbtiType} 的观影品味`}
-                content={report.movieAnalysis}
+                content={ft(report.movieAnalysis)}
               />
               <AnalysisSection
                 icon="🎵"
                 title={`${mbtiType} 的音乐品味`}
-                content={report.musicAnalysis}
+                content={ft(report.musicAnalysis)}
               />
             </>
           ) : expanding ? (
@@ -475,7 +491,7 @@ export default function ResultPage({
               {report.timelineText && (
                 <div className="mt-3 pt-3 border-t border-white/10">
                   <p className="text-sm text-gray-300 leading-relaxed whitespace-pre-line">
-                    {report.timelineText}
+                    {ft(report.timelineText)}
                   </p>
                 </div>
               )}
@@ -549,17 +565,17 @@ export default function ResultPage({
             <AnalysisSection
               icon="🔗"
               title="跨领域品味关联"
-              content={report.crossDomain}
+              content={ft(report.crossDomain)}
             />
             <AnalysisSection
               icon="🧠"
               title={`${mbtiType} 深度人格画像`}
-              content={report.personality}
+              content={ft(report.personality)}
             />
             <AnalysisSection
               icon="🎯"
               title="品味盲区"
-              content={report.blindSpots}
+              content={ft(report.blindSpots)}
             />
 
             {/* Recommendations with Douban links */}
