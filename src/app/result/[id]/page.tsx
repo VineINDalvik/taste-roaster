@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useRef, use } from "react";
+import { useEffect, useState, useRef, use, useMemo, useCallback } from "react";
 import Link from "next/link";
 import ShareCard from "@/components/ShareCard";
 
@@ -99,6 +99,17 @@ function getDoubanSearchUrl(title: string, type: "book" | "movie" | "music") {
   return `https://search.douban.com/${typeMap[type]}/subject_search?search_text=${q}`;
 }
 
+function deriveMbtiType(dims: {
+  ie: MBTIDimension;
+  ns: MBTIDimension;
+  tf: MBTIDimension;
+  jp: MBTIDimension;
+}): string {
+  return (
+    dims.ie.letter + dims.ns.letter + dims.tf.letter + dims.jp.letter
+  ).toUpperCase();
+}
+
 export default function ResultPage({
   params,
 }: {
@@ -115,6 +126,11 @@ export default function ResultPage({
 
   const [expanding, setExpanding] = useState(false);
 
+  const mbtiType = useMemo(() => {
+    if (!report?.mbti?.dimensions) return report?.mbti?.type || "????";
+    return deriveMbtiType(report.mbti.dimensions);
+  }, [report?.mbti]);
+
   const isDeepUnlocked = !!(
     report?.personality ||
     report?.crossDomain ||
@@ -123,9 +139,9 @@ export default function ResultPage({
 
   const hasExpandContent = !!(
     report?.bookAnalysis ||
-    report?.movieAnalysis ||
-    report?.timelineMonths?.length
+    report?.movieAnalysis
   );
+  const hasTimeline = !!(report?.timelineMonths?.length);
 
   useEffect(() => {
     const stored = localStorage.getItem(`taste-report-${id}`);
@@ -141,51 +157,52 @@ export default function ResultPage({
     setLoading(false);
   }, [id]);
 
-  // Auto-fetch expand content (book/movie/music analysis + timeline)
-  useEffect(() => {
-    if (!report?.input || !report?.mbti?.type || hasExpandContent || expanding) return;
+  const handleLoadExpand = useCallback(async () => {
+    if (!report?.input || !report?.mbti?.type || expanding) return;
     setExpanding(true);
 
-    fetch(`/api/expand/${id}`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        id: report.id,
-        input: report.input,
-        mbti: report.mbti,
-        roast: report.roast,
-        summary: report.summary,
-        radarData: report.radarData,
-      }),
-    })
-      .then(async (res) => {
-        if (!res.ok) return;
-        const ct = res.headers.get("content-type") ?? "";
-        if (!ct.includes("application/json")) return;
-        const data = await res.json();
-        setReport((prev) => {
-          if (!prev) return prev;
-          const updated = {
-            ...prev,
-            bookAnalysis: data.bookAnalysis || prev.bookAnalysis,
-            movieAnalysis: data.movieAnalysis || prev.movieAnalysis,
-            musicAnalysis: data.musicAnalysis || prev.musicAnalysis,
-            timelineMonths: data.timelineMonths?.length
-              ? data.timelineMonths
-              : prev.timelineMonths,
-            timelineText: data.timelineText || prev.timelineText,
-          };
-          localStorage.setItem(
-            `taste-report-${id}`,
-            JSON.stringify(updated)
-          );
-          return updated;
-        });
-      })
-      .catch(() => {})
-      .finally(() => setExpanding(false));
+    try {
+      const res = await fetch(`/api/expand/${id}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          id: report.id,
+          input: report.input,
+          mbti: report.mbti,
+          roast: report.roast,
+          summary: report.summary,
+          radarData: report.radarData,
+        }),
+      });
+      if (!res.ok) throw new Error("请求失败");
+      const ct = res.headers.get("content-type") ?? "";
+      if (!ct.includes("application/json")) throw new Error("返回格式异常");
+      const data = await res.json();
+      setReport((prev) => {
+        if (!prev) return prev;
+        const updated = {
+          ...prev,
+          bookAnalysis: data.bookAnalysis || prev.bookAnalysis,
+          movieAnalysis: data.movieAnalysis || prev.movieAnalysis,
+          musicAnalysis: data.musicAnalysis || prev.musicAnalysis,
+          timelineMonths: data.timelineMonths?.length
+            ? data.timelineMonths
+            : prev.timelineMonths,
+          timelineText: data.timelineText || prev.timelineText,
+        };
+        localStorage.setItem(
+          `taste-report-${id}`,
+          JSON.stringify(updated)
+        );
+        return updated;
+      });
+    } catch {
+      // silently fail, user can retry via button
+    } finally {
+      setExpanding(false);
+    }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [report?.id]);
+  }, [report?.id, expanding]);
 
   const handleDeepUnlock = async () => {
     if (!report?.input) {
@@ -307,7 +324,7 @@ export default function ResultPage({
         {/* Share Card */}
         <div className="animate-fade-in-up">
           <ShareCard
-            mbtiType={report.mbti.type}
+            mbtiType={mbtiType}
             mbtiTitle={report.mbti.title}
             dimensions={report.mbti.dimensions}
             roast={report.roast}
@@ -325,7 +342,7 @@ export default function ResultPage({
         <div className="animate-fade-in-up animate-delay-100">
           <div className="card-glass rounded-xl p-5 space-y-3">
             <h3 className="text-sm font-bold text-[#667eea]">
-              🧬 MBTI 维度解读
+              🧬 {mbtiType} 维度解读
             </h3>
             <div className="space-y-3">
               <EvidenceRow label="I/E" dim={report.mbti.dimensions.ie} />
@@ -358,24 +375,24 @@ export default function ResultPage({
         {/* === FREE CONTENT: Book/Movie/Music Analysis === */}
         <div className="space-y-4 animate-fade-in-up animate-delay-200">
           <h2 className="text-lg font-bold text-white flex items-center gap-2">
-            <span className="text-[#667eea]">✦</span> {report.mbti.type}{" "}
+            <span className="text-[#667eea]">✦</span> {mbtiType}{" "}
             品味报告
           </h2>
           {hasExpandContent ? (
             <>
               <AnalysisSection
                 icon="📚"
-                title={`${report.mbti.type} 的阅读品味`}
+                title={`${mbtiType} 的阅读品味`}
                 content={report.bookAnalysis}
               />
               <AnalysisSection
                 icon="🎬"
-                title={`${report.mbti.type} 的观影品味`}
+                title={`${mbtiType} 的观影品味`}
                 content={report.movieAnalysis}
               />
               <AnalysisSection
                 icon="🎵"
-                title={`${report.mbti.type} 的音乐品味`}
+                title={`${mbtiType} 的音乐品味`}
                 content={report.musicAnalysis}
               />
             </>
@@ -383,13 +400,26 @@ export default function ResultPage({
             <div className="card-glass rounded-xl p-5 text-center space-y-2">
               <div className="text-lg animate-pulse">📊</div>
               <p className="text-sm text-gray-400">
-                正在生成书影音品味分析和时间线...
+                正在生成品味分析和时间线...
               </p>
               <div className="w-32 mx-auto h-1 bg-white/10 rounded-full overflow-hidden">
                 <div className="h-full w-1/2 accent-gradient rounded-full animate-pulse" />
               </div>
             </div>
-          ) : null}
+          ) : (
+            <button
+              onClick={handleLoadExpand}
+              className="w-full flex items-center gap-4 p-4 rounded-xl card-glass border border-[#667eea]/20 hover:border-[#667eea]/40 transition-all group"
+              style={{ background: "linear-gradient(135deg, rgba(102,126,234,0.06), rgba(233,69,96,0.04))" }}
+            >
+              <span className="text-xl flex-shrink-0">📊</span>
+              <span className="flex-1 text-left">
+                <span className="block text-sm font-semibold text-white">加载完整品味分析</span>
+                <span className="block text-xs text-gray-500 mt-0.5">书影音逐项分析 + 品味时间线 · 约需 10-15 秒</span>
+              </span>
+              <span className="text-[#667eea] group-hover:translate-x-1 transition-transform">→</span>
+            </button>
+          )}
         </div>
 
         {/* === FREE CONTENT: Timeline === */}
@@ -453,6 +483,22 @@ export default function ResultPage({
           </div>
         )}
 
+        {/* Timeline retry button */}
+        {hasExpandContent && !hasTimeline && !expanding && (
+          <button
+            onClick={handleLoadExpand}
+            className="w-full flex items-center gap-4 p-4 rounded-xl card-glass border border-[#667eea]/20 hover:border-[#667eea]/40 transition-all group animate-fade-in-up animate-delay-200"
+            style={{ background: "linear-gradient(135deg, rgba(102,126,234,0.06), rgba(233,69,96,0.04))" }}
+          >
+            <span className="text-xl flex-shrink-0">📅</span>
+            <span className="flex-1 text-left">
+              <span className="block text-sm font-semibold text-white">重新加载时间线</span>
+              <span className="block text-xs text-gray-500 mt-0.5">品味分析已加载，点击重试时间线</span>
+            </span>
+            <span className="text-[#667eea] group-hover:translate-x-1 transition-transform">↻</span>
+          </button>
+        )}
+
         {/* === UNLOCK SECTION: Deep Analysis === */}
         {!isDeepUnlocked ? (
           unlocking ? (
@@ -471,7 +517,7 @@ export default function ResultPage({
                   </li>
                   <li className="flex items-start gap-2">
                     <span className="text-[#e94560]">✦</span>
-                    {report.mbti.type} 深度人格画像
+                    {mbtiType} 深度人格画像
                   </li>
                   <li className="flex items-start gap-2">
                     <span className="text-[#e94560]">✦</span>
@@ -507,7 +553,7 @@ export default function ResultPage({
             />
             <AnalysisSection
               icon="🧠"
-              title={`${report.mbti.type} 深度人格画像`}
+              title={`${mbtiType} 深度人格画像`}
               content={report.personality}
             />
             <AnalysisSection
@@ -520,7 +566,7 @@ export default function ResultPage({
             {report.recommendations && report.recommendations.length > 0 && (
               <div className="card-glass rounded-xl p-5 space-y-3">
                 <h3 className="text-sm font-bold text-[#e94560]">
-                  💡 {report.mbti.type} 专属推荐
+                  💡 {mbtiType} 专属推荐
                 </h3>
                 <p className="text-xs text-gray-500">
                   已排除你读过/看过/听过的作品 · 点击可跳转豆瓣
