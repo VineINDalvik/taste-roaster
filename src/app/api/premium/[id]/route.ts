@@ -6,23 +6,25 @@ import {
   generateRecommendations,
   generateGraph,
 } from "@/lib/analyzer";
-import type { TasteReport, TasteInput } from "@/lib/types";
+import type { TasteReport, TasteInput, CulturalMBTI } from "@/lib/types";
 
 export const maxDuration = 120;
 
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const basicReport = body as Partial<TasteReport> & { input: TasteInput };
+    const basicReport = body as Partial<TasteReport> & {
+      input: TasteInput;
+      mbti: CulturalMBTI;
+    };
 
-    if (!basicReport?.input?.doubanId || !basicReport?.label) {
+    if (!basicReport?.input?.doubanId || !basicReport?.mbti?.type) {
       return NextResponse.json(
         { error: "报告数据不完整，请重新生成基础报告" },
         { status: 400 }
       );
     }
 
-    // Full scrape for premium (includes reviews, diaries, statuses)
     let fullInput: TasteInput;
     try {
       const fullData = await scrapeDoubanFull(basicReport.input.doubanId);
@@ -38,7 +40,6 @@ export async function POST(req: NextRequest) {
         source: "douban",
       };
     } catch {
-      // If full scrape fails, use the quick data we already have
       fullInput = basicReport.input;
     }
 
@@ -46,9 +47,12 @@ export async function POST(req: NextRequest) {
       id: body.id ?? "temp",
       createdAt: body.createdAt ?? new Date().toISOString(),
       input: fullInput,
-      label: basicReport.label!,
+      mbti: basicReport.mbti,
       roast: basicReport.roast ?? "",
-      radarData: basicReport.radarData ?? { depth: 50, breadth: 50, uniqueness: 50, emotionSensitivity: 50, timeSpan: 50 },
+      radarData: basicReport.radarData ?? {
+        depth: 50, breadth: 50, uniqueness: 50,
+        emotionSensitivity: 50, timeSpan: 50,
+      },
       summary: basicReport.summary ?? "",
       isPremium: false,
     };
@@ -69,9 +73,8 @@ export async function POST(req: NextRequest) {
       crossDomain: premium.crossDomain,
       personality: premium.personality,
       blindSpots: premium.blindSpots,
-      recommendations,
+      recommendations: recommendations.filter((r) => !r.alreadyConsumed),
       graph,
-      // Return enriched counts so UI can update
       fullCounts: {
         bookCount: fullInput.books.length,
         movieCount: fullInput.movies.length,

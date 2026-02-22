@@ -1,6 +1,6 @@
 import { getOpenAI } from "./openai";
 import {
-  TASTE_ANALYSIS_PROMPT,
+  MBTI_ANALYSIS_PROMPT,
   PREMIUM_ANALYSIS_PROMPT,
   TIMELINE_PROMPT,
   RECOMMENDATION_PROMPT,
@@ -14,36 +14,44 @@ import { truncateForTokenBudget, groupByMonth } from "./token-budget";
 import type {
   TasteInput,
   TasteReport,
+  CulturalMBTI,
   RadarData,
   MonthSnapshot,
   RecommendationItem,
+  RealCounts,
 } from "./types";
 
-function buildPromptData(input: TasteInput, originalCounts?: Record<string, number>, wasTruncated?: boolean) {
-  const totalCount =
+function buildPromptData(
+  input: TasteInput,
+  realCounts?: RealCounts,
+  originalCounts?: Record<string, number>,
+  wasTruncated?: boolean
+) {
+  const sampleCount =
     input.books.length +
     input.movies.length +
-    input.music.length +
-    (input.reviews?.length ?? 0) +
-    (input.diaries?.length ?? 0) +
-    (input.statuses?.length ?? 0);
+    input.music.length;
 
   let truncateNote = "";
   if (wasTruncated && originalCounts) {
     const origTotal =
-      originalCounts.books +
-      originalCounts.movies +
-      originalCounts.music +
-      originalCounts.reviews +
-      originalCounts.diaries +
-      originalCounts.statuses;
-    truncateNote = `，原始共${origTotal}条，已截取最近${totalCount}条用于分析`;
+      originalCounts.books + originalCounts.movies + originalCounts.music;
+    truncateNote = `，已从${origTotal}条中采样${sampleCount}条用于分析`;
   }
 
   return {
     userName: input.doubanName || input.doubanId || "匿名用户",
-    totalCount: String(totalCount),
+    sampleCount: String(sampleCount),
+    totalCount: String(
+      sampleCount +
+      (input.reviews?.length ?? 0) +
+      (input.diaries?.length ?? 0) +
+      (input.statuses?.length ?? 0)
+    ),
     truncateNote,
+    realBooks: String(realCounts?.books ?? input.books.length),
+    realMovies: String(realCounts?.movies ?? input.movies.length),
+    realMusic: String(realCounts?.music ?? input.music.length),
     bookCount: String(input.books.length),
     movieCount: String(input.movies.length),
     musicCount: String(input.music.length),
@@ -68,23 +76,24 @@ function fillTemplate(template: string, data: Record<string, string>): string {
 }
 
 export async function generateBasicReport(
-  input: TasteInput
+  input: TasteInput,
+  realCounts?: RealCounts
 ): Promise<{
-  label: string;
+  mbti: CulturalMBTI;
   roast: string;
   radar: RadarData;
   summary: string;
 }> {
   const { input: truncated, wasTruncated, originalCounts } = truncateForTokenBudget(input);
   const openai = getOpenAI();
-  const data = buildPromptData(truncated, originalCounts, wasTruncated);
-  const prompt = fillTemplate(TASTE_ANALYSIS_PROMPT, data);
+  const data = buildPromptData(truncated, realCounts, originalCounts, wasTruncated);
+  const prompt = fillTemplate(MBTI_ANALYSIS_PROMPT, data);
 
   const response = await openai.chat.completions.create({
     model: "gpt-4o-mini",
     messages: [{ role: "user", content: prompt }],
-    max_tokens: 1500,
-    temperature: 0.85,
+    max_tokens: 2000,
+    temperature: 0.8,
   });
 
   const text = response.choices[0]?.message?.content ?? "{}";
@@ -93,8 +102,36 @@ export async function generateBasicReport(
 
   const parsed = JSON.parse(jsonMatch[0]);
 
+  const mbti: CulturalMBTI = {
+    type: parsed.mbti?.type ?? "INFP",
+    title: parsed.mbti?.title ?? "文化探索者",
+    dimensions: {
+      ie: {
+        letter: parsed.mbti?.dimensions?.ie?.letter ?? "I",
+        score: parsed.mbti?.dimensions?.ie?.score ?? 60,
+        evidence: parsed.mbti?.dimensions?.ie?.evidence ?? "",
+      },
+      ns: {
+        letter: parsed.mbti?.dimensions?.ns?.letter ?? "N",
+        score: parsed.mbti?.dimensions?.ns?.score ?? 60,
+        evidence: parsed.mbti?.dimensions?.ns?.evidence ?? "",
+      },
+      tf: {
+        letter: parsed.mbti?.dimensions?.tf?.letter ?? "T",
+        score: parsed.mbti?.dimensions?.tf?.score ?? 60,
+        evidence: parsed.mbti?.dimensions?.tf?.evidence ?? "",
+      },
+      jp: {
+        letter: parsed.mbti?.dimensions?.jp?.letter ?? "P",
+        score: parsed.mbti?.dimensions?.jp?.score ?? 60,
+        evidence: parsed.mbti?.dimensions?.jp?.evidence ?? "",
+      },
+    },
+    summary: parsed.mbti?.summary ?? "",
+  };
+
   return {
-    label: parsed.label ?? "神秘品味人",
+    mbti,
     roast: parsed.roast ?? "数据太少，品味成谜。",
     radar: {
       depth: parsed.radar?.depth ?? 50,
@@ -120,8 +157,9 @@ export async function generatePremiumReport(
   const { input: truncated, wasTruncated, originalCounts } = truncateForTokenBudget(report.input);
   const openai = getOpenAI();
   const data = {
-    ...buildPromptData(truncated, originalCounts, wasTruncated),
-    label: report.label,
+    ...buildPromptData(truncated, undefined, originalCounts, wasTruncated),
+    mbtiType: report.mbti.type,
+    mbtiTitle: report.mbti.title,
     roast: report.roast,
   };
   const prompt = fillTemplate(PREMIUM_ANALYSIS_PROMPT, data);
@@ -165,8 +203,7 @@ export async function generateTimeline(
     if (m.diaryTitles.length > 0)
       monthlyData += `- 日记：${m.diaryTitles.join("、")}\n`;
     if (
-      m.books.length + m.movies.length + m.music.length + m.diaryTitles.length ===
-      0
+      m.books.length + m.movies.length + m.music.length + m.diaryTitles.length === 0
     )
       monthlyData += `- (本月无记录)\n`;
   }
@@ -174,7 +211,8 @@ export async function generateTimeline(
   const openai = getOpenAI();
   const data = {
     userName: report.input.doubanName || report.input.doubanId || "匿名用户",
-    label: report.label,
+    mbtiType: report.mbti.type,
+    mbtiTitle: report.mbti.title,
     monthCount: String(monthlyBuckets.length),
     monthlyData,
   };
@@ -219,26 +257,19 @@ export async function generateRecommendations(
 ): Promise<RecommendationItem[]> {
   const openai = getOpenAI();
 
-  const bookSample = report.input.books
-    .slice(0, 15)
-    .map((b) => b.title)
-    .join("、") || "无";
-  const movieSample = report.input.movies
-    .slice(0, 15)
-    .map((m) => m.title)
-    .join("、") || "无";
-  const musicSample = report.input.music
-    .slice(0, 15)
-    .map((m) => m.title)
-    .join("、") || "无";
+  // Pass ALL consumed titles so AI avoids them
+  const bookTitles = report.input.books.map((b) => b.title).join("、") || "无";
+  const movieTitles = report.input.movies.map((m) => m.title).join("、") || "无";
+  const musicTitles = report.input.music.map((m) => m.title).join("、") || "无";
 
   const data = {
     userName: report.input.doubanName || report.input.doubanId || "匿名用户",
-    label: report.label,
+    mbtiType: report.mbti.type,
+    mbtiTitle: report.mbti.title,
     summary: report.summary,
-    bookSample,
-    movieSample,
-    musicSample,
+    bookTitles,
+    movieTitles,
+    musicTitles,
   };
 
   const prompt = fillTemplate(RECOMMENDATION_PROMPT, data);
@@ -255,12 +286,19 @@ export async function generateRecommendations(
   if (!jsonMatch) return [];
 
   const parsed = JSON.parse(jsonMatch[0]);
+  const allTitles = new Set([
+    ...report.input.books.map((b) => b.title),
+    ...report.input.movies.map((m) => m.title),
+    ...report.input.music.map((m) => m.title),
+  ]);
+
   return (parsed.recommendations ?? []).map(
     (r: { title: string; type: string; reason: string; matchScore: number }) => ({
       title: r.title,
       type: r.type as "book" | "movie" | "music",
       reason: r.reason,
       matchScore: r.matchScore ?? 70,
+      alreadyConsumed: allTitles.has(r.title),
     })
   );
 }
@@ -279,6 +317,7 @@ export async function generateGraph(
 
   const data = {
     userName: report.input.doubanName || report.input.doubanId || "匿名用户",
+    mbtiType: report.mbti.type,
     bookSample,
     movieSample,
     musicSample,

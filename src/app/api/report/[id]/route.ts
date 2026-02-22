@@ -24,7 +24,7 @@ export async function GET(
     id: report.id,
     createdAt: report.createdAt,
     doubanName: report.input.doubanName,
-    label: report.label,
+    mbti: report.mbti,
     roast: report.roast,
     radarData: report.radarData,
     summary: report.summary,

@@ -35,6 +35,24 @@ export interface TasteInput {
   source: "douban" | "manual";
 }
 
+export interface MBTIDimension {
+  letter: string; // "I" | "E" | "N" | "S" | "T" | "F" | "J" | "P"
+  score: number; // 0-100 (percentage toward this pole)
+  evidence: string; // concise reasoning from taste data
+}
+
+export interface CulturalMBTI {
+  type: string; // e.g. "INTJ"
+  title: string; // e.g. "理性主义审美建筑师"
+  dimensions: {
+    ie: MBTIDimension; // Introversion vs Extraversion
+    ns: MBTIDimension; // iNtuition vs Sensing
+    tf: MBTIDimension; // Thinking vs Feeling
+    jp: MBTIDimension; // Judging vs Perceiving
+  };
+  summary: string; // overall MBTI interpretation
+}
+
 export interface RadarData {
   depth: number; // 0-100
   breadth: number;
@@ -47,10 +65,11 @@ export interface TasteReport {
   id: string;
   createdAt: string;
   input: TasteInput;
-  label: string;
+  mbti: CulturalMBTI;
   roast: string;
   radarData: RadarData;
   summary: string;
+  // premium fields
   bookAnalysis?: string;
   movieAnalysis?: string;
   musicAnalysis?: string;
@@ -78,6 +97,13 @@ export interface RecommendationItem {
   type: "book" | "movie" | "music";
   reason: string;
   matchScore: number; // 0-100
+  alreadyConsumed?: boolean;
+}
+
+export interface RealCounts {
+  books: number;
+  movies: number;
+  music: number;
 }
 
 export interface CompareResult {

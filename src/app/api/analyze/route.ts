@@ -32,33 +32,31 @@ export async function POST(req: NextRequest) {
       source: "douban",
     };
 
-    const result = await generateBasicReport(input);
+    const result = await generateBasicReport(input, doubanData.profile.realCounts);
 
     const id = uuidv4();
+    const sampleCount = input.books.length + input.movies.length + input.music.length;
 
     return NextResponse.json({
       id,
       createdAt: new Date().toISOString(),
       doubanName: doubanData.profile.name,
-      label: result.label,
+      mbti: result.mbti,
       roast: result.roast,
       radarData: result.radar,
       summary: result.summary,
       isPremium: false,
       input,
+      sampleCount,
+      // Real counts from profile page
+      realCounts: doubanData.profile.realCounts,
+      bookCount: doubanData.profile.realCounts.books || input.books.length,
+      movieCount: doubanData.profile.realCounts.movies || input.movies.length,
+      musicCount: doubanData.profile.realCounts.music || input.music.length,
       itemCount:
-        input.books.length +
-        input.movies.length +
-        input.music.length +
-        input.reviews.length +
-        input.diaries.length +
-        input.statuses.length,
-      bookCount: input.books.length,
-      movieCount: input.movies.length,
-      musicCount: input.music.length,
-      reviewCount: input.reviews.length,
-      diaryCount: input.diaries.length,
-      statusCount: input.statuses.length,
+        (doubanData.profile.realCounts.books || input.books.length) +
+        (doubanData.profile.realCounts.movies || input.movies.length) +
+        (doubanData.profile.realCounts.music || input.music.length),
     });
   } catch (error) {
     console.error("Analysis error:", error);

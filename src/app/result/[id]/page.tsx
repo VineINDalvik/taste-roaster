@@ -9,6 +9,24 @@ const TasteGraph = dynamic(() => import("@/components/TasteGraph"), {
   ssr: false,
 });
 
+interface MBTIDimension {
+  letter: string;
+  score: number;
+  evidence: string;
+}
+
+interface CulturalMBTI {
+  type: string;
+  title: string;
+  dimensions: {
+    ie: MBTIDimension;
+    ns: MBTIDimension;
+    tf: MBTIDimension;
+    jp: MBTIDimension;
+  };
+  summary: string;
+}
+
 interface MonthSnapshot {
   month: string;
   books: string[];
@@ -24,11 +42,12 @@ interface RecommendationItem {
   type: "book" | "movie" | "music";
   reason: string;
   matchScore: number;
+  alreadyConsumed?: boolean;
 }
 
 interface ReportData {
   id: string;
-  label: string;
+  mbti: CulturalMBTI;
   roast: string;
   radarData: {
     depth: number;
@@ -42,6 +61,7 @@ interface ReportData {
   doubanName?: string;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   input?: any;
+  sampleCount?: number;
   itemCount: number;
   bookCount: number;
   movieCount: number;
@@ -75,23 +95,22 @@ interface ReportData {
 
 const UNLOCK_MESSAGES = [
   "正在全量扫描书影音数据...",
-  "深入挖掘你的评论和日记...",
-  "AI 正在阅读你写过的每一篇影评...",
-  "分析你的阅读品味进化轨迹...",
-  "对比同类型用户画像...",
+  "深入挖掘评论和日记...",
+  "分析你的 MBTI 维度变化...",
+  "解读阅读品味进化轨迹...",
   "构建品味知识图谱...",
-  "生成个性化推荐...",
-  "AI 正在打磨最犀利的点评...",
-  "快好了，最后的深度分析...",
+  "生成个性化推荐（排除已读）...",
+  "AI 正在写深度人格画像...",
+  "快好了，最后的打磨...",
 ];
 
 const FUN_FACTS = [
-  "你知道吗？豆瓣评分最高的中文书是《红楼梦》",
-  "数据显示：标记超过500部电影的人只占豆瓣用户的3%",
-  "有趣的是：凌晨标记书影音的人品味普遍更小众",
-  "豆瓣最早的用户编号只有4位数",
-  "看文艺片多的人通常也更喜欢读非虚构类书籍",
-  "音乐品味是三者中最能反映人格特质的",
+  "INTJ 是豆瓣上最常见的文化MBTI——理性派果然爱数据",
+  "数据显示：ENFP 用户的书影音品类最杂食",
+  "INFJ 用户平均每部电影写的短评最长",
+  "看文艺片多的人80%测出来是 xNxP",
+  "音乐品味是四个维度中最能区分 T/F 的",
+  "ISTP 用户偏好硬科幻和推理的概率最高",
 ];
 
 export default function ResultPage({
@@ -131,7 +150,6 @@ export default function ResultPage({
   const handleShareUnlock = async () => {
     if (!report?.input) return;
 
-    // Step 1: Trigger the share action (copy link + download card)
     const url = window.location.href;
     if (navigator.clipboard?.writeText) {
       await navigator.clipboard.writeText(url).catch(() => {});
@@ -146,7 +164,6 @@ export default function ResultPage({
       document.body.removeChild(ta);
     }
 
-    // Step 2: Generate share-unlock content (personality + crossDomain)
     setShareUnlocking(true);
     try {
       const res = await fetch(`/api/share-unlock/${id}`, {
@@ -155,7 +172,7 @@ export default function ResultPage({
         body: JSON.stringify({
           id: report.id,
           input: report.input,
-          label: report.label,
+          mbti: report.mbti,
           roast: report.roast,
           summary: report.summary,
           radarData: report.radarData,
@@ -205,7 +222,7 @@ export default function ResultPage({
         body: JSON.stringify({
           id: report.id,
           input: report.input,
-          label: report.label,
+          mbti: report.mbti,
           roast: report.roast,
           summary: report.summary,
           radarData: report.radarData,
@@ -272,7 +289,7 @@ export default function ResultPage({
             href="/upload"
             className="inline-block px-6 py-2 rounded-xl accent-gradient text-white text-sm"
           >
-            重新鉴定
+            重新测试
           </Link>
         </div>
       </main>
@@ -286,19 +303,53 @@ export default function ResultPage({
           href="/upload"
           className="inline-flex items-center text-sm text-gray-400 hover:text-white transition-colors"
         >
-          ← 重新鉴定
+          ← 重新测试
         </Link>
 
-        {/* Share Card */}
+        {/* Share Card with MBTI */}
         <div className="animate-fade-in-up">
           <ShareCard
-            label={report.label}
+            mbtiType={report.mbti.type}
+            mbtiTitle={report.mbti.title}
+            dimensions={report.mbti.dimensions}
             roast={report.roast}
             radarData={report.radarData}
             summary={report.summary}
             itemCount={report.itemCount}
             doubanName={report.doubanName}
           />
+        </div>
+
+        {/* MBTI Evidence Section */}
+        <div className="animate-fade-in-up animate-delay-100">
+          <div className="card-glass rounded-xl p-5 space-y-3">
+            <h3 className="text-sm font-bold text-[#667eea]">
+              🧬 MBTI 维度解读
+            </h3>
+            <div className="space-y-3">
+              <EvidenceRow
+                label="I/E"
+                dim={report.mbti.dimensions.ie}
+              />
+              <EvidenceRow
+                label="N/S"
+                dim={report.mbti.dimensions.ns}
+              />
+              <EvidenceRow
+                label="T/F"
+                dim={report.mbti.dimensions.tf}
+              />
+              <EvidenceRow
+                label="J/P"
+                dim={report.mbti.dimensions.jp}
+              />
+            </div>
+            {report.mbti.summary && (
+              <p className="text-xs text-gray-300 leading-relaxed pt-2 border-t border-white/10">
+                {report.mbti.summary}
+              </p>
+            )}
+          </div>
         </div>
 
         {/* Stats */}
@@ -316,14 +367,14 @@ export default function ResultPage({
             </div>
           )}
 
-        {/* Free hint */}
-        {!report.isPremium && (
+        {/* Sample note */}
+        {!report.isPremium && report.sampleCount && (
           <div className="text-center text-xs text-gray-500 animate-fade-in-up animate-delay-100">
-            以上基于近期 {report.itemCount} 条记录快速分析
+            基于 {report.sampleCount} 条采样数据分析 · 分享或解锁获取全量深度报告
           </div>
         )}
 
-        {/* Share-unlock section (middle tier) */}
+        {/* Share-unlock section */}
         {!report.isPremium && !shareUnlocked && (
           <div className="animate-fade-in-up animate-delay-200">
             <div className="card-glass rounded-2xl p-6 text-center space-y-4">
@@ -332,20 +383,16 @@ export default function ResultPage({
                 分享解锁深度分析
               </h3>
               <p className="text-sm text-gray-400">
-                分享给朋友，免费解锁「人格画像」+「跨领域关联」
+                分享给朋友，免费解锁「{report.mbti.type} 深度人格画像」
               </p>
               <button
                 onClick={handleShareUnlock}
                 disabled={shareUnlocking}
                 className="w-full py-3 rounded-xl bg-gradient-to-r from-[#667eea] to-[#764ba2] text-white font-medium hover:opacity-90 transition-opacity disabled:opacity-50"
               >
-                {shareUnlocking
-                  ? "AI 正在分析..."
-                  : "分享并解锁 (免费)"}
+                {shareUnlocking ? "AI 正在分析..." : "分享并解锁 (免费)"}
               </button>
-              <p className="text-xs text-gray-500">
-                链接已自动复制到剪贴板
-              </p>
+              <p className="text-xs text-gray-500">链接已自动复制到剪贴板</p>
             </div>
           </div>
         )}
@@ -356,8 +403,16 @@ export default function ResultPage({
             <h2 className="text-lg font-bold text-white flex items-center gap-2">
               <span className="text-[#667eea]">✦</span> 分享解锁内容
             </h2>
-            <PremiumSection icon="🧠" title="人格画像透视" content={report.personality} />
-            <PremiumSection icon="🔗" title="跨领域关联" content={report.crossDomain} />
+            <PremiumSection
+              icon="🧠"
+              title={`${report.mbti.type} 深度人格画像`}
+              content={report.personality}
+            />
+            <PremiumSection
+              icon="🔗"
+              title="跨领域品味关联"
+              content={report.crossDomain}
+            />
           </div>
         )}
 
@@ -370,7 +425,9 @@ export default function ResultPage({
               <div className="card-glass rounded-2xl p-6 text-center space-y-4">
                 <div className="text-2xl">🔒</div>
                 <h3 className="text-lg font-bold text-white">
-                  {shareUnlocked ? "解锁完整报告" : "直接购买完整报告"}
+                  {shareUnlocked
+                    ? "解锁完整报告"
+                    : "直接购买完整报告"}
                 </h3>
                 <ul className="text-sm text-gray-400 space-y-1.5 text-left max-w-xs mx-auto">
                   <li className="flex items-start gap-2">
@@ -379,15 +436,15 @@ export default function ResultPage({
                   </li>
                   <li className="flex items-start gap-2">
                     <span className="text-[#e94560]">✦</span>
-                    书 / 影 / 音 分品类毒评
+                    书 / 影 / 音 分品类 MBTI 解读
                   </li>
                   <li className="flex items-start gap-2">
                     <span className="text-[#e94560]">✦</span>
-                    品味时间线 + 品味星图
+                    品味时间线 + 品味图谱
                   </li>
                   <li className="flex items-start gap-2">
                     <span className="text-[#e94560]">✦</span>
-                    10 部 AI 精准推荐
+                    AI 精准推荐（排除已读/已看/已听）
                   </li>
                 </ul>
                 <button
@@ -405,22 +462,23 @@ export default function ResultPage({
         ) : (
           <div className="space-y-6 animate-fade-in-up animate-delay-200">
             <h2 className="text-xl font-bold text-white flex items-center gap-2">
-              <span className="text-[#f5c518]">★</span> 完整品味报告
+              <span className="text-[#f5c518]">★</span> {report.mbti.type}{" "}
+              完整品味报告
             </h2>
 
             <PremiumSection
               icon="📚"
-              title="阅读品味"
+              title={`${report.mbti.type} 的阅读品味`}
               content={report.bookAnalysis}
             />
             <PremiumSection
               icon="🎬"
-              title="观影品味"
+              title={`${report.mbti.type} 的观影品味`}
               content={report.movieAnalysis}
             />
             <PremiumSection
               icon="🎵"
-              title="音乐品味"
+              title={`${report.mbti.type} 的音乐品味`}
               content={report.musicAnalysis}
             />
 
@@ -485,17 +543,17 @@ export default function ResultPage({
 
             <PremiumSection
               icon="🔗"
-              title="跨领域关联"
+              title="跨领域品味关联"
               content={report.crossDomain}
             />
             <PremiumSection
               icon="🧠"
-              title="人格画像透视"
+              title={`${report.mbti.type} 深度人格画像`}
               content={report.personality}
             />
             <PremiumSection
               icon="🎯"
-              title="品味盲区"
+              title={`${report.mbti.type} 的品味盲区`}
               content={report.blindSpots}
             />
 
@@ -534,34 +592,39 @@ export default function ResultPage({
             {report.recommendations && report.recommendations.length > 0 && (
               <div className="card-glass rounded-xl p-5 space-y-3">
                 <h3 className="text-sm font-bold text-[#e94560]">
-                  💡 AI 精准推荐
+                  💡 {report.mbti.type} 专属推荐
                 </h3>
+                <p className="text-xs text-gray-500">
+                  已排除你读过/看过/听过的作品
+                </p>
                 <div className="space-y-3">
-                  {report.recommendations.map((rec, i) => (
-                    <div
-                      key={i}
-                      className="flex items-start gap-3 p-3 rounded-lg bg-white/[0.03] hover:bg-white/[0.06] transition-colors"
-                    >
-                      <div className="flex-shrink-0 w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center text-sm">
-                        {rec.type === "book"
-                          ? "📖"
-                          : rec.type === "movie"
-                            ? "🎬"
-                            : "🎵"}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2">
-                          <span className="text-sm text-white font-medium truncate">
-                            {rec.title}
-                          </span>
-                          <MatchBadge score={rec.matchScore} />
+                  {report.recommendations
+                    .filter((r) => !r.alreadyConsumed)
+                    .map((rec, i) => (
+                      <div
+                        key={i}
+                        className="flex items-start gap-3 p-3 rounded-lg bg-white/[0.03] hover:bg-white/[0.06] transition-colors"
+                      >
+                        <div className="flex-shrink-0 w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center text-sm">
+                          {rec.type === "book"
+                            ? "📖"
+                            : rec.type === "movie"
+                              ? "🎬"
+                              : "🎵"}
                         </div>
-                        <p className="text-xs text-gray-400 mt-0.5 leading-relaxed">
-                          {rec.reason}
-                        </p>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm text-white font-medium truncate">
+                              {rec.title}
+                            </span>
+                            <MatchBadge score={rec.matchScore} />
+                          </div>
+                          <p className="text-xs text-gray-400 mt-0.5 leading-relaxed">
+                            {rec.reason}
+                          </p>
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    ))}
                 </div>
               </div>
             )}
@@ -577,7 +640,7 @@ export default function ResultPage({
             再测一个人
           </Link>
           <p className="text-xs text-gray-500">
-            分享链接给朋友，看看谁的品味更 &quot;独特&quot;
+            分享链接给朋友，看看谁是什么 MBTI
           </p>
         </div>
       </div>
@@ -585,7 +648,34 @@ export default function ResultPage({
   );
 }
 
-function UnlockingOverlay({ step, funFact }: { step: number; funFact: string }) {
+function EvidenceRow({
+  label,
+  dim,
+}: {
+  label: string;
+  dim: MBTIDimension;
+}) {
+  return (
+    <div className="flex items-start gap-3">
+      <div className="flex-shrink-0 w-10 h-6 rounded bg-white/5 flex items-center justify-center">
+        <span className="text-xs font-bold text-[#667eea]">
+          {dim.letter}
+        </span>
+      </div>
+      <p className="text-xs text-gray-400 leading-relaxed flex-1">
+        {dim.evidence}
+      </p>
+    </div>
+  );
+}
+
+function UnlockingOverlay({
+  step,
+  funFact,
+}: {
+  step: number;
+  funFact: string;
+}) {
   return (
     <div className="card-glass rounded-2xl p-8 text-center space-y-6 animate-fade-in-up">
       <div className="relative w-24 h-24 mx-auto">
@@ -594,7 +684,10 @@ function UnlockingOverlay({ step, funFact }: { step: number; funFact: string }) 
         <div className="absolute inset-3 rounded-full border-2 border-white/5" />
         <div
           className="absolute inset-3 rounded-full border-2 border-t-[#f5c518] animate-spin"
-          style={{ animationDirection: "reverse", animationDuration: "1.5s" }}
+          style={{
+            animationDirection: "reverse",
+            animationDuration: "1.5s",
+          }}
         />
         <div className="absolute inset-0 flex items-center justify-center text-2xl">
           🧠
@@ -607,7 +700,9 @@ function UnlockingOverlay({ step, funFact }: { step: number; funFact: string }) 
         <div className="w-56 mx-auto h-1.5 bg-white/10 rounded-full overflow-hidden">
           <div
             className="h-full accent-gradient rounded-full transition-all duration-1000 ease-out"
-            style={{ width: `${((step + 1) / UNLOCK_MESSAGES.length) * 100}%` }}
+            style={{
+              width: `${((step + 1) / UNLOCK_MESSAGES.length) * 100}%`,
+            }}
           />
         </div>
         <p className="text-xs text-gray-500">全量分析中 · 约需 30-60 秒</p>
