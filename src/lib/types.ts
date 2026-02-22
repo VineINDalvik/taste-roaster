@@ -47,18 +47,37 @@ export interface TasteReport {
   id: string;
   createdAt: string;
   input: TasteInput;
-  label: string; // e.g. "文艺复兴型废物"
-  roast: string; // one-liner roast
+  label: string;
+  roast: string;
   radarData: RadarData;
-  summary: string; // 2-3 sentence summary
+  summary: string;
   bookAnalysis?: string;
   movieAnalysis?: string;
   musicAnalysis?: string;
-  timeline?: string;
+  timelineText?: string;
+  timelineMonths?: MonthSnapshot[];
   crossDomain?: string;
   personality?: string;
   blindSpots?: string;
+  recommendations?: RecommendationItem[];
   isPremium: boolean;
+}
+
+export interface MonthSnapshot {
+  month: string; // "2026-02"
+  books: string[];
+  movies: string[];
+  music: string[];
+  mood: string;
+  tasteShift: string;
+  roast: string;
+}
+
+export interface RecommendationItem {
+  title: string;
+  type: "book" | "movie" | "music";
+  reason: string;
+  matchScore: number; // 0-100
 }
 
 export interface CompareResult {

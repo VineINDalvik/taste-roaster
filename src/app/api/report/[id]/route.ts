@@ -42,10 +42,12 @@ export async function GET(
     response.bookAnalysis = report.bookAnalysis;
     response.movieAnalysis = report.movieAnalysis;
     response.musicAnalysis = report.musicAnalysis;
-    response.timeline = report.timeline;
+    response.timelineMonths = report.timelineMonths;
+    response.timelineText = report.timelineText;
     response.crossDomain = report.crossDomain;
     response.personality = report.personality;
     response.blindSpots = report.blindSpots;
+    response.recommendations = report.recommendations;
   }
 
   return NextResponse.json(response);

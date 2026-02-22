@@ -1,48 +1,47 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getReport, updateReport } from "@/lib/store";
-import { generatePremiumReport } from "@/lib/analyzer";
+import {
+  generatePremiumReport,
+  generateTimeline,
+  generateRecommendations,
+  generateGraph,
+} from "@/lib/analyzer";
+import type { TasteReport } from "@/lib/types";
 
-export async function POST(
-  _req: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  const { id } = await params;
-  const report = getReport(id);
+export async function POST(req: NextRequest) {
+  try {
+    const body = await req.json();
+    const report = body as TasteReport;
 
-  if (!report) {
-    return NextResponse.json({ error: "报告不存在" }, { status: 404 });
-  }
+    if (!report?.input || !report?.label) {
+      return NextResponse.json(
+        { error: "报告数据不完整，请重新生成基础报告" },
+        { status: 400 }
+      );
+    }
 
-  if (report.isPremium) {
+    const [premium, timeline, recommendations, graph] = await Promise.all([
+      generatePremiumReport(report),
+      generateTimeline(report),
+      generateRecommendations(report),
+      generateGraph(report),
+    ]);
+
     return NextResponse.json({
-      message: "已解锁",
-      bookAnalysis: report.bookAnalysis,
-      movieAnalysis: report.movieAnalysis,
-      musicAnalysis: report.musicAnalysis,
-      timeline: report.timeline,
-      crossDomain: report.crossDomain,
-      personality: report.personality,
-      blindSpots: report.blindSpots,
+      bookAnalysis: premium.bookAnalysis,
+      movieAnalysis: premium.movieAnalysis,
+      musicAnalysis: premium.musicAnalysis,
+      timelineMonths: timeline.months,
+      timelineText: `${timeline.trend}\n\n${timeline.prediction}`,
+      crossDomain: premium.crossDomain,
+      personality: premium.personality,
+      blindSpots: premium.blindSpots,
+      recommendations,
+      graph,
     });
+  } catch (error) {
+    console.error("Premium generation error:", error);
+    const message =
+      error instanceof Error ? error.message : "深度分析失败，请重试";
+    return NextResponse.json({ error: message }, { status: 500 });
   }
-
-  // In production, verify payment here before generating
-  const premium = await generatePremiumReport(report);
-
-  const updated = updateReport(id, {
-    isPremium: true,
-    bookAnalysis: premium.bookAnalysis,
-    movieAnalysis: premium.movieAnalysis,
-    musicAnalysis: premium.musicAnalysis,
-    timeline: premium.timeline,
-    crossDomain: premium.crossDomain,
-    personality: premium.personality,
-    blindSpots: premium.blindSpots,
-  });
-
-  return NextResponse.json({
-    message: "解锁成功",
-    ...premium,
-    isPremium: updated?.isPremium,
-  });
 }

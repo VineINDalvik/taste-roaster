@@ -2,8 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { v4 as uuidv4 } from "uuid";
 import { scrapeDoubanUser } from "@/lib/douban-scraper";
 import { generateBasicReport } from "@/lib/analyzer";
-import { saveReport } from "@/lib/store";
-import type { TasteInput, TasteReport } from "@/lib/types";
+import type { TasteInput } from "@/lib/types";
 
 export async function POST(req: NextRequest) {
   try {
@@ -33,37 +32,27 @@ export async function POST(req: NextRequest) {
       source: "douban",
     };
 
-    const totalItems =
-      input.books.length +
-      input.movies.length +
-      input.music.length +
-      input.reviews.length +
-      input.diaries.length +
-      input.statuses.length;
-
     const result = await generateBasicReport(input);
 
-    const report: TasteReport = {
-      id: uuidv4(),
+    const id = uuidv4();
+
+    return NextResponse.json({
+      id,
       createdAt: new Date().toISOString(),
-      input,
+      doubanName: doubanData.profile.name,
       label: result.label,
       roast: result.roast,
       radarData: result.radar,
       summary: result.summary,
       isPremium: false,
-    };
-
-    saveReport(report);
-
-    return NextResponse.json({
-      id: report.id,
-      doubanName: doubanData.profile.name,
-      label: report.label,
-      roast: report.roast,
-      radarData: report.radarData,
-      summary: report.summary,
-      itemCount: totalItems,
+      input,
+      itemCount:
+        input.books.length +
+        input.movies.length +
+        input.music.length +
+        input.reviews.length +
+        input.diaries.length +
+        input.statuses.length,
       bookCount: input.books.length,
       movieCount: input.movies.length,
       musicCount: input.music.length,

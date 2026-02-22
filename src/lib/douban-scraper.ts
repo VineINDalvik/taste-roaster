@@ -49,16 +49,28 @@ async function scrapeProfile(userId: string): Promise<DoubanProfile> {
     $("title").text().split("的豆瓣")[0]?.trim() ||
     $(".info h1").text().trim() ||
     userId;
-  const avatar = $(".basic-info img").attr("src") || $("#db-usr-profile .pic img").attr("src") || "";
-  const intro = $(".user-info .intro .all")?.text().trim() || $(".intro .all")?.text().trim() || $(".user-info .intro")?.text().trim() || "";
+  const avatar =
+    $(".basic-info img").attr("src") ||
+    $("#db-usr-profile .pic img").attr("src") ||
+    "";
+  const intro =
+    $(".user-info .intro .all")?.text().trim() ||
+    $(".intro .all")?.text().trim() ||
+    $(".user-info .intro")?.text().trim() ||
+    "";
 
   return { id: userId, name, avatar, intro };
 }
 
+/**
+ * Scrape a user's "已读/已看/已听" collection.
+ * /collect = done items only (wish = /wish, doing = /do)
+ * Uses list mode for stable HTML structure, 15 items per page.
+ */
 async function scrapeCollection(
   userId: string,
   type: "book" | "movie" | "music",
-  maxPages: number = 50
+  maxPages: number = 150
 ): Promise<WorkItem[]> {
   const domain =
     type === "book"
@@ -66,69 +78,59 @@ async function scrapeCollection(
       : type === "movie"
         ? "movie.douban.com"
         : "music.douban.com";
-  const action = type === "book" ? "collect" : type === "movie" ? "collect" : "collect";
 
   const items: WorkItem[] = [];
+  const seenTitles = new Set<string>();
+  const pageSize = 15;
 
   for (let page = 0; page < maxPages; page++) {
-    const start = page * 15;
-    const url = `https://${domain}/people/${userId}/${action}?start=${start}&sort=time&rating=all&filter=all&mode=list`;
+    const start = page * pageSize;
+    const url = `https://${domain}/people/${userId}/collect?start=${start}&sort=time&mode=list`;
 
     try {
       const html = await fetchPage(url);
       const $ = cheerio.load(html);
 
-      const listItems = $(".list-view .item, .item.comment-item, li.subject-item");
+      // In list mode, items are in .list-view > .item
+      const listItems = $(".list-view .item");
 
-      if (listItems.length === 0 && page === 0) {
-        const gridItems = $(".item");
-        if (gridItems.length === 0) break;
+      if (listItems.length === 0) break;
 
-        gridItems.each((_, el) => {
-          const title = $(el).find("li.title a, .title a, em").text().trim();
-          const ratingEl = $(el).find("[class*='rating']").attr("class") || "";
-          const ratingMatch = ratingEl.match(/rating(\d)/);
-          const rating = ratingMatch ? parseInt(ratingMatch[1]) : undefined;
-          const date = $(el).find(".date, .collect-stamp, span.date").text().trim();
-          const comment = $(el).find(".comment, .short-note .comment, p.comment").text().trim();
+      let foundNew = false;
+      listItems.each((_, el) => {
+        const titleEl = $(el).find(".title a").first();
+        const title = (titleEl.text().trim() || titleEl.attr("title") || "")
+          .replace(/\s+/g, " ")
+          .trim();
 
-          if (title) {
-            items.push({ title, rating, date: date || undefined, comment: comment || undefined });
-          }
-        });
-      } else {
-        listItems.each((_, el) => {
-          const title =
-            $(el).find(".title a").first().text().trim() ||
-            $(el).find("a[title]").attr("title") ||
-            $(el).find("a").first().text().trim();
+        if (!title || seenTitles.has(title)) return;
+        seenTitles.add(title);
+        foundNew = true;
 
-          const ratingEl = $(el).find("[class*='rating']").attr("class") || "";
-          const ratingMatch = ratingEl.match(/rating(\d)/);
-          const rating = ratingMatch ? parseInt(ratingMatch[1]) : undefined;
+        const ratingClass = $(el).find("[class*='rating']").attr("class") || "";
+        const ratingMatch = ratingClass.match(/rating(\d)-t/);
+        const rating = ratingMatch ? parseInt(ratingMatch[1]) : undefined;
 
-          const date =
-            $(el).find(".date, .collect-stamp span, span.date").text().trim();
-          const comment =
-            $(el).find(".comment, .short-note .comment, p.comment").text().trim();
+        const dateText = $(el).find(".date").text().trim();
+        const dateMatch = dateText.match(/\d{4}-\d{2}-\d{2}/);
+        const date = dateMatch ? dateMatch[0] : undefined;
 
-          if (title) {
-            items.push({
-              title: title.replace(/\s+/g, " "),
-              rating,
-              date: date || undefined,
-              comment: comment || undefined,
-            });
-          }
-        });
-      }
+        const comment = $(el).find(".comment").text().trim() || undefined;
 
-      const hasNext = $(".paginator .next a").length > 0 || $(".next a").length > 0;
+        items.push({ title, rating, date, comment });
+      });
+
+      if (!foundNew) break;
+
+      const hasNext = $(".paginator .next a").length > 0;
       if (!hasNext) break;
 
-      await sleep(800 + Math.random() * 500);
+      await sleep(600 + Math.random() * 400);
     } catch {
-      if (page === 0) throw new Error(`无法访问${type === "book" ? "读书" : type === "movie" ? "电影" : "音乐"}页面`);
+      if (page === 0)
+        throw new Error(
+          `无法访问${type === "book" ? "读书" : type === "movie" ? "电影" : "音乐"}页面`
+        );
       break;
     }
   }
@@ -139,8 +141,15 @@ async function scrapeCollection(
 async function scrapeReviews(
   userId: string,
   maxPages: number = 20
-): Promise<{ title: string; content: string; type: string; rating?: number }[]> {
-  const reviews: { title: string; content: string; type: string; rating?: number }[] = [];
+): Promise<
+  { title: string; content: string; type: string; rating?: number }[]
+> {
+  const reviews: {
+    title: string;
+    content: string;
+    type: string;
+    rating?: number;
+  }[] = [];
 
   for (let page = 0; page < maxPages; page++) {
     const start = page * 10;
@@ -150,12 +159,23 @@ async function scrapeReviews(
       );
       const $ = cheerio.load(html);
 
-      $(".review-item, .tlst, .ilst").each((_, el) => {
-        const title = $(el).find("a.title-link, h2 a, a").first().text().trim();
-        const content = $(el).find(".short-content, .review-short, p").text().trim();
+      const reviewItems = $(".review-item, .tlst, .ilst");
+      if (reviewItems.length === 0 && page === 0) break;
+
+      reviewItems.each((_, el) => {
+        const title = $(el)
+          .find("a.title-link, h2 a, a")
+          .first()
+          .text()
+          .trim();
+        const content = $(el)
+          .find(".short-content, .review-short, p")
+          .text()
+          .trim();
         const typeText = $(el).find(".type, .category").text().trim();
-        const ratingEl = $(el).find("[class*='rating']").attr("class") || "";
-        const ratingMatch = ratingEl.match(/rating(\d)/);
+        const ratingClass =
+          $(el).find("[class*='rating']").attr("class") || "";
+        const ratingMatch = ratingClass.match(/rating(\d)/);
 
         if (title) {
           reviews.push({
@@ -169,7 +189,7 @@ async function scrapeReviews(
 
       const hasNext = $(".paginator .next a").length > 0;
       if (!hasNext) break;
-      await sleep(800 + Math.random() * 500);
+      await sleep(600 + Math.random() * 400);
     } catch {
       break;
     }
@@ -192,23 +212,26 @@ async function scrapeDiaries(
       );
       const $ = cheerio.load(html);
 
-      $(".note-container .note-header-container, .klist .list-item, .article-list .item").each(
-        (_, el) => {
-          const title = $(el).find("a.title, h3 a, a").first().text().trim();
-          const date = $(el).find(".pub-date, .time, span.date").text().trim();
-          if (title) {
-            diaries.push({
-              title,
-              content: "",
-              date: date || undefined,
-            });
-          }
-        }
+      const noteItems = $(
+        ".note-container .note-header-container, .klist .list-item, .article-list .item"
       );
+      if (noteItems.length === 0 && page === 0) break;
+
+      noteItems.each((_, el) => {
+        const title = $(el).find("a.title, h3 a, a").first().text().trim();
+        const date = $(el).find(".pub-date, .time, span.date").text().trim();
+        if (title) {
+          diaries.push({
+            title,
+            content: "",
+            date: date || undefined,
+          });
+        }
+      });
 
       const hasNext = $(".paginator .next a").length > 0;
       if (!hasNext) break;
-      await sleep(800 + Math.random() * 500);
+      await sleep(600 + Math.random() * 400);
     } catch {
       break;
     }
@@ -230,9 +253,14 @@ async function scrapeStatuses(
 
     $(".status-item, .new-status, .saying").each((_, el) => {
       const content =
-        $(el).find(".status-content, .saying-text, blockquote").text().trim() ||
-        $(el).find("p").text().trim();
-      const date = $(el).find(".created_at, .pubtime, span.date").text().trim();
+        $(el)
+          .find(".status-content, .saying-text, blockquote")
+          .text()
+          .trim() || $(el).find("p").text().trim();
+      const date = $(el)
+        .find(".created_at, .pubtime, span.date")
+        .text()
+        .trim();
 
       if (content && content.length > 5) {
         statuses.push({
@@ -267,7 +295,12 @@ export async function scrapeDoubanUser(userId: string): Promise<DoubanData> {
   ]);
 
   const totalItems =
-    books.length + movies.length + music.length + reviews.length + diaries.length + statuses.length;
+    books.length +
+    movies.length +
+    music.length +
+    reviews.length +
+    diaries.length +
+    statuses.length;
 
   if (totalItems === 0) {
     throw new Error("未获取到任何数据，该用户可能设置了隐私保护");

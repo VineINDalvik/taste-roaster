@@ -46,6 +46,7 @@ export default function UploadPage() {
         throw new Error(result.error || "分析失败");
       }
 
+      localStorage.setItem(`taste-report-${result.id}`, JSON.stringify(result));
       router.push(`/result/${result.id}`);
     } catch (err) {
       setError(err instanceof Error ? err.message : "分析失败，请重试");
