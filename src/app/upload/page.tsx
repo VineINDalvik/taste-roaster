@@ -9,10 +9,8 @@ const PROGRESS_MESSAGES = [
   "采样ta看过的电影...",
   "采样ta听过的音乐...",
   "AI 正在分析 MBTI 四维度...",
-  "从品味推导人格类型...",
-  "分析书影音各品类品味...",
-  "构建近 6 个月时间线...",
-  "生成完整文化 MBTI 报告...",
+  "从品味中推导人格类型...",
+  "生成文化 MBTI 报告...",
 ];
 
 export default function UploadPage() {
@@ -40,6 +38,11 @@ export default function UploadPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ doubanId: doubanId.trim() }),
       });
+
+      const ct = res.headers.get("content-type") ?? "";
+      if (!ct.includes("application/json")) {
+        throw new Error("服务器超时或返回异常，请稍后重试");
+      }
 
       const result = await res.json();
 

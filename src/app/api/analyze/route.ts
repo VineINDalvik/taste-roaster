@@ -1,12 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { v4 as uuidv4 } from "uuid";
 import { scrapeDoubanQuick } from "@/lib/douban-scraper";
-import {
-  generateBasicReport,
-  generatePremiumReport,
-  generateTimeline,
-} from "@/lib/analyzer";
-import type { TasteInput, TasteReport } from "@/lib/types";
+import { generateBasicReport } from "@/lib/analyzer";
+import type { TasteInput } from "@/lib/types";
 
 export const maxDuration = 60;
 
@@ -38,7 +34,6 @@ export async function POST(req: NextRequest) {
       source: "douban",
     };
 
-    // Generate MBTI first (needed for premium + timeline prompts)
     const basicResult = await generateBasicReport(
       input,
       doubanData.profile.realCounts
@@ -48,38 +43,9 @@ export async function POST(req: NextRequest) {
     const sampleCount =
       input.books.length + input.movies.length + input.music.length;
 
-    // Build a temporary report for premium + timeline calls
-    const tempReport: TasteReport = {
-      id,
-      createdAt: new Date().toISOString(),
-      input,
-      mbti: basicResult.mbti,
-      roast: basicResult.roast,
-      radarData: basicResult.radar,
-      summary: basicResult.summary,
-      isPremium: false,
-    };
-
-    // Generate book/movie/music analysis + timeline in parallel (sampled data, fast)
-    const [premiumResult, timelineResult] = await Promise.all([
-      generatePremiumReport(tempReport).catch(() => ({
-        bookAnalysis: "",
-        movieAnalysis: "",
-        musicAnalysis: "",
-        crossDomain: "",
-        personality: "",
-        blindSpots: "",
-      })),
-      generateTimeline(tempReport).catch(() => ({
-        months: [],
-        trend: "",
-        prediction: "",
-      })),
-    ]);
-
     return NextResponse.json({
       id,
-      createdAt: tempReport.createdAt,
+      createdAt: new Date().toISOString(),
       doubanName: doubanData.profile.name,
       mbti: basicResult.mbti,
       roast: basicResult.roast,
@@ -88,13 +54,6 @@ export async function POST(req: NextRequest) {
       isPremium: false,
       input,
       sampleCount,
-      // Free content: book/movie/music analysis + timeline
-      bookAnalysis: premiumResult.bookAnalysis,
-      movieAnalysis: premiumResult.movieAnalysis,
-      musicAnalysis: premiumResult.musicAnalysis,
-      timelineMonths: timelineResult.months,
-      timelineText: `${timelineResult.trend}\n\n${timelineResult.prediction}`,
-      // Real counts from paginator
       realCounts: doubanData.profile.realCounts,
       bookCount:
         doubanData.profile.realCounts.books || input.books.length,

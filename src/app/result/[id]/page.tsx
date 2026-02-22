@@ -113,10 +113,18 @@ export default function ResultPage({
   const [error, setError] = useState<string | null>(null);
   const stepInterval = useRef<NodeJS.Timeout>(undefined);
 
+  const [expanding, setExpanding] = useState(false);
+
   const isDeepUnlocked = !!(
     report?.personality ||
     report?.crossDomain ||
     report?.blindSpots
+  );
+
+  const hasExpandContent = !!(
+    report?.bookAnalysis ||
+    report?.movieAnalysis ||
+    report?.timelineMonths?.length
   );
 
   useEffect(() => {
@@ -132,6 +140,52 @@ export default function ResultPage({
     }
     setLoading(false);
   }, [id]);
+
+  // Auto-fetch expand content (book/movie/music analysis + timeline)
+  useEffect(() => {
+    if (!report?.input || !report?.mbti?.type || hasExpandContent || expanding) return;
+    setExpanding(true);
+
+    fetch(`/api/expand/${id}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        id: report.id,
+        input: report.input,
+        mbti: report.mbti,
+        roast: report.roast,
+        summary: report.summary,
+        radarData: report.radarData,
+      }),
+    })
+      .then(async (res) => {
+        if (!res.ok) return;
+        const ct = res.headers.get("content-type") ?? "";
+        if (!ct.includes("application/json")) return;
+        const data = await res.json();
+        setReport((prev) => {
+          if (!prev) return prev;
+          const updated = {
+            ...prev,
+            bookAnalysis: data.bookAnalysis || prev.bookAnalysis,
+            movieAnalysis: data.movieAnalysis || prev.movieAnalysis,
+            musicAnalysis: data.musicAnalysis || prev.musicAnalysis,
+            timelineMonths: data.timelineMonths?.length
+              ? data.timelineMonths
+              : prev.timelineMonths,
+            timelineText: data.timelineText || prev.timelineText,
+          };
+          localStorage.setItem(
+            `taste-report-${id}`,
+            JSON.stringify(updated)
+          );
+          return updated;
+        });
+      })
+      .catch(() => {})
+      .finally(() => setExpanding(false));
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [report?.id]);
 
   const handleDeepUnlock = async () => {
     if (!report?.input) {
@@ -180,6 +234,10 @@ export default function ResultPage({
           radarData: report.radarData,
         }),
       });
+      const ct = res.headers.get("content-type") ?? "";
+      if (!ct.includes("application/json")) {
+        throw new Error("服务器返回异常，请稍后重试");
+      }
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
 
@@ -303,21 +361,35 @@ export default function ResultPage({
             <span className="text-[#667eea]">✦</span> {report.mbti.type}{" "}
             品味报告
           </h2>
-          <AnalysisSection
-            icon="📚"
-            title={`${report.mbti.type} 的阅读品味`}
-            content={report.bookAnalysis}
-          />
-          <AnalysisSection
-            icon="🎬"
-            title={`${report.mbti.type} 的观影品味`}
-            content={report.movieAnalysis}
-          />
-          <AnalysisSection
-            icon="🎵"
-            title={`${report.mbti.type} 的音乐品味`}
-            content={report.musicAnalysis}
-          />
+          {hasExpandContent ? (
+            <>
+              <AnalysisSection
+                icon="📚"
+                title={`${report.mbti.type} 的阅读品味`}
+                content={report.bookAnalysis}
+              />
+              <AnalysisSection
+                icon="🎬"
+                title={`${report.mbti.type} 的观影品味`}
+                content={report.movieAnalysis}
+              />
+              <AnalysisSection
+                icon="🎵"
+                title={`${report.mbti.type} 的音乐品味`}
+                content={report.musicAnalysis}
+              />
+            </>
+          ) : expanding ? (
+            <div className="card-glass rounded-xl p-5 text-center space-y-2">
+              <div className="text-lg animate-pulse">📊</div>
+              <p className="text-sm text-gray-400">
+                正在生成书影音品味分析和时间线...
+              </p>
+              <div className="w-32 mx-auto h-1 bg-white/10 rounded-full overflow-hidden">
+                <div className="h-full w-1/2 accent-gradient rounded-full animate-pulse" />
+              </div>
+            </div>
+          ) : null}
         </div>
 
         {/* === FREE CONTENT: Timeline === */}

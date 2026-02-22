@@ -301,21 +301,16 @@ async function scrapeCollectionSampled(
     };
   }
 
-  // Fixed page selection formula — purely based on totalPages, fully deterministic.
-  // Fetch: recent pages (0-3) + evenly spaced middle pages + last pages.
-  // Goal: build a large pool to score from.
+  // Fixed page selection — deterministic, based only on totalPages.
+  // Keep it lean: 5 additional pages max to stay within serverless time limits.
+  // Pages: 1, 2 (recent) + 1 middle + 1 last = 4 additional, or all if few pages.
   const pagesToFetch: number[] = [];
-  if (totalPages <= 10) {
+  if (totalPages <= 6) {
     for (let i = 1; i < totalPages; i++) pagesToFetch.push(i);
   } else {
-    // Recent: pages 1,2,3
-    pagesToFetch.push(1, 2, 3);
-    // Evenly spaced middle: 4 pages at 20%, 40%, 60%, 80% positions
-    for (const pct of [0.2, 0.4, 0.6, 0.8]) {
-      pagesToFetch.push(Math.floor(totalPages * pct));
-    }
-    // Last 2 pages
-    pagesToFetch.push(totalPages - 2, totalPages - 1);
+    pagesToFetch.push(1, 2);
+    pagesToFetch.push(Math.floor(totalPages / 2));
+    pagesToFetch.push(totalPages - 1);
   }
 
   const uniquePages = [...new Set(pagesToFetch)]
