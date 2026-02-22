@@ -20,7 +20,7 @@ export const MBTI_ANALYSIS_PROMPT = `你是一位文化心理学家，擅长通�
 【动态/广播】({statusCount}条)
 {statuses}
 
-请从书影音数据中推导这个人的「书影音人格」——用品味偏好映射 MBTI 四个维度：
+请从书影音数据中推导这个人的「书影音 MBTI」——用品味偏好映射 MBTI 四个维度：
 
 **维度映射规则：**
 - **I(内向)/E(外向)**：偏好独处型内容（文学小说、艺术片、独立音乐、哲学）→ I；偏好社交型内容（商业片、流行乐、综艺、社会热点）→ E
@@ -81,7 +81,7 @@ export const MBTI_ANALYSIS_PROMPT = `你是一位文化心理学家，擅长通�
 export const PREMIUM_ANALYSIS_PROMPT = `你是文化心理学家。基于之前的MBTI分析，现在给出深度品味报告。
 
 用户：{userName}
-书影音人格：{mbtiType} · {mbtiTitle}
+书影音 MBTI：{mbtiType} · {mbtiTitle}
 点评：{roast}
 
 数据（共{totalCount}条记录{truncateNote}）：
@@ -187,7 +187,7 @@ export const COMPARE_PROMPT = `你是文化心理学家，擅长通过品味数�
 
 **用户 A：**
 - 名字：{nameA}
-- 书影音人格：{mbtiTypeA} · {mbtiTitleA}
+- 书影音 MBTI：{mbtiTypeA} · {mbtiTitleA}
 - 品味概述：{summaryA}
 - 读过的书（部分）：{booksA}
 - 看过的电影（部分）：{moviesA}
@@ -195,7 +195,7 @@ export const COMPARE_PROMPT = `你是文化心理学家，擅长通过品味数�
 
 **用户 B：**
 - 名字：{nameB}
-- 书影音人格：{mbtiTypeB} · {mbtiTitleB}
+- 书影音 MBTI：{mbtiTypeB} · {mbtiTitleB}
 - 品味概述：{summaryB}
 - 读过的书（部分）：{booksB}
 - 看过的电影（部分）：{moviesB}

@@ -8,7 +8,7 @@ const PROGRESS_MESSAGES = [
   "正在爬取对方的豆瓣数据...",
   "采样对方读过的书...",
   "采样对方看过的电影...",
-  "推导对方的书影音人格...",
+  "推导对方的书影音 MBTI...",
   "寻找你们的品味交集...",
   "AI 正在犀利点评你们的匹配度...",
   "生成双人对比报告...",
@@ -54,7 +54,7 @@ function CompareContent() {
 
     const stored = localStorage.getItem(`taste-report-${fromId}`);
     if (!stored) {
-      setError("找不到你的报告数据，请先测试自己的书影音人格");
+      setError("找不到你的报告数据，请先测试自己的书影音 MBTI");
       return;
     }
 
@@ -159,7 +159,7 @@ function CompareContent() {
           <div className="text-4xl">👥</div>
           <h1 className="text-xl font-bold text-white">品味双人对比</h1>
           <p className="text-gray-400">
-            请先测试自己的书影音人格，然后从结果页发起对比
+            请先测试自己的书影音 MBTI，然后从结果页发起对比
           </p>
           <Link
             href="/upload"
@@ -183,7 +183,7 @@ function CompareContent() {
           <p className="text-sm text-gray-400">
             {myName ? `${myName}，` : ""}输入对方的豆瓣 ID
             <br />
-            看看你们的书影音人格有多配
+            看看你们的书影音 MBTI 有多配
           </p>
         </div>
 

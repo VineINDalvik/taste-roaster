@@ -188,7 +188,7 @@ export default function ShareCard({
         useCORS: true,
       });
       const link = document.createElement("a");
-      link.download = `书影音人格-${mbtiType}.png`;
+      link.download = `书影音MBTI-${mbtiType}.png`;
       link.href = canvas.toDataURL("image/png");
       link.click();
     } catch {
@@ -240,7 +240,7 @@ export default function ShareCard({
           {/* Header */}
           <div className="text-center mb-4">
             <div className="text-[10px] tracking-[0.3em] text-gray-500 uppercase mb-3">
-              {doubanName ? `${doubanName} 的` : ""}书影音人格
+              {doubanName ? `${doubanName} 的` : ""}书影音 MBTI
             </div>
             <div
               className="text-5xl font-black mb-1 tracking-[0.15em]"
@@ -299,7 +299,7 @@ export default function ShareCard({
           {/* Footer */}
           <div className="flex items-center justify-between text-[10px] text-gray-600 border-t border-white/5 pt-3">
             <span>基于 {itemCount} 条书影音数据</span>
-            <span className="text-[#667eea]">测测你的书影音人格 →</span>
+            <span className="text-[#667eea]">测测你的书影音 MBTI →</span>
           </div>
         </div>
       </div>

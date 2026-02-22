@@ -11,8 +11,18 @@ const BASE_HEADERS: Record<string, string> = {
   "Accept-Language": "zh-CN,zh;q=0.9,en;q=0.8",
 };
 
+const FETCH_TIMEOUT_MS = 10_000;
+const INTER_PAGE_SLEEP_MS = 400;
+const INTER_TYPE_SLEEP_MS = 200;
+
 function sleep(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function fetchWithTimeout(url: string, opts: RequestInit, timeoutMs = FETCH_TIMEOUT_MS): Promise<Response> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  return fetch(url, { ...opts, signal: controller.signal }).finally(() => clearTimeout(timer));
 }
 
 // ─── PoW Challenge Solver ───────────────────────────────────────
@@ -27,7 +37,7 @@ function solvePoW(challenge: string, difficulty: number = 4): number {
   while (true) {
     nonce++;
     if (sha512(challenge + nonce).substring(0, difficulty) === target) return nonce;
-    if (nonce > 5_000_000) throw new Error("PoW solver exceeded max iterations");
+    if (nonce > 2_000_000) throw new Error("PoW solver exceeded max iterations");
   }
 }
 
@@ -70,17 +80,16 @@ async function fetchPage(url: string): Promise<string> {
   const ck = cookieString();
   if (ck) headers["Cookie"] = ck;
 
-  let res = await fetch(url, { headers, redirect: "manual" });
+  let res = await fetchWithTimeout(url, { headers, redirect: "manual" });
   mergeCookies(res.headers.getSetCookie?.() ?? []);
 
-  // Follow redirects
   let redirectCount = 0;
-  while ((res.status === 301 || res.status === 302) && redirectCount < 8) {
+  while ((res.status === 301 || res.status === 302) && redirectCount < 5) {
     redirectCount++;
     const loc = res.headers.get("location");
     if (!loc) break;
     const nextHeaders = { ...BASE_HEADERS, Cookie: cookieString() };
-    res = await fetch(loc, { headers: nextHeaders, redirect: "manual" });
+    res = await fetchWithTimeout(loc, { headers: nextHeaders, redirect: "manual" });
     mergeCookies(res.headers.getSetCookie?.() ?? []);
   }
 
@@ -90,7 +99,6 @@ async function fetchPage(url: string): Promise<string> {
 
   let html = await res.text();
 
-  // If we got a challenge page, solve it
   if (isChallengePage(html)) {
     const $ = cheerio.load(html);
     const tok = $("#tok").val() as string;
@@ -103,7 +111,7 @@ async function fetchPage(url: string): Promise<string> {
     const action = ($("#sec").attr("action") || "/c");
     const postUrl = origin + action;
 
-    const postRes = await fetch(postUrl, {
+    const postRes = await fetchWithTimeout(postUrl, {
       method: "POST",
       headers: {
         ...BASE_HEADERS,
@@ -116,14 +124,13 @@ async function fetchPage(url: string): Promise<string> {
     });
     mergeCookies(postRes.headers.getSetCookie?.() ?? []);
 
-    // Follow redirect chain after POST
     let finalRes = postRes;
     let count = 0;
-    while ((finalRes.status === 301 || finalRes.status === 302) && count < 8) {
+    while ((finalRes.status === 301 || finalRes.status === 302) && count < 5) {
       count++;
       const loc = finalRes.headers.get("location");
       if (!loc) break;
-      finalRes = await fetch(loc, {
+      finalRes = await fetchWithTimeout(loc, {
         headers: { ...BASE_HEADERS, Cookie: cookieString() },
         redirect: "manual",
       });
@@ -137,7 +144,6 @@ async function fetchPage(url: string): Promise<string> {
     }
   }
 
-  // Check for 403 in the HTML title
   if (html.includes("<title>403 Forbidden</title>")) {
     throw new Error("豆瓣暂时限制访问，请稍后再试");
   }
@@ -313,14 +319,13 @@ async function scrapeCollectionSampled(
     };
   }
 
-  // Fixed page selection — deterministic, based only on totalPages.
-  // Keep it lean: 5 additional pages max to stay within serverless time limits.
-  // Pages: 1, 2 (recent) + 1 middle + 1 last = 4 additional, or all if few pages.
+  // Deterministic page selection: 1 recent + 1 middle + 1 last = 3 additional max.
+  // Keeps total fetches per type to 4 max (~6-10s per type).
   const pagesToFetch: number[] = [];
-  if (totalPages <= 6) {
+  if (totalPages <= 4) {
     for (let i = 1; i < totalPages; i++) pagesToFetch.push(i);
   } else {
-    pagesToFetch.push(1, 2);
+    pagesToFetch.push(1);
     pagesToFetch.push(Math.floor(totalPages / 2));
     pagesToFetch.push(totalPages - 1);
   }
@@ -329,11 +334,9 @@ async function scrapeCollectionSampled(
     .filter((p) => p > 0 && p < totalPages)
     .sort((a, b) => a - b);
 
-  // Always fetch ALL designated pages — don't break early.
-  // This ensures the pool is consistent across runs.
   for (const page of uniquePages) {
     try {
-      await sleep(800);
+      await sleep(INTER_PAGE_SLEEP_MS);
       const start = page * PAGE_SIZE;
       const pageUrl = `https://${domain}/people/${userId}/collect?start=${start}&sort=time&mode=list`;
       const pageHtml = await fetchPage(pageUrl);
@@ -520,28 +523,34 @@ async function scrapeStatuses(
 // ─── Public API ─────────────────────────────────────────────────
 
 export async function scrapeDoubanQuick(userId: string): Promise<DoubanData> {
-  const profile = await scrapeProfile(userId);
+  // Skip profile fetch — get name from collection page titles instead (saves ~2-5s)
+  const emptyResult = { items: [] as WorkItem[], realCount: 0, nameHint: "" };
 
   const bookResult = await scrapeCollectionSampled(userId, "book", 100)
-    .catch(() => ({ items: [] as WorkItem[], realCount: 0, nameHint: "" }));
-  profile.realCounts.books = bookResult.realCount;
-  await sleep(800);
+    .catch(() => emptyResult);
+  await sleep(INTER_TYPE_SLEEP_MS);
 
   const movieResult = await scrapeCollectionSampled(userId, "movie", 100)
-    .catch(() => ({ items: [] as WorkItem[], realCount: 0, nameHint: "" }));
-  profile.realCounts.movies = movieResult.realCount;
-  await sleep(800);
+    .catch(() => emptyResult);
+  await sleep(INTER_TYPE_SLEEP_MS);
 
   const musicResult = await scrapeCollectionSampled(userId, "music", 100)
-    .catch(() => ({ items: [] as WorkItem[], realCount: 0, nameHint: "" }));
-  profile.realCounts.music = musicResult.realCount;
+    .catch(() => emptyResult);
 
-  // Fix name: if profile name is bad (e.g. "登录豆瓣"), use name from collection title
-  if (profile.name === userId || BAD_NAMES.includes(profile.name)) {
-    const fallback =
-      bookResult.nameHint || movieResult.nameHint || musicResult.nameHint;
-    if (fallback) profile.name = fallback;
-  }
+  const name =
+    bookResult.nameHint || movieResult.nameHint || musicResult.nameHint || userId;
+
+  const profile: DoubanProfile = {
+    id: userId,
+    name,
+    avatar: "",
+    intro: "",
+    realCounts: {
+      books: bookResult.realCount,
+      movies: movieResult.realCount,
+      music: musicResult.realCount,
+    },
+  };
 
   const totalItems =
     bookResult.items.length + movieResult.items.length + musicResult.items.length;

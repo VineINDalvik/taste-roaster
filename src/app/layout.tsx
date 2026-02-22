@@ -8,10 +8,10 @@ export const viewport: Viewport = {
 };
 
 export const metadata: Metadata = {
-  title: "豆瓣书影音人格 | 你的品味是什么人格",
+  title: "豆瓣书影音 MBTI | 你的品味是什么人格",
   description: "输入豆瓣ID，AI从你的书影音数据推导你的MBTI人格类型",
   openGraph: {
-    title: "豆瓣书影音人格 | 你的品味是什么人格",
+    title: "豆瓣书影音 MBTI | 你的品味是什么人格",
     description: "你读的书、看的电影、听的音乐，暴露了你是INTJ还是ENFP",
     type: "website",
   },
