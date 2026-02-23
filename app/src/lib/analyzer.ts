@@ -226,7 +226,22 @@ export async function generatePremiumReport(
     mbtiTitle: report.mbti.title,
     roast: report.roast,
   };
-  const prompt = fillTemplate(PREMIUM_ANALYSIS_PROMPT, data);
+
+  const hasBooks = (truncated.books?.length ?? 0) > 0;
+  const hasMovies = (truncated.movies?.length ?? 0) > 0;
+  const hasMusic = (truncated.music?.length ?? 0) > 0;
+
+  const skipHints: string[] = [];
+  if (!hasBooks) skipHints.push('bookAnalysis返回""');
+  if (!hasMovies) skipHints.push('movieAnalysis返回""');
+  if (!hasMusic) skipHints.push('musicAnalysis返回""');
+
+  let prompt = fillTemplate(PREMIUM_ANALYSIS_PROMPT, data);
+  if (skipHints.length > 0) {
+    prompt += `\n注意：该用户缺少部分数据，${skipHints.join("，")}`;
+  }
+
+  const maxTokens = 3000 - skipHints.length * 400;
 
   const text = await llmCall(openai, {
     model: getModel(),
@@ -234,7 +249,7 @@ export async function generatePremiumReport(
       { role: "system", content: PREMIUM_SYSTEM_PROMPT },
       { role: "user", content: prompt },
     ],
-    max_tokens: 3000,
+    max_tokens: Math.max(maxTokens, 1500),
     temperature: 0,
     response_format: { type: "json_object" },
   });

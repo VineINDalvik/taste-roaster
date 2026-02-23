@@ -402,10 +402,16 @@ export default function ResultPage({
         </div>
 
         {/* Stats */}
-        <div className="grid grid-cols-3 gap-3 animate-fade-in-up animate-delay-100">
-          <StatBlock value={report.bookCount} label="本书" emoji="📚" />
-          <StatBlock value={report.movieCount} label="部电影" emoji="🎬" />
-          <StatBlock value={report.musicCount} label="首音乐" emoji="🎵" />
+        <div className={`grid gap-3 animate-fade-in-up animate-delay-100 ${
+          [report.bookCount, report.movieCount, report.musicCount].filter(c => c > 0).length === 3
+            ? "grid-cols-3"
+            : [report.bookCount, report.movieCount, report.musicCount].filter(c => c > 0).length === 2
+              ? "grid-cols-2"
+              : "grid-cols-1"
+        }`}>
+          {report.bookCount > 0 && <StatBlock value={report.bookCount} label="本书" emoji="📚" />}
+          {report.movieCount > 0 && <StatBlock value={report.movieCount} label="部电影" emoji="🎬" />}
+          {report.musicCount > 0 && <StatBlock value={report.musicCount} label="首音乐" emoji="🎵" />}
         </div>
 
         {report.sampleCount && (
@@ -422,41 +428,47 @@ export default function ResultPage({
             品味报告
           </h2>
 
-          {/* Book Analysis */}
-          {report.bookAnalysis ? (
-            <ShareableCard filename={`阅读画像-${mbtiType}`}>
-              <BookPortrait
-                analysis={ft(report.bookAnalysis)!}
-                mbtiType={mbtiType}
-              />
-            </ShareableCard>
-          ) : expanding ? (
-            <ExpandSkeleton icon="📚" label="阅读画像" />
-          ) : null}
+          {/* Book Analysis - only show if user has book data */}
+          {report.bookCount > 0 && (
+            report.bookAnalysis ? (
+              <ShareableCard filename={`阅读画像-${mbtiType}`}>
+                <BookPortrait
+                  analysis={ft(report.bookAnalysis)!}
+                  mbtiType={mbtiType}
+                />
+              </ShareableCard>
+            ) : expanding ? (
+              <ExpandSkeleton icon="📚" label="阅读画像" />
+            ) : null
+          )}
 
-          {/* Movie Analysis */}
-          {report.movieAnalysis ? (
-            <ShareableCard filename={`观影画像-${mbtiType}`}>
-              <MoviePortrait
-                analysis={ft(report.movieAnalysis)!}
-                mbtiType={mbtiType}
-              />
-            </ShareableCard>
-          ) : expanding ? (
-            <ExpandSkeleton icon="🎬" label="观影画像" />
-          ) : null}
+          {/* Movie Analysis - only show if user has movie data */}
+          {report.movieCount > 0 && (
+            report.movieAnalysis ? (
+              <ShareableCard filename={`观影画像-${mbtiType}`}>
+                <MoviePortrait
+                  analysis={ft(report.movieAnalysis)!}
+                  mbtiType={mbtiType}
+                />
+              </ShareableCard>
+            ) : expanding ? (
+              <ExpandSkeleton icon="🎬" label="观影画像" />
+            ) : null
+          )}
 
-          {/* Music Analysis */}
-          {report.musicAnalysis ? (
-            <ShareableCard filename={`音乐画像-${mbtiType}`}>
-              <MusicPortrait
-                analysis={ft(report.musicAnalysis)!}
-                mbtiType={mbtiType}
-              />
-            </ShareableCard>
-          ) : expanding ? (
-            <ExpandSkeleton icon="🎵" label="音乐画像" />
-          ) : null}
+          {/* Music Analysis - only show if user has music data */}
+          {report.musicCount > 0 && (
+            report.musicAnalysis ? (
+              <ShareableCard filename={`音乐画像-${mbtiType}`}>
+                <MusicPortrait
+                  analysis={ft(report.musicAnalysis)!}
+                  mbtiType={mbtiType}
+                />
+              </ShareableCard>
+            ) : expanding ? (
+              <ExpandSkeleton icon="🎵" label="音乐画像" />
+            ) : null
+          )}
 
           {/* Retry button on failure */}
           {!hasExpandContent && !expanding && expandFailed && (
