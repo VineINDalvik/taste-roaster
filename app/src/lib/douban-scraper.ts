@@ -22,7 +22,7 @@ function sleep(ms: number) {
 function proxyUrl(url: string): string {
   const key = process.env.SCRAPER_API_KEY;
   if (!key) return url;
-  return `https://api.scraperapi.com?api_key=${key}&url=${encodeURIComponent(url)}&country_code=cn`;
+  return `https://api.scraperapi.com?api_key=${key}&url=${encodeURIComponent(url)}&render=false&keep_headers=true`;
 }
 
 function fetchWithTimeout(url: string, opts: RequestInit, timeoutMs = FETCH_TIMEOUT_MS): Promise<Response> {
@@ -80,6 +80,26 @@ function isChallengePage(html: string): boolean {
  * 3. Cookie persistence across all .douban.com subdomains
  */
 async function fetchPage(url: string): Promise<string> {
+  const usingProxy = !!process.env.SCRAPER_API_KEY;
+
+  // When using ScraperAPI, it handles redirects, cookies, and anti-bot
+  // challenges automatically — skip manual redirect/PoW logic.
+  if (usingProxy) {
+    const res = await fetchWithTimeout(url, {
+      headers: BASE_HEADERS,
+      redirect: "follow",
+    });
+    if (res.status === 404) throw new Error("用户不存在或主页未公开");
+    if (res.status === 403) throw new Error("豆瓣暂时限制访问，请稍后再试");
+    if (!res.ok) throw new Error(`请求失败: ${res.status}`);
+    const html = await res.text();
+    if (html.includes("<title>403 Forbidden</title>")) {
+      throw new Error("豆瓣暂时限制访问，请稍后再试");
+    }
+    return html;
+  }
+
+  // Direct mode: handle cookies, redirects, and PoW challenges ourselves
   const headers: Record<string, string> = {
     ...BASE_HEADERS,
     Referer: "https://www.douban.com/",
@@ -314,10 +334,19 @@ async function scrapeCollectionSampled(
     return { items: [], realCount, nameHint };
   }
 
-  const totalPages = Math.ceil(realCount / PAGE_SIZE) || 1;
-  const seenTitles = new Set(page0Items.map((i) => i.title));
   const allItems = [...page0Items];
 
+  // First page already has up to PAGE_SIZE (30) items.
+  // Only fetch more pages if targetItems exceeds what we got.
+  if (targetItems <= PAGE_SIZE || allItems.length >= targetItems) {
+    return {
+      items: deterministicSelect(allItems, targetItems),
+      realCount: realCount || allItems.length,
+      nameHint,
+    };
+  }
+
+  const totalPages = Math.ceil(realCount / PAGE_SIZE) || 1;
   if (totalPages <= 1) {
     return {
       items: deterministicSelect(allItems, targetItems),
@@ -326,15 +355,19 @@ async function scrapeCollectionSampled(
     };
   }
 
-  // Deterministic page selection: 1 recent + 1 middle + 1 last = 3 additional max.
-  // Keeps total fetches per type to 4 max (~6-10s per type).
+  const seenTitles = new Set(page0Items.map((i) => i.title));
+  const neededPages = Math.min(
+    Math.ceil(targetItems / PAGE_SIZE) - 1,
+    3
+  );
+
   const pagesToFetch: number[] = [];
-  if (totalPages <= 4) {
+  if (totalPages <= neededPages + 1) {
     for (let i = 1; i < totalPages; i++) pagesToFetch.push(i);
   } else {
     pagesToFetch.push(1);
-    pagesToFetch.push(Math.floor(totalPages / 2));
-    pagesToFetch.push(totalPages - 1);
+    if (neededPages >= 2) pagesToFetch.push(Math.floor(totalPages / 2));
+    if (neededPages >= 3) pagesToFetch.push(totalPages - 1);
   }
 
   const uniquePages = [...new Set(pagesToFetch)]
@@ -355,11 +388,10 @@ async function scrapeCollectionSampled(
         }
       }
     } catch {
-      // Skip failed pages but continue with others
+      // Skip failed pages
     }
   }
 
-  // Deterministic selection: score all items → stable sort → take top N
   const selected = deterministicSelect(allItems, targetItems);
   return { items: selected, realCount: realCount || allItems.length, nameHint };
 }
@@ -533,9 +565,9 @@ export async function scrapeDoubanQuick(userId: string): Promise<DoubanData> {
   const emptyResult = { items: [] as WorkItem[], realCount: 0, nameHint: "" };
 
   const [bookResult, movieResult, musicResult] = await Promise.all([
-    scrapeCollectionSampled(userId, "book", 100).catch(() => emptyResult),
-    scrapeCollectionSampled(userId, "movie", 100).catch(() => emptyResult),
-    scrapeCollectionSampled(userId, "music", 100).catch(() => emptyResult),
+    scrapeCollectionSampled(userId, "book", 30).catch(() => emptyResult),
+    scrapeCollectionSampled(userId, "movie", 30).catch(() => emptyResult),
+    scrapeCollectionSampled(userId, "music", 30).catch(() => emptyResult),
   ]);
 
   const name =

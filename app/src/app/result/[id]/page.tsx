@@ -167,6 +167,7 @@ export default function ResultPage({
     report?.movieAnalysis
   );
   const hasTimeline = !!(report?.timelineMonths?.length);
+  const [expandFailed, setExpandFailed] = useState(false);
 
   useEffect(() => {
     const stored = localStorage.getItem(`taste-report-${id}`);
@@ -182,9 +183,24 @@ export default function ResultPage({
     setLoading(false);
   }, [id]);
 
+  // Auto-trigger expand load when report is ready but expand content is missing
+  useEffect(() => {
+    if (
+      report?.input &&
+      report?.mbti?.type &&
+      !hasExpandContent &&
+      !expanding &&
+      !expandFailed
+    ) {
+      handleLoadExpand();
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [report?.id, hasExpandContent]);
+
   const handleLoadExpand = useCallback(async () => {
     if (!report?.input || !report?.mbti?.type || expanding) return;
     setExpanding(true);
+    setExpandFailed(false);
 
     try {
       const res = await fetch(`/api/expand/${id}`, {
@@ -223,7 +239,7 @@ export default function ResultPage({
         return updated;
       });
     } catch {
-      // silently fail, user can retry via button
+      setExpandFailed(true);
     } finally {
       setExpanding(false);
     }
@@ -405,53 +421,53 @@ export default function ResultPage({
             <span className="text-[#667eea]">✦</span> {mbtiType}{" "}
             品味报告
           </h2>
-          {hasExpandContent ? (
-            <>
-              {report.bookAnalysis ? (
-                <ShareableCard filename={`阅读画像-${mbtiType}`}>
-                  <BookPortrait
-                    analysis={ft(report.bookAnalysis)!}
-                    mbtiType={mbtiType}
-                  />
-                </ShareableCard>
-              ) : null}
-              {report.movieAnalysis ? (
-                <ShareableCard filename={`观影画像-${mbtiType}`}>
-                  <MoviePortrait
-                    analysis={ft(report.movieAnalysis)!}
-                    mbtiType={mbtiType}
-                  />
-                </ShareableCard>
-              ) : null}
-              {report.musicAnalysis ? (
-                <ShareableCard filename={`音乐画像-${mbtiType}`}>
-                  <MusicPortrait
-                    analysis={ft(report.musicAnalysis)!}
-                    mbtiType={mbtiType}
-                  />
-                </ShareableCard>
-              ) : null}
-            </>
+
+          {/* Book Analysis */}
+          {report.bookAnalysis ? (
+            <ShareableCard filename={`阅读画像-${mbtiType}`}>
+              <BookPortrait
+                analysis={ft(report.bookAnalysis)!}
+                mbtiType={mbtiType}
+              />
+            </ShareableCard>
           ) : expanding ? (
-            <div className="card-glass rounded-xl p-5 text-center space-y-2">
-              <div className="text-lg animate-pulse">📊</div>
-              <p className="text-sm text-gray-400">
-                正在生成品味分析和时间线...
-              </p>
-              <div className="w-32 mx-auto h-1 bg-white/10 rounded-full overflow-hidden">
-                <div className="h-full w-1/2 accent-gradient rounded-full animate-pulse" />
-              </div>
-            </div>
-          ) : (
+            <ExpandSkeleton icon="📚" label="阅读画像" />
+          ) : null}
+
+          {/* Movie Analysis */}
+          {report.movieAnalysis ? (
+            <ShareableCard filename={`观影画像-${mbtiType}`}>
+              <MoviePortrait
+                analysis={ft(report.movieAnalysis)!}
+                mbtiType={mbtiType}
+              />
+            </ShareableCard>
+          ) : expanding ? (
+            <ExpandSkeleton icon="🎬" label="观影画像" />
+          ) : null}
+
+          {/* Music Analysis */}
+          {report.musicAnalysis ? (
+            <ShareableCard filename={`音乐画像-${mbtiType}`}>
+              <MusicPortrait
+                analysis={ft(report.musicAnalysis)!}
+                mbtiType={mbtiType}
+              />
+            </ShareableCard>
+          ) : expanding ? (
+            <ExpandSkeleton icon="🎵" label="音乐画像" />
+          ) : null}
+
+          {/* Retry button on failure */}
+          {!hasExpandContent && !expanding && expandFailed && (
             <button
               onClick={handleLoadExpand}
-              className="w-full flex items-center gap-4 p-4 rounded-xl card-glass border border-[#667eea]/20 hover:border-[#667eea]/40 transition-all group"
-              style={{ background: "linear-gradient(135deg, rgba(102,126,234,0.06), rgba(233,69,96,0.04))" }}
+              className="w-full flex items-center gap-4 p-4 rounded-xl card-glass border border-red-500/20 hover:border-[#667eea]/40 transition-all group"
             >
-              <span className="text-xl flex-shrink-0">📊</span>
+              <span className="text-xl flex-shrink-0">🔄</span>
               <span className="flex-1 text-left">
-                <span className="block text-sm font-semibold text-white">加载完整品味分析</span>
-                <span className="block text-xs text-gray-500 mt-0.5">书影音逐项分析 + 品味时间线 · 约需 10-15 秒</span>
+                <span className="block text-sm font-semibold text-white">品味分析加载失败</span>
+                <span className="block text-xs text-gray-500 mt-0.5">点击重试 · 书影音逐项分析 + 品味时间线</span>
               </span>
               <span className="text-[#667eea] group-hover:translate-x-1 transition-transform">→</span>
             </button>
@@ -473,6 +489,11 @@ export default function ResultPage({
               />
             </ShareableCard>
           </div>
+        )}
+
+        {/* Timeline skeleton while loading */}
+        {!hasTimeline && expanding && (
+          <ExpandSkeleton icon="📅" label="品味进化时间线" />
         )}
 
         {/* Timeline retry button */}
@@ -807,6 +828,28 @@ function AnalysisSection({
       <p className="text-sm text-gray-300 leading-relaxed whitespace-pre-line">
         {content}
       </p>
+    </div>
+  );
+}
+
+function ExpandSkeleton({ icon, label }: { icon: string; label: string }) {
+  return (
+    <div className="card-glass rounded-xl p-5 space-y-3 animate-pulse">
+      <div className="flex items-center gap-2">
+        <span className="text-base">{icon}</span>
+        <span className="text-sm font-bold text-gray-500">{label}</span>
+      </div>
+      <div className="space-y-2">
+        <div className="h-3 bg-white/5 rounded-full w-4/5" />
+        <div className="h-3 bg-white/5 rounded-full w-3/5" />
+        <div className="h-3 bg-white/5 rounded-full w-2/3" />
+      </div>
+      <div className="flex items-center gap-2 pt-1">
+        <div className="h-1 flex-1 bg-white/10 rounded-full overflow-hidden">
+          <div className="h-full w-1/3 accent-gradient rounded-full animate-[pulse_2s_ease-in-out_infinite]" />
+        </div>
+        <span className="text-[10px] text-gray-600">生成中...</span>
+      </div>
     </div>
   );
 }
