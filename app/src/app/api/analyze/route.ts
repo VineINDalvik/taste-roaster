@@ -41,6 +41,13 @@ export async function POST(req: NextRequest) {
       source: "douban",
     };
 
+    const fullInput: TasteInput = {
+      ...input,
+      books: doubanData.fullBooks,
+      movies: doubanData.fullMovies,
+      music: doubanData.fullMusic,
+    };
+
     const basicResult = await generateBasicReport(
       input,
       doubanData.profile.realCounts
@@ -60,18 +67,19 @@ export async function POST(req: NextRequest) {
       summary: basicResult.summary,
       isPremium: false,
       input,
+      fullInput,
       sampleCount,
       realCounts: doubanData.profile.realCounts,
       bookCount:
-        doubanData.profile.realCounts.books || input.books.length,
+        doubanData.profile.realCounts.books || fullInput.books.length,
       movieCount:
-        doubanData.profile.realCounts.movies || input.movies.length,
+        doubanData.profile.realCounts.movies || fullInput.movies.length,
       musicCount:
-        doubanData.profile.realCounts.music || input.music.length,
+        doubanData.profile.realCounts.music || fullInput.music.length,
       itemCount:
-        (doubanData.profile.realCounts.books || input.books.length) +
-        (doubanData.profile.realCounts.movies || input.movies.length) +
-        (doubanData.profile.realCounts.music || input.music.length),
+        (doubanData.profile.realCounts.books || fullInput.books.length) +
+        (doubanData.profile.realCounts.movies || fullInput.movies.length) +
+        (doubanData.profile.realCounts.music || fullInput.music.length),
       _usage: getAccumulatedUsage(),
     });
   } catch (error) {

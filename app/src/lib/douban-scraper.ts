@@ -201,6 +201,9 @@ export interface DoubanData {
   books: WorkItem[];
   movies: WorkItem[];
   music: WorkItem[];
+  fullBooks: WorkItem[];
+  fullMovies: WorkItem[];
+  fullMusic: WorkItem[];
   reviews: { title: string; content: string; type: string; rating?: number }[];
   diaries: { title: string; content: string; date?: string }[];
   statuses: { content: string; date?: string }[];
@@ -613,22 +616,31 @@ function allocateBudget(
 export async function scrapeDoubanQuick(userId: string): Promise<DoubanData> {
   const emptyResult = { items: [] as WorkItem[], realCount: 0, nameHint: "" };
 
-  const PAGE_SIZE = 30;
   const [bookResult, movieResult, musicResult] = await Promise.all([
-    scrapeCollectionSampled(userId, "book", PAGE_SIZE).catch(() => emptyResult),
-    scrapeCollectionSampled(userId, "movie", PAGE_SIZE).catch(() => emptyResult),
-    scrapeCollectionSampled(userId, "music", PAGE_SIZE).catch(() => emptyResult),
+    scrapeCollectionSampled(userId, "book", 30).catch(() => emptyResult),
+    scrapeCollectionSampled(userId, "movie", 30).catch(() => emptyResult),
+    scrapeCollectionSampled(userId, "music", 30).catch(() => emptyResult),
   ]);
 
-  const budget = allocateBudget(
+  const mbtieBudget = allocateBudget(
     bookResult.items.length,
     movieResult.items.length,
-    musicResult.items.length
+    musicResult.items.length,
+    20
   );
+  const books = deterministicSelect(bookResult.items, mbtieBudget.book);
+  const movies = deterministicSelect(movieResult.items, mbtieBudget.movie);
+  const music = deterministicSelect(musicResult.items, mbtieBudget.music);
 
-  const books = deterministicSelect(bookResult.items, budget.book);
-  const movies = deterministicSelect(movieResult.items, budget.movie);
-  const music = deterministicSelect(musicResult.items, budget.music);
+  const expandBudget = allocateBudget(
+    bookResult.items.length,
+    movieResult.items.length,
+    musicResult.items.length,
+    50
+  );
+  const fullBooks = deterministicSelect(bookResult.items, expandBudget.book);
+  const fullMovies = deterministicSelect(movieResult.items, expandBudget.movie);
+  const fullMusic = deterministicSelect(musicResult.items, expandBudget.music);
 
   const name =
     bookResult.nameHint || movieResult.nameHint || musicResult.nameHint || userId;
@@ -655,6 +667,9 @@ export async function scrapeDoubanQuick(userId: string): Promise<DoubanData> {
     books,
     movies,
     music,
+    fullBooks,
+    fullMovies,
+    fullMusic,
     reviews: [], diaries: [], statuses: [],
   };
 }
@@ -695,6 +710,9 @@ export async function scrapeDoubanFull(userId: string): Promise<DoubanData> {
     books: bookResult.items,
     movies: movieResult.items,
     music: musicResult.items,
+    fullBooks: bookResult.items,
+    fullMovies: movieResult.items,
+    fullMusic: musicResult.items,
     reviews, diaries, statuses,
   };
 }

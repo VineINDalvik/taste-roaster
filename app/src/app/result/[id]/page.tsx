@@ -65,6 +65,8 @@ interface ReportData {
   doubanId?: string;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   input?: any;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  fullInput?: any;
   sampleCount?: number;
   itemCount: number;
   bookCount: number;
@@ -203,12 +205,13 @@ export default function ResultPage({
     setExpandFailed(false);
 
     try {
+      const expandInput = report.fullInput || report.input;
       const res = await fetch(`/api/expand/${id}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           id: report.id,
-          input: report.input,
+          input: expandInput,
           mbti: report.mbti,
           roast: report.roast,
           summary: report.summary,
