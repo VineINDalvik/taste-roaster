@@ -28,7 +28,7 @@ const DIMS: { key: string; left: string; right: string }[] = [
   { key: "jp", left: "J 判断", right: "P 感知" },
 ];
 
-const RADAR_KEYS = [
+const RADAR_KEYS: [string, string][] = [
   ["wenqing", "文青浓度"],
   ["emo", "emo指数"],
   ["shekong", "社恐值"],
@@ -52,10 +52,7 @@ async function loadFonts(): Promise<{ regular: ArrayBuffer; bold: ArrayBuffer }>
   return { regular: fontRegular!, bold: fontBold! };
 }
 
-function radarSvgPath(data: Record<string, number>): string {
-  const cx = 65,
-    cy = 65,
-    r = 47;
+function radarPoints(data: Record<string, number>, cx: number, cy: number, r: number): string {
   const n = RADAR_KEYS.length;
   const pts = RADAR_KEYS.map(([key], i) => {
     const angle = (Math.PI * 2 * i) / n - Math.PI / 2;
@@ -65,52 +62,26 @@ function radarSvgPath(data: Record<string, number>): string {
   return pts.join(" ");
 }
 
-function radarGridPaths(): string[] {
-  const cx = 65,
-    cy = 65,
-    r = 47;
+function gridPolygon(cx: number, cy: number, r: number, scale: number): string {
   const n = RADAR_KEYS.length;
-  return [0.25, 0.5, 0.75, 1].map((s) => {
-    const pts = RADAR_KEYS.map(([,], i) => {
-      const angle = (Math.PI * 2 * i) / n - Math.PI / 2;
-      return `${cx + r * s * Math.cos(angle)},${cy + r * s * Math.sin(angle)}`;
-    });
-    return pts.join(" ");
+  const pts = RADAR_KEYS.map(([,], i) => {
+    const angle = (Math.PI * 2 * i) / n - Math.PI / 2;
+    return `${cx + r * scale * Math.cos(angle)},${cy + r * scale * Math.sin(angle)}`;
   });
+  return pts.join(" ");
 }
 
-function radarLabelPositions(): { x: number; y: number; label: string }[] {
-  const cx = 65,
-    cy = 65,
-    r = 47;
+function labelPos(cx: number, cy: number, r: number): { x: number; y: number; label: string }[] {
   const n = RADAR_KEYS.length;
   return RADAR_KEYS.map(([, label], i) => {
     const angle = (Math.PI * 2 * i) / n - Math.PI / 2;
-    return { x: cx + r * 1.3 * Math.cos(angle), y: cy + r * 1.3 * Math.sin(angle), label };
+    return { x: cx + r * 1.35 * Math.cos(angle), y: cy + r * 1.35 * Math.sin(angle), label };
   });
-}
-
-export async function GET() {
-  try {
-    return new ImageResponse(
-      (
-        <div style={{ display: "flex", fontSize: 40, color: "white", background: "#1a1a2e", width: "100%", height: "100%", alignItems: "center", justifyContent: "center" }}>
-          Hello Share Card
-        </div>
-      ),
-      { width: 400, height: 200 }
-    );
-  } catch (e) {
-    const msg = e instanceof Error ? `${e.message}\n${e.stack}` : String(e);
-    return new Response(`GET failed: ${msg}`, { status: 500 });
-  }
 }
 
 export async function POST(req: NextRequest) {
   try {
-    const body = await req.text();
-    if (!body) return new Response("empty body", { status: 400 });
-    const data: CardData = JSON.parse(body);
+    const data: CardData = await req.json();
     const fonts = await loadFonts();
 
     const stats = [
@@ -119,9 +90,9 @@ export async function POST(req: NextRequest) {
       { val: data.musicCount, label: "首音乐" },
     ].filter((s) => s.val && s.val > 0);
 
-    const grids = radarGridPaths();
-    const dataPath = radarSvgPath(data.radarData);
-    const labels = radarLabelPositions();
+    const RCX = 65, RCY = 65, RR = 44;
+    const dataPath = radarPoints(data.radarData, RCX, RCY, RR);
+    const labels = labelPos(RCX, RCY, RR);
 
     return new ImageResponse(
       (
@@ -138,15 +109,7 @@ export async function POST(req: NextRequest) {
           }}
         >
           {/* Header */}
-          <div
-            style={{
-              display: "flex",
-              justifyContent: "center",
-              fontSize: 13,
-              color: "#6b7280",
-              marginBottom: 20,
-            }}
-          >
+          <div style={{ display: "flex", justifyContent: "center", fontSize: 13, color: "#6b7280", marginBottom: 20 }}>
             {data.doubanName ? `${data.doubanName} 的书影音 MBTI` : "书影音 MBTI"}
           </div>
 
@@ -168,20 +131,11 @@ export async function POST(req: NextRequest) {
           </div>
 
           {/* Title */}
-          <div
-            style={{
-              display: "flex",
-              justifyContent: "center",
-              fontSize: 17,
-              fontWeight: 600,
-              color: "#e94560",
-              marginBottom: 20,
-            }}
-          >
+          <div style={{ display: "flex", justifyContent: "center", fontSize: 17, fontWeight: 600, color: "#e94560", marginBottom: 20 }}>
             {data.mbtiTitle}
           </div>
 
-          {/* Roast box */}
+          {/* Roast */}
           <div
             style={{
               display: "flex",
@@ -193,16 +147,7 @@ export async function POST(req: NextRequest) {
               marginBottom: 22,
             }}
           >
-            <div
-              style={{
-                display: "flex",
-                fontSize: 14,
-                color: "#d1d5db",
-                textAlign: "center",
-                lineHeight: 1.6,
-                fontStyle: "italic",
-              }}
-            >
+            <div style={{ display: "flex", fontSize: 14, color: "#d1d5db", textAlign: "center", lineHeight: 1.6, fontStyle: "italic" }}>
               &ldquo;{data.roast}&rdquo;
             </div>
           </div>
@@ -215,13 +160,9 @@ export async function POST(req: NextRequest) {
               return (
                 <div key={d.key} style={{ display: "flex", flexDirection: "column", gap: 4 }}>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                    <span style={{ fontSize: 13, fontWeight: isLeft ? 700 : 400, color: isLeft ? "#fff" : "#6b7280" }}>
-                      {d.left}
-                    </span>
+                    <span style={{ fontSize: 13, fontWeight: isLeft ? 700 : 400, color: isLeft ? "#fff" : "#6b7280" }}>{d.left}</span>
                     <span style={{ fontSize: 11, color: "#4b5563" }}>{dim.score}%</span>
-                    <span style={{ fontSize: 13, fontWeight: !isLeft ? 700 : 400, color: !isLeft ? "#fff" : "#6b7280" }}>
-                      {d.right}
-                    </span>
+                    <span style={{ fontSize: 13, fontWeight: !isLeft ? 700 : 400, color: !isLeft ? "#fff" : "#6b7280" }}>{d.right}</span>
                   </div>
                   <div style={{ display: "flex", position: "relative", height: 8, borderRadius: 4, background: "rgba(255,255,255,0.08)" }}>
                     <div
@@ -248,19 +189,33 @@ export async function POST(req: NextRequest) {
 
           {/* Radar + Stats row */}
           <div style={{ display: "flex", flexDirection: "row", marginBottom: 16 }}>
-            {/* Radar chart as SVG */}
-            <div style={{ display: "flex", width: 130, height: 130 }}>
+            {/* Radar with labels using absolute positioning */}
+            <div style={{ display: "flex", position: "relative", width: 130, height: 130 }}>
               <svg width="130" height="130" viewBox="0 0 130 130">
-                {grids.map((g, i) => (
-                  <polygon key={i} points={g} fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth="0.5" />
+                {[0.25, 0.5, 0.75, 1].map((s) => (
+                  <polygon key={s} points={gridPolygon(RCX, RCY, RR, s)} fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth="0.5" />
                 ))}
                 <polygon points={dataPath} fill="rgba(102,126,234,0.15)" stroke="#667eea" strokeWidth="1.5" />
-                {labels.map((l, i) => (
-                  <text key={i} x={l.x} y={l.y} textAnchor="middle" dominantBaseline="central" fill="rgba(255,255,255,0.4)" fontSize="8" fontFamily="NotoSansSC">
-                    {l.label}
-                  </text>
-                ))}
               </svg>
+              {/* Radar labels as HTML divs positioned absolutely */}
+              {labels.map((l) => (
+                <div
+                  key={l.label}
+                  style={{
+                    display: "flex",
+                    position: "absolute",
+                    left: l.x - 20,
+                    top: l.y - 6,
+                    width: 40,
+                    fontSize: 7,
+                    color: "rgba(255,255,255,0.4)",
+                    justifyContent: "center",
+                    textAlign: "center",
+                  }}
+                >
+                  {l.label}
+                </div>
+              ))}
             </div>
 
             {/* Stats */}
@@ -285,17 +240,7 @@ export async function POST(req: NextRequest) {
           </div>
 
           {/* Summary */}
-          <div
-            style={{
-              display: "flex",
-              fontSize: 13,
-              color: "#9ca3af",
-              textAlign: "center",
-              lineHeight: 1.6,
-              marginBottom: 20,
-              justifyContent: "center",
-            }}
-          >
+          <div style={{ display: "flex", fontSize: 13, color: "#9ca3af", textAlign: "center", lineHeight: 1.6, marginBottom: 20, justifyContent: "center" }}>
             {data.summary}
           </div>
 
