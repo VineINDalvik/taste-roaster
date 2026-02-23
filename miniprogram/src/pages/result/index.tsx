@@ -450,25 +450,34 @@ export default function ResultPage() {
           </View>
         </View>
 
-        {/* Explore More Platforms */}
+        {/* Explore More */}
         <View className='animate-fade-in-up animate-delay-300'>
           <Text className='explore-section-title'>
-            <Text className='text-blue'>🌐</Text> 探索更多品味维度
+            <Text className='text-blue'>🌐</Text> 探索更多
           </Text>
           <View className='explore-grid'>
             {[
-              { icon: '🎧', name: '网易云音乐', desc: '听歌品味分析', color: '#e94560' },
-              { icon: '📖', name: '微信读书', desc: '阅读品味画像', color: '#667eea' },
-              { icon: '🎶', name: 'Spotify', desc: '全球音乐品味', color: '#1DB954' },
-              { icon: '🧩', name: 'Chrome 插件', desc: '一键分析浏览器书签', color: '#f5c518' },
+              { icon: '🎧', name: '网易云音乐', desc: '听歌品味分析', color: '#e94560', badge: '即将上线' },
+              { icon: '📖', name: '微信读书', desc: '阅读品味画像', color: '#667eea', badge: '即将上线' },
+              { icon: '🔮', name: '赛博神算子', desc: 'AI 塔罗占卜', color: '#a855f7', badge: '可体验' },
             ].map(item => (
-              <View key={item.name} className='explore-card card-glass'>
+              <View
+                key={item.name}
+                className='explore-card card-glass'
+                onClick={() => {
+                  if (item.name === '赛博神算子') {
+                    Taro.setClipboardData({ data: 'https://cyber-oracle.vercel.app', success: () => {
+                      Taro.showToast({ title: '链接已复制，可在浏览器打开', icon: 'none' })
+                    }})
+                  }
+                }}
+              >
                 <View className='explore-card-header'>
                   <Text className='explore-card-icon'>{item.icon}</Text>
                   <Text className='explore-card-name'>{item.name}</Text>
                 </View>
                 <Text className='explore-card-desc'>{item.desc}</Text>
-                <Text className='explore-card-badge' style={{ color: item.color, background: item.color + '15' }}>即将上线</Text>
+                <Text className='explore-card-badge' style={{ color: item.color, background: item.color + '15' }}>{item.badge}</Text>
               </View>
             ))}
           </View>

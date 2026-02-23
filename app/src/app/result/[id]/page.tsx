@@ -653,22 +653,24 @@ export default function ResultPage({
           </div>
         </div>
 
-        {/* === Explore More Platforms === */}
+        {/* === Explore More === */}
         <div className="animate-fade-in-up animate-delay-300">
           <div className="space-y-3">
             <h2 className="text-sm font-bold text-gray-400 flex items-center gap-2">
-              <span className="text-[#667eea]">🌐</span> 探索更多品味维度
+              <span className="text-[#667eea]">🌐</span> 探索更多
             </h2>
-            <div className="grid grid-cols-2 gap-2">
+            <div className="grid grid-cols-3 gap-2">
               {[
-                { icon: "🎧", name: "网易云音乐", desc: "听歌品味分析", color: "#e94560" },
-                { icon: "📖", name: "微信读书", desc: "阅读品味画像", color: "#667eea" },
-                { icon: "🎶", name: "Spotify", desc: "全球音乐品味", color: "#1DB954" },
-                { icon: "🧩", name: "Chrome 插件", desc: "一键分析浏览器书签", color: "#f5c518" },
+                { icon: "🎧", name: "网易云音乐", desc: "听歌品味分析", color: "#e94560", badge: "即将上线" },
+                { icon: "📖", name: "微信读书", desc: "阅读品味画像", color: "#667eea", badge: "即将上线" },
+                { icon: "🔮", name: "赛博神算子", desc: "AI 塔罗占卜", color: "#a855f7", badge: "可体验", href: "https://cyber-oracle.vercel.app" },
               ].map((item) => (
-                <div
+                <a
                   key={item.name}
-                  className="card-glass rounded-xl p-3 space-y-1.5 relative overflow-hidden group cursor-default"
+                  href={(item as any).href || undefined}
+                  target={(item as any).href ? "_blank" : undefined}
+                  rel={(item as any).href ? "noopener noreferrer" : undefined}
+                  className={`card-glass rounded-xl p-3 space-y-1.5 relative overflow-hidden ${(item as any).href ? "cursor-pointer hover:bg-white/[0.06] transition-colors" : "cursor-default"}`}
                 >
                   <div className="flex items-center gap-2">
                     <span className="text-base">{item.icon}</span>
@@ -679,9 +681,9 @@ export default function ResultPage({
                     className="absolute top-2 right-2 text-[9px] px-1.5 py-0.5 rounded-full font-medium"
                     style={{ color: item.color, background: `${item.color}15` }}
                   >
-                    即将上线
+                    {item.badge}
                   </span>
-                </div>
+                </a>
               ))}
             </div>
           </div>
