@@ -56,6 +56,7 @@ export async function POST(req: NextRequest) {
       crossDomain: premium.crossDomain,
       personality: premium.personality,
       blindSpots: premium.blindSpots,
+      diaryInsight: premium.diaryInsight,
       recommendations: recommendations.filter((r) => !r.alreadyConsumed),
       _usage: getAccumulatedUsage(),
     });

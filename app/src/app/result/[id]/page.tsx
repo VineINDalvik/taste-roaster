@@ -9,6 +9,14 @@ import BookPortrait from "@/components/BookPortrait";
 import MoviePortrait from "@/components/MoviePortrait";
 import ShareableCard from "@/components/ShareableCard";
 import InviteModal from "@/components/InviteModal";
+import {
+  PRICE_BASIC,
+  PRICE_DEEP,
+  isBasicPaid,
+  markBasicPaid,
+  isDeepPaid,
+  markDeepPaid,
+} from "@/lib/payment";
 
 interface MBTIDimension {
   letter: string;
@@ -82,6 +90,7 @@ interface ReportData {
   crossDomain?: string;
   personality?: string;
   blindSpots?: string;
+  diaryInsight?: string;
   recommendations?: RecommendationItem[];
 }
 
@@ -146,6 +155,8 @@ export default function ResultPage({
 
   const [expanding, setExpanding] = useState(false);
   const [showInviteModal, setShowInviteModal] = useState(false);
+  const [basicPaid, setBasicPaid] = useState(false);
+  const [deepPaid, setDeepPaid] = useState(false);
 
   const mbtiType = useMemo(() => {
     if (!report?.mbti?.dimensions) return report?.mbti?.type || "????";
@@ -175,7 +186,10 @@ export default function ResultPage({
     const stored = localStorage.getItem(`taste-report-${id}`);
     if (stored) {
       try {
-        setReport(JSON.parse(stored));
+        const parsed = JSON.parse(stored);
+        setReport(parsed);
+        setBasicPaid(isBasicPaid(parsed.id || id));
+        setDeepPaid(isDeepPaid(parsed.id || id));
       } catch {
         setError("报告数据损坏");
       }
@@ -185,11 +199,12 @@ export default function ResultPage({
     setLoading(false);
   }, [id]);
 
-  // Auto-trigger expand load when report is ready but expand content is missing
+  // Auto-trigger expand load when basic is paid but content not yet loaded
   useEffect(() => {
     if (
       report?.input &&
       report?.mbti?.type &&
+      basicPaid &&
       !hasExpandContent &&
       !expanding &&
       !expandFailed
@@ -197,7 +212,20 @@ export default function ResultPage({
       handleLoadExpand();
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [report?.id, hasExpandContent]);
+  }, [report?.id, hasExpandContent, basicPaid]);
+
+  // Auto-trigger deep analysis when deepPaid but content not loaded
+  useEffect(() => {
+    if (
+      report?.input &&
+      deepPaid &&
+      !isDeepUnlocked &&
+      !unlocking
+    ) {
+      handleDeepUnlock();
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [deepPaid, isDeepUnlocked]);
 
   const handleLoadExpand = useCallback(async () => {
     if (!report?.input || !report?.mbti?.type || expanding) return;
@@ -249,25 +277,22 @@ export default function ResultPage({
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [report?.id, expanding]);
 
+  const handleBasicUnlock = () => {
+    if (!report) return;
+    markBasicPaid(report.id || id);
+    setBasicPaid(true);
+  };
+
+  const handleDeepUnlockPaid = () => {
+    if (!report) return;
+    markDeepPaid(report.id || id);
+    setDeepPaid(true);
+  };
+
   const handleDeepUnlock = async () => {
     if (!report?.input) {
       alert("缺少原始数据，请重新测试");
       return;
-    }
-
-    // Copy link first
-    const url = window.location.href;
-    if (navigator.clipboard?.writeText) {
-      await navigator.clipboard.writeText(url).catch(() => {});
-    } else {
-      const ta = document.createElement("textarea");
-      ta.value = url;
-      ta.style.position = "fixed";
-      ta.style.opacity = "0";
-      document.body.appendChild(ta);
-      ta.select();
-      document.execCommand("copy");
-      document.body.removeChild(ta);
     }
 
     setUnlocking(true);
@@ -309,6 +334,7 @@ export default function ResultPage({
         crossDomain: data.crossDomain,
         personality: data.personality,
         blindSpots: data.blindSpots,
+        diaryInsight: data.diaryInsight,
         recommendations: data.recommendations,
       };
       setReport(updated);
@@ -419,151 +445,148 @@ export default function ResultPage({
 
         {/* sample count hidden — avoid showing small numbers */}
 
-        {/* === FREE CONTENT: Book/Movie/Music Analysis === */}
-        <div className="space-y-4 animate-fade-in-up animate-delay-200">
-          <h2 className="text-lg font-bold text-white flex items-center gap-2">
-            <span className="text-[#667eea]">✦</span> {mbtiType}{" "}
-            品味报告
-          </h2>
+        {/* === PAID BASIC: Book/Movie/Music Analysis + Timeline (¥0.66) === */}
+        {basicPaid ? (
+          <>
+            <div className="space-y-4 animate-fade-in-up animate-delay-200">
+              <h2 className="text-lg font-bold text-white flex items-center gap-2">
+                <span className="text-[#667eea]">✦</span> {mbtiType}{" "}
+                品味报告
+              </h2>
 
-          {/* Book Analysis - only show if user has book data */}
-          {report.bookCount > 0 && (
-            report.bookAnalysis ? (
-              <ShareableCard filename={`阅读画像-${mbtiType}`}>
-                <BookPortrait
-                  analysis={ft(report.bookAnalysis)!}
-                  mbtiType={mbtiType}
-                />
-              </ShareableCard>
-            ) : expanding ? (
-              <ExpandSkeleton icon="📚" label="阅读画像" />
-            ) : null
-          )}
+              {report.bookCount > 0 && (
+                report.bookAnalysis ? (
+                  <ShareableCard filename={`阅读画像-${mbtiType}`}>
+                    <BookPortrait analysis={ft(report.bookAnalysis)!} mbtiType={mbtiType} />
+                  </ShareableCard>
+                ) : expanding ? (
+                  <ExpandSkeleton icon="📚" label="阅读画像" />
+                ) : null
+              )}
 
-          {/* Movie Analysis - only show if user has movie data */}
-          {report.movieCount > 0 && (
-            report.movieAnalysis ? (
-              <ShareableCard filename={`观影画像-${mbtiType}`}>
-                <MoviePortrait
-                  analysis={ft(report.movieAnalysis)!}
-                  mbtiType={mbtiType}
-                />
-              </ShareableCard>
-            ) : expanding ? (
-              <ExpandSkeleton icon="🎬" label="观影画像" />
-            ) : null
-          )}
+              {report.movieCount > 0 && (
+                report.movieAnalysis ? (
+                  <ShareableCard filename={`观影画像-${mbtiType}`}>
+                    <MoviePortrait analysis={ft(report.movieAnalysis)!} mbtiType={mbtiType} />
+                  </ShareableCard>
+                ) : expanding ? (
+                  <ExpandSkeleton icon="🎬" label="观影画像" />
+                ) : null
+              )}
 
-          {/* Music Analysis - only show if user has music data */}
-          {report.musicCount > 0 && (
-            report.musicAnalysis ? (
-              <ShareableCard filename={`音乐画像-${mbtiType}`}>
-                <MusicPortrait
-                  analysis={ft(report.musicAnalysis)!}
-                  mbtiType={mbtiType}
-                />
-              </ShareableCard>
-            ) : expanding ? (
-              <ExpandSkeleton icon="🎵" label="音乐画像" />
-            ) : null
-          )}
+              {report.musicCount > 0 && (
+                report.musicAnalysis ? (
+                  <ShareableCard filename={`音乐画像-${mbtiType}`}>
+                    <MusicPortrait analysis={ft(report.musicAnalysis)!} mbtiType={mbtiType} />
+                  </ShareableCard>
+                ) : expanding ? (
+                  <ExpandSkeleton icon="🎵" label="音乐画像" />
+                ) : null
+              )}
 
-          {/* Retry button on failure */}
-          {!hasExpandContent && !expanding && expandFailed && (
-            <button
-              onClick={handleLoadExpand}
-              className="w-full flex items-center gap-4 p-4 rounded-xl card-glass border border-red-500/20 hover:border-[#667eea]/40 transition-all group"
-            >
-              <span className="text-xl flex-shrink-0">🔄</span>
-              <span className="flex-1 text-left">
-                <span className="block text-sm font-semibold text-white">品味分析加载失败</span>
-                <span className="block text-xs text-gray-500 mt-0.5">点击重试 · 书影音逐项分析 + 品味时间线</span>
-              </span>
-              <span className="text-[#667eea] group-hover:translate-x-1 transition-transform">→</span>
-            </button>
-          )}
-        </div>
+              {!hasExpandContent && !expanding && expandFailed && (
+                <button
+                  onClick={handleLoadExpand}
+                  className="w-full flex items-center gap-4 p-4 rounded-xl card-glass border border-red-500/20 hover:border-[#667eea]/40 transition-all group"
+                >
+                  <span className="text-xl flex-shrink-0">🔄</span>
+                  <span className="flex-1 text-left">
+                    <span className="block text-sm font-semibold text-white">品味分析加载失败</span>
+                    <span className="block text-xs text-gray-500 mt-0.5">点击重试</span>
+                  </span>
+                  <span className="text-[#667eea] group-hover:translate-x-1 transition-transform">→</span>
+                </button>
+              )}
+            </div>
 
-        {/* === FREE CONTENT: Evolution Curve === */}
-        {report.timelineMonths && report.timelineMonths.length > 0 && (
+            {report.timelineMonths && report.timelineMonths.length > 0 && (
+              <div className="animate-fade-in-up animate-delay-200">
+                <ShareableCard filename={`品味进化-${mbtiType}`}>
+                  <EvolutionCurve
+                    months={report.timelineMonths}
+                    trend={ft(report.timelineText?.split("\n")[0])}
+                    prediction={ft(
+                      report.timelineText?.includes("预测")
+                        ? report.timelineText.split("\n").slice(1).join("\n")
+                        : undefined
+                    )}
+                  />
+                </ShareableCard>
+              </div>
+            )}
+
+            {!hasTimeline && expanding && (
+              <ExpandSkeleton icon="📅" label="品味进化时间线" />
+            )}
+          </>
+        ) : (
           <div className="animate-fade-in-up animate-delay-200">
-            <ShareableCard filename={`品味进化-${mbtiType}`}>
-              <EvolutionCurve
-                months={report.timelineMonths}
-                trend={ft(report.timelineText?.split("\n")[0])}
-                prediction={ft(
-                  report.timelineText?.includes("预测")
-                    ? report.timelineText.split("\n").slice(1).join("\n")
-                    : undefined
-                )}
-              />
-            </ShareableCard>
+            <div className="card-glass rounded-2xl p-6 text-center space-y-4">
+              <div className="text-2xl">📊</div>
+              <h3 className="text-lg font-bold text-white">解锁完整品味报告</h3>
+              <ul className="text-sm text-gray-400 space-y-1.5 text-left max-w-xs mx-auto">
+                <li className="flex items-start gap-2"><span className="text-[#667eea]">✦</span> 阅读情绪画像 · 书架密码</li>
+                <li className="flex items-start gap-2"><span className="text-[#667eea]">✦</span> 观影品味画像 · 光影密码</li>
+                <li className="flex items-start gap-2"><span className="text-[#667eea]">✦</span> 音乐情绪画像 · 声波密码</li>
+                <li className="flex items-start gap-2"><span className="text-[#667eea]">✦</span> 品味进化曲线 · 时间线</li>
+              </ul>
+              <div className="rounded-xl p-3" style={{ background: "rgba(102,126,234,0.08)", border: "1px solid rgba(102,126,234,0.2)" }}>
+                <span className="text-2xl font-black text-[#667eea]">¥{PRICE_BASIC}</span>
+                <span className="text-xs text-gray-400 ml-1">/份</span>
+              </div>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src="/images/tip-qrcode.jpg" alt="支付二维码" className="w-36 h-36 mx-auto rounded-xl" />
+              <p className="text-[10px] text-gray-500">微信扫码支付</p>
+              <button
+                onClick={handleBasicUnlock}
+                className="w-full py-3 rounded-xl bg-gradient-to-r from-[#667eea] to-[#764ba2] text-white font-medium hover:opacity-90 transition-opacity"
+              >
+                已支付？点击解锁
+              </button>
+            </div>
           </div>
         )}
 
-        {/* Timeline skeleton while loading */}
-        {!hasTimeline && expanding && (
-          <ExpandSkeleton icon="📅" label="品味进化时间线" />
-        )}
-
-        {/* Timeline retry button */}
-        {hasExpandContent && !hasTimeline && !expanding && (
-          <button
-            onClick={handleLoadExpand}
-            className="w-full flex items-center gap-4 p-4 rounded-xl card-glass border border-[#667eea]/20 hover:border-[#667eea]/40 transition-all group animate-fade-in-up animate-delay-200"
-            style={{ background: "linear-gradient(135deg, rgba(102,126,234,0.06), rgba(233,69,96,0.04))" }}
-          >
-            <span className="text-xl flex-shrink-0">📅</span>
-            <span className="flex-1 text-left">
-              <span className="block text-sm font-semibold text-white">重新加载时间线</span>
-              <span className="block text-xs text-gray-500 mt-0.5">品味分析已加载，点击重试时间线</span>
-            </span>
-            <span className="text-[#667eea] group-hover:translate-x-1 transition-transform">↻</span>
-          </button>
-        )}
-
-        {/* === UNLOCK SECTION: Deep Analysis === */}
-        {!isDeepUnlocked ? (
-          unlocking ? (
-            <UnlockingOverlay step={unlockStep} funFact={funFact} />
-          ) : (
-            <div className="animate-fade-in-up animate-delay-300">
-              <div className="card-glass rounded-2xl p-6 text-center space-y-4">
-                <div className="text-2xl">🔮</div>
-                <h3 className="text-lg font-bold text-white">
-                  分享解锁深度解读
-                </h3>
-                <ul className="text-sm text-gray-400 space-y-1.5 text-left max-w-xs mx-auto">
-                  <li className="flex items-start gap-2">
-                    <span className="text-[#e94560]">✦</span>
-                    跨领域品味关联分析
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <span className="text-[#e94560]">✦</span>
-                    {mbtiType} 深度人格画像
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <span className="text-[#e94560]">✦</span>
-                    品味盲区诊断
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <span className="text-[#e94560]">✦</span>
-                    AI 专属推荐
-                  </li>
-                </ul>
-                <button
-                  onClick={handleDeepUnlock}
-                  className="w-full py-3 rounded-xl bg-gradient-to-r from-[#667eea] to-[#764ba2] text-white font-medium hover:opacity-90 transition-opacity"
-                >
-                  分享并解锁 (免费)
-                </button>
-                <p className="text-xs text-gray-500">
-                  链接已自动复制到剪贴板 · 分析约需 15-20 秒
-                </p>
+        {/* === PAID DEEP: Deep Analysis + Diary Insight (¥0.99) === */}
+        {basicPaid && (
+          !isDeepUnlocked ? (
+            !deepPaid ? (
+              <div className="animate-fade-in-up animate-delay-300">
+                <div className="card-glass rounded-2xl p-6 text-center space-y-4">
+                  <div className="text-2xl">🔮</div>
+                  <h3 className="text-lg font-bold text-white">解锁深度解读</h3>
+                  <ul className="text-sm text-gray-400 space-y-1.5 text-left max-w-xs mx-auto">
+                    <li className="flex items-start gap-2"><span className="text-[#e94560]">✦</span> 跨领域品味关联分析</li>
+                    <li className="flex items-start gap-2"><span className="text-[#e94560]">✦</span> {mbtiType} 深度人格画像</li>
+                    <li className="flex items-start gap-2"><span className="text-[#e94560]">✦</span> 品味盲区诊断</li>
+                    <li className="flex items-start gap-2"><span className="text-[#e94560]">✦</span> 日记与动态解读</li>
+                    <li className="flex items-start gap-2"><span className="text-[#e94560]">✦</span> AI 专属推荐</li>
+                  </ul>
+                  <div className="rounded-xl p-3" style={{ background: "rgba(233,69,96,0.08)", border: "1px solid rgba(233,69,96,0.2)" }}>
+                    <span className="text-2xl font-black text-[#e94560]">¥{PRICE_DEEP}</span>
+                    <span className="text-xs text-gray-400 ml-1">/份</span>
+                  </div>
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src="/images/tip-qrcode.jpg" alt="支付二维码" className="w-36 h-36 mx-auto rounded-xl" />
+                  <p className="text-[10px] text-gray-500">微信扫码支付</p>
+                  <button
+                    onClick={() => { handleDeepUnlockPaid(); handleDeepUnlock(); }}
+                    className="w-full py-3 rounded-xl bg-gradient-to-r from-[#e94560] to-[#764ba2] text-white font-medium hover:opacity-90 transition-opacity"
+                  >
+                    已支付？点击解锁
+                  </button>
+                  <p className="text-xs text-gray-500">分析约需 15-20 秒</p>
+                </div>
               </div>
-            </div>
-          )
-        ) : (
+            ) : unlocking ? (
+              <UnlockingOverlay step={unlockStep} funFact={funFact} />
+            ) : (
+              <div className="card-glass rounded-xl p-5 text-center space-y-3 animate-fade-in-up animate-delay-300">
+                <div className="text-xl animate-pulse">🔮</div>
+                <p className="text-sm text-gray-400">正在加载深度解读...</p>
+              </div>
+            )
+          ) : (
           <div className="space-y-4 animate-fade-in-up animate-delay-300">
             <h2 className="text-lg font-bold text-white flex items-center gap-2">
               <span className="text-[#e94560]">✦</span> 深度解读
@@ -584,6 +607,20 @@ export default function ResultPage({
               title="品味盲区"
               content={ft(report.blindSpots)}
             />
+            {report.diaryInsight ? (
+              <AnalysisSection
+                icon="📝"
+                title="日记与动态解读"
+                content={ft(report.diaryInsight)}
+              />
+            ) : (
+              <div className="card-glass rounded-xl p-5 space-y-2">
+                <h3 className="text-sm font-bold text-white flex items-center gap-2">
+                  <span>📝</span> 日记与动态解读
+                </h3>
+                <p className="text-xs text-gray-500">暂无日记/动态数据，或需重新生成深度解读以获取此板块</p>
+              </div>
+            )}
 
             {/* Recommendations with Douban links */}
             {report.recommendations && report.recommendations.length > 0 && (
@@ -632,6 +669,7 @@ export default function ResultPage({
               </div>
             )}
           </div>
+          )
         )}
 
         {/* CTA: Compare */}
@@ -663,7 +701,7 @@ export default function ResultPage({
               {[
                 { icon: "🎧", name: "网易云音乐", desc: "听歌品味分析", color: "#e94560", badge: "即将上线" },
                 { icon: "📖", name: "微信读书", desc: "阅读品味画像", color: "#667eea", badge: "即将上线" },
-                { icon: "🔮", name: "赛博神算子", desc: "AI 塔罗占卜", color: "#a855f7", badge: "可体验", href: "https://cyber-oracle.vercel.app" },
+                { icon: "🔮", name: "赛博神算子", desc: "AI 塔罗占卜", color: "#a855f7", badge: "可体验", href: "https://cyber-oracle-nine.vercel.app" },
               ].map((item) => (
                 <a
                   key={item.name}

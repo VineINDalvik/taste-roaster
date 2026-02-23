@@ -49,9 +49,51 @@ export function setCompare(id: string, data: unknown) {
   }
 }
 
+// Payment pricing
+export const PRICE_BASIC = 0.66
+export const PRICE_DEEP = 0.99
+export const PRICE_COMPARE = 1.88
+
+const BASIC_PAID_KEY = 'taste-basic-paid'
+const DEEP_PAID_KEY = 'taste-deep-paid'
+
+function getPaidIds(key: string): string[] {
+  try {
+    const raw = Taro.getStorageSync(key)
+    if (!raw) return []
+    return typeof raw === 'string' ? JSON.parse(raw) : raw
+  } catch {
+    return []
+  }
+}
+
+function addPaidId(key: string, reportId: string) {
+  const ids = getPaidIds(key)
+  if (!ids.includes(reportId)) {
+    ids.push(reportId)
+    try { Taro.setStorageSync(key, JSON.stringify(ids)) } catch {}
+  }
+}
+
+export function isBasicPaid(reportId: string): boolean {
+  return getPaidIds(BASIC_PAID_KEY).includes(reportId)
+}
+
+export function markBasicPaid(reportId: string): void {
+  addPaidId(BASIC_PAID_KEY, reportId)
+}
+
+export function isDeepPaid(reportId: string): boolean {
+  return getPaidIds(DEEP_PAID_KEY).includes(reportId)
+}
+
+export function markDeepPaid(reportId: string): void {
+  addPaidId(DEEP_PAID_KEY, reportId)
+}
+
 const COMPARE_USAGE_KEY = 'taste-compare-usage'
 const FREE_LIMIT = 1
-export const COMPARE_PRICE_CNY = 0.66
+export const COMPARE_PRICE_CNY = 1.88
 
 interface CompareUsage {
   count: number

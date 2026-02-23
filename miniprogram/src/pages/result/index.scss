@@ -50,6 +50,12 @@
   font-weight: bold;
 }
 
+.section-empty-hint {
+  font-size: 22rpx;
+  color: #6b7280;
+  margin-top: 12rpx;
+}
+
 // ========== Themed Analysis Sections ==========
 
 .themed-section {
@@ -520,6 +526,43 @@
 
 .unlock-hint {
   font-size: 22rpx;
+  color: #6b7280;
+}
+
+.payment-price-block {
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  padding: 16rpx 24rpx;
+  border-radius: 16rpx;
+  background: rgba(102, 126, 234, 0.08);
+  border: 1px solid rgba(102, 126, 234, 0.2);
+}
+
+.payment-price {
+  font-size: 48rpx;
+  font-weight: 900;
+  color: #667eea;
+}
+
+.payment-price-red {
+  color: #e94560;
+}
+
+.payment-price-unit {
+  font-size: 22rpx;
+  color: #9ca3af;
+  margin-left: 4rpx;
+}
+
+.payment-qrcode {
+  width: 280rpx;
+  height: 280rpx;
+  border-radius: 16rpx;
+}
+
+.payment-qr-hint {
+  font-size: 20rpx;
   color: #6b7280;
 }
 

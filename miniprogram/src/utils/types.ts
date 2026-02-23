@@ -92,6 +92,7 @@ export interface ReportData {
   crossDomain?: string
   personality?: string
   blindSpots?: string
+  diaryInsight?: string
   recommendations?: RecommendationItem[]
 }
 

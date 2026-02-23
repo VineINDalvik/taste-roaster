@@ -4,7 +4,7 @@ import Taro, { useRouter, useShareAppMessage, useShareTimeline } from '@tarojs/t
 import ShareCard from '@/components/share-card'
 import EvolutionCurve from '@/components/evolution-curve'
 import { callApi } from '@/utils/api'
-import { getReport, setReport } from '@/utils/storage'
+import { getReport, setReport, isBasicPaid, markBasicPaid, isDeepPaid, markDeepPaid, PRICE_BASIC, PRICE_DEEP } from '@/utils/storage'
 import { saveAnalysisCard, saveFullReport } from '@/utils/canvas-saver'
 import type { ReportData, RecommendationItem, MonthSnapshot, MBTIDimension } from '@/utils/types'
 import './index.scss'
@@ -54,6 +54,8 @@ export default function ResultPage() {
   const [funFact, setFunFact] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [showShareModal, setShowShareModal] = useState(false)
+  const [basicPaid, setBasicPaid] = useState(false)
+  const [deepPaid, setDeepPaid] = useState(false)
   const stepRef = useRef<ReturnType<typeof setInterval>>()
 
   // musicEmotions handled by themed AnalysisSection with theme='music'
@@ -90,7 +92,10 @@ export default function ResultPage() {
     const stored = getReport(id)
     if (stored) {
       try {
-        setReportState(typeof stored === 'string' ? JSON.parse(stored) : stored)
+        const parsed = typeof stored === 'string' ? JSON.parse(stored) : stored
+        setReportState(parsed)
+        setBasicPaid(isBasicPaid(parsed.id || id))
+        setDeepPaid(isDeepPaid(parsed.id || id))
       } catch {
         setError('报告数据损坏')
       }
@@ -166,6 +171,7 @@ export default function ResultPage() {
         crossDomain: data.crossDomain as string,
         personality: data.personality as string,
         blindSpots: data.blindSpots as string,
+        diaryInsight: data.diaryInsight as string,
         recommendations: data.recommendations as RecommendationItem[],
       }
       setReportState(updated)
@@ -183,7 +189,7 @@ export default function ResultPage() {
       Taro.showToast({ title: '缺少原始数据，请重新测试', icon: 'none' })
       return
     }
-    setShowShareModal(true)
+    startDeepAnalysis()
   }
 
   const handleShareDone = useCallback(() => {
@@ -268,103 +274,126 @@ export default function ResultPage() {
 
         {/* sample count hidden — avoid showing small numbers */}
 
-        {/* Taste Analysis Section — button-triggered */}
-        <View className='animate-fade-in-up animate-delay-200'>
-          <Text className='report-title'>
-            <Text className='text-blue'>✦</Text> {mbtiType} 品味报告
-          </Text>
+        {/* Taste Analysis Section — payment gated (¥0.66) */}
+        {basicPaid ? (
+          <>
+            <View className='animate-fade-in-up animate-delay-200'>
+              <Text className='report-title'>
+                <Text className='text-blue'>✦</Text> {mbtiType} 品味报告
+              </Text>
 
-          {hasExpandContent ? (
-            <View className='analysis-sections'>
-              <AnalysisSection
-                icon='📚' title='阅读情绪画像' content={ft(report.bookAnalysis)} theme='book'
-                onSave={() => saveAnalysisCard('analysisCanvas', { icon: '📚', title: `${mbtiType} 的阅读品味`, content: ft(report.bookAnalysis) || '', mbtiType, doubanName: report.doubanName })}
-              />
-              <AnalysisSection
-                icon='🎬' title='观影品味画像' content={ft(report.movieAnalysis)} theme='movie'
-                onSave={() => saveAnalysisCard('analysisCanvas', { icon: '🎬', title: `${mbtiType} 的观影品味`, content: ft(report.movieAnalysis) || '', mbtiType, doubanName: report.doubanName })}
-              />
-              <AnalysisSection
-                icon='🎵' title='音乐情绪画像' content={ft(report.musicAnalysis)} theme='music'
-                onSave={() => saveAnalysisCard('analysisCanvas', { icon: '🎵', title: `${mbtiType} 的音乐品味`, content: ft(report.musicAnalysis) || '', mbtiType, doubanName: report.doubanName })}
-              />
-            </View>
-          ) : expanding ? (
-            <View className='section-card card-glass center-text'>
-              <Text className='loading-emoji animate-pulse'>📊</Text>
-              <Text className='loading-sub'>正在生成品味分析和时间线...</Text>
-              <View className='progress-bar-bg' style={{ width: '200rpx', margin: '0 auto' }}>
-                <View className='progress-bar-fill accent-gradient animate-pulse' style={{ width: '50%' }} />
-              </View>
-            </View>
-          ) : (
-            <View className='load-btn-card card-glass' onClick={handleLoadExpand}>
-              <Text className='load-btn-icon'>📊</Text>
-              <View className='load-btn-text-wrap'>
-                <Text className='load-btn-title'>加载完整品味分析</Text>
-                <Text className='load-btn-desc'>书影音逐项分析 + 品味时间线 · 约需 10-15 秒</Text>
-              </View>
-              <Text className='load-btn-arrow'>→</Text>
-            </View>
-          )}
-        </View>
-
-        {/* Evolution Curve */}
-        {report.timelineMonths && report.timelineMonths.length > 0 && (
-          <View className='animate-fade-in-up animate-delay-200'>
-            <EvolutionCurve
-              months={report.timelineMonths}
-              trend={ft(report.timelineText?.split('\n')[0])}
-              prediction={ft(
-                report.timelineText?.includes('预测')
-                  ? report.timelineText.split('\n').slice(1).join('\n')
-                  : undefined
+              {hasExpandContent ? (
+                <View className='analysis-sections'>
+                  <AnalysisSection
+                    icon='📚' title='阅读情绪画像' content={ft(report.bookAnalysis)} theme='book'
+                    onSave={() => saveAnalysisCard('analysisCanvas', { icon: '📚', title: `${mbtiType} 的阅读品味`, content: ft(report.bookAnalysis) || '', mbtiType, doubanName: report.doubanName })}
+                  />
+                  <AnalysisSection
+                    icon='🎬' title='观影品味画像' content={ft(report.movieAnalysis)} theme='movie'
+                    onSave={() => saveAnalysisCard('analysisCanvas', { icon: '🎬', title: `${mbtiType} 的观影品味`, content: ft(report.movieAnalysis) || '', mbtiType, doubanName: report.doubanName })}
+                  />
+                  <AnalysisSection
+                    icon='🎵' title='音乐情绪画像' content={ft(report.musicAnalysis)} theme='music'
+                    onSave={() => saveAnalysisCard('analysisCanvas', { icon: '🎵', title: `${mbtiType} 的音乐品味`, content: ft(report.musicAnalysis) || '', mbtiType, doubanName: report.doubanName })}
+                  />
+                </View>
+              ) : expanding ? (
+                <View className='section-card card-glass center-text'>
+                  <Text className='loading-emoji animate-pulse'>📊</Text>
+                  <Text className='loading-sub'>正在生成品味分析和时间线...</Text>
+                  <View className='progress-bar-bg' style={{ width: '200rpx', margin: '0 auto' }}>
+                    <View className='progress-bar-fill accent-gradient animate-pulse' style={{ width: '50%' }} />
+                  </View>
+                </View>
+              ) : (
+                <View className='load-btn-card card-glass' onClick={handleLoadExpand}>
+                  <Text className='load-btn-icon'>📊</Text>
+                  <View className='load-btn-text-wrap'>
+                    <Text className='load-btn-title'>加载完整品味分析</Text>
+                    <Text className='load-btn-desc'>书影音逐项分析 + 品味时间线 · 约需 10-15 秒</Text>
+                  </View>
+                  <Text className='load-btn-arrow'>→</Text>
+                </View>
               )}
-            />
-          </View>
-        )}
-
-        {/* Timeline skeleton while loading */}
-        {!hasTimeline && expanding && (
-          <View className='section-card card-glass center-text'>
-            <Text className='loading-emoji animate-pulse'>📅</Text>
-            <Text className='loading-text'>品味进化时间线加载中...</Text>
-          </View>
-        )}
-
-        {/* Timeline load button — shows when expand loaded but no timeline data */}
-        {hasExpandContent && !hasTimeline && !expanding && (
-          <View className='load-btn-card card-glass animate-fade-in-up animate-delay-200' onClick={handleLoadExpand}>
-            <Text className='load-btn-icon'>📅</Text>
-            <View className='load-btn-text-wrap'>
-              <Text className='load-btn-title'>重新加载时间线</Text>
-              <Text className='load-btn-desc'>品味分析已加载，点击重试时间线</Text>
             </View>
-            <Text className='load-btn-arrow'>↻</Text>
-          </View>
-        )}
 
-        {/* Unlock Section (Share to unlock - free) */}
-        {!isDeepUnlocked ? (
-          unlocking ? (
-            <UnlockingOverlay step={unlockStep} funFact={funFact} />
-          ) : (
-            <View className='unlock-card card-glass animate-fade-in-up animate-delay-300'>
-              <Text className='unlock-emoji'>🔮</Text>
-              <Text className='unlock-title'>分享解锁深度解读</Text>
-              <View className='unlock-list'>
-                <Text className='unlock-item'><Text className='text-red'>✦</Text> 跨领域品味关联分析</Text>
-                <Text className='unlock-item'><Text className='text-red'>✦</Text> {mbtiType} 深度人格画像</Text>
-                <Text className='unlock-item'><Text className='text-red'>✦</Text> 品味盲区诊断</Text>
-                <Text className='unlock-item'><Text className='text-red'>✦</Text> AI 专属推荐</Text>
+            {report.timelineMonths && report.timelineMonths.length > 0 && (
+              <View className='animate-fade-in-up animate-delay-200'>
+                <EvolutionCurve
+                  months={report.timelineMonths}
+                  trend={ft(report.timelineText?.split('\n')[0])}
+                  prediction={ft(
+                    report.timelineText?.includes('预测')
+                      ? report.timelineText.split('\n').slice(1).join('\n')
+                      : undefined
+                  )}
+                />
               </View>
-              <View className='btn-unlock' onClick={handleDeepUnlock}>
-                <Text className='btn-action-text'>分享并解锁 (免费)</Text>
+            )}
+
+            {!hasTimeline && expanding && (
+              <View className='section-card card-glass center-text'>
+                <Text className='loading-emoji animate-pulse'>📅</Text>
+                <Text className='loading-text'>品味进化时间线加载中...</Text>
               </View>
-              <Text className='unlock-hint'>分享给好友即可解锁 · 分析约需 15-20 秒</Text>
-            </View>
-          )
+            )}
+          </>
         ) : (
+          <View className='unlock-card card-glass animate-fade-in-up animate-delay-200'>
+            <Text className='unlock-emoji'>📊</Text>
+            <Text className='unlock-title'>解锁完整品味报告</Text>
+            <View className='unlock-list'>
+              <Text className='unlock-item'><Text className='text-blue'>✦</Text> 阅读情绪画像 · 书架密码</Text>
+              <Text className='unlock-item'><Text className='text-blue'>✦</Text> 观影品味画像 · 光影密码</Text>
+              <Text className='unlock-item'><Text className='text-blue'>✦</Text> 音乐情绪画像 · 声波密码</Text>
+              <Text className='unlock-item'><Text className='text-blue'>✦</Text> 品味进化曲线 · 时间线</Text>
+            </View>
+            <View className='payment-price-block'>
+              <Text className='payment-price'>¥{PRICE_BASIC}</Text>
+              <Text className='payment-price-unit'>/份</Text>
+            </View>
+            <Image className='payment-qrcode' src='https://taste-mbti.vercel.app/images/tip-qrcode.jpg' mode='aspectFit' />
+            <Text className='payment-qr-hint'>微信扫码支付</Text>
+            <View className='btn-unlock' onClick={() => { markBasicPaid(report.id || id); setBasicPaid(true) }}>
+              <Text className='btn-action-text'>已支付？点击解锁</Text>
+            </View>
+          </View>
+        )}
+
+        {/* Deep Analysis Section — payment gated (¥0.99) */}
+        {basicPaid && (
+          !isDeepUnlocked ? (
+            !deepPaid ? (
+              <View className='unlock-card card-glass animate-fade-in-up animate-delay-300'>
+                <Text className='unlock-emoji'>🔮</Text>
+                <Text className='unlock-title'>解锁深度解读</Text>
+                <View className='unlock-list'>
+                  <Text className='unlock-item'><Text className='text-red'>✦</Text> 跨领域品味关联分析</Text>
+                  <Text className='unlock-item'><Text className='text-red'>✦</Text> {mbtiType} 深度人格画像</Text>
+                  <Text className='unlock-item'><Text className='text-red'>✦</Text> 品味盲区诊断</Text>
+                  <Text className='unlock-item'><Text className='text-red'>✦</Text> 日记与动态解读</Text>
+                  <Text className='unlock-item'><Text className='text-red'>✦</Text> AI 专属推荐</Text>
+                </View>
+                <View className='payment-price-block'>
+                  <Text className='payment-price payment-price-red'>¥{PRICE_DEEP}</Text>
+                  <Text className='payment-price-unit'>/份</Text>
+                </View>
+                <Image className='payment-qrcode' src='https://taste-mbti.vercel.app/images/tip-qrcode.jpg' mode='aspectFit' />
+                <Text className='payment-qr-hint'>微信扫码支付</Text>
+                <View className='btn-unlock' onClick={() => { markDeepPaid(report.id || id); setDeepPaid(true); handleDeepUnlock() }}>
+                  <Text className='btn-action-text'>已支付？点击解锁</Text>
+                </View>
+                <Text className='unlock-hint'>分析约需 15-20 秒</Text>
+              </View>
+            ) : unlocking ? (
+              <UnlockingOverlay step={unlockStep} funFact={funFact} />
+            ) : (
+              <View className='section-card card-glass center-text animate-fade-in-up animate-delay-300'>
+                <Text className='loading-emoji animate-pulse'>🔮</Text>
+                <Text className='loading-sub'>正在加载深度解读...</Text>
+              </View>
+            )
+          ) : (
           <View className='animate-fade-in-up animate-delay-300'>
             <Text className='report-title'>
               <Text className='text-red'>✦</Text> 深度解读
@@ -382,6 +411,17 @@ export default function ResultPage() {
                 icon='🎯' title='品味盲区' content={ft(report.blindSpots)}
                 onSave={() => saveAnalysisCard('analysisCanvas', { icon: '🎯', title: '品味盲区', content: ft(report.blindSpots) || '', mbtiType, doubanName: report.doubanName })}
               />
+              {report.diaryInsight ? (
+                <AnalysisSection
+                  icon='📝' title='日记与动态解读' content={ft(report.diaryInsight)}
+                  onSave={() => saveAnalysisCard('analysisCanvas', { icon: '📝', title: '日记与动态解读', content: ft(report.diaryInsight) || '', mbtiType, doubanName: report.doubanName })}
+                />
+              ) : (
+                <View className='section-card card-glass'>
+                  <Text className='section-title'>📝 日记与动态解读</Text>
+                  <Text className='section-empty-hint'>暂无日记/动态数据，或需重新生成深度解读以获取此板块</Text>
+                </View>
+              )}
             </View>
 
             {report.recommendations && report.recommendations.length > 0 && (
@@ -415,6 +455,7 @@ export default function ResultPage() {
               </View>
             )}
           </View>
+          )
         )}
 
         {/* Paid Deep Analysis (hidden behind feature flag) */}
@@ -466,7 +507,7 @@ export default function ResultPage() {
                 className='explore-card card-glass'
                 onClick={() => {
                   if (item.name === '赛博神算子') {
-                    Taro.setClipboardData({ data: 'https://cyber-oracle.vercel.app', success: () => {
+                    Taro.setClipboardData({ data: 'https://cyber-oracle-nine.vercel.app', success: () => {
                       Taro.showToast({ title: '链接已复制，可在浏览器打开', icon: 'none' })
                     }})
                   }

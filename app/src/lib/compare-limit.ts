@@ -1,6 +1,6 @@
 const STORAGE_KEY = "taste-compare-usage";
 const FREE_LIMIT = 1;
-const PRICE_CNY = 0.66;
+const PRICE_CNY = 1.88;
 
 interface CompareUsage {
   count: number;

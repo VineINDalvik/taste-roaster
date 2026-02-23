@@ -662,6 +662,12 @@ export async function scrapeDoubanQuick(userId: string): Promise<DoubanData> {
     throw new Error("未获取到任何数据，该用户可能设置了隐私保护");
   }
 
+  const [reviews, diaries, statuses] = await Promise.all([
+    scrapeReviews(userId).catch(() => [] as { title: string; content: string; type: string; rating?: number }[]),
+    scrapeDiaries(userId).catch(() => [] as { title: string; content: string; date?: string }[]),
+    scrapeStatuses(userId).catch(() => [] as { content: string; date?: string }[]),
+  ]);
+
   return {
     profile,
     books,
@@ -670,7 +676,7 @@ export async function scrapeDoubanQuick(userId: string): Promise<DoubanData> {
     fullBooks,
     fullMovies,
     fullMusic,
-    reviews: [], diaries: [], statuses: [],
+    reviews, diaries, statuses,
   };
 }
 

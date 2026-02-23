@@ -217,6 +217,7 @@ export async function generatePremiumReport(
   crossDomain: string;
   personality: string;
   blindSpots: string;
+  diaryInsight: string;
 }> {
   const { input: truncated, wasTruncated, originalCounts } = truncateForTokenBudget(report.input);
   const openai = getOpenAI();
@@ -230,11 +231,13 @@ export async function generatePremiumReport(
   const hasBooks = (truncated.books?.length ?? 0) > 0;
   const hasMovies = (truncated.movies?.length ?? 0) > 0;
   const hasMusic = (truncated.music?.length ?? 0) > 0;
+  const hasDiaryOrStatus = ((truncated.diaries?.length ?? 0) + (truncated.statuses?.length ?? 0)) > 0;
 
   const skipHints: string[] = [];
   if (!hasBooks) skipHints.push('bookAnalysis返回""');
   if (!hasMovies) skipHints.push('movieAnalysis返回""');
   if (!hasMusic) skipHints.push('musicAnalysis返回""');
+  if (!hasDiaryOrStatus) skipHints.push('diaryInsight返回""');
 
   let prompt = fillTemplate(PREMIUM_ANALYSIS_PROMPT, data);
   if (skipHints.length > 0) {
@@ -260,6 +263,7 @@ export async function generatePremiumReport(
     crossDomain: string;
     personality: string;
     blindSpots: string;
+    diaryInsight: string;
   };
 }
 

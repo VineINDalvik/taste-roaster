@@ -45,7 +45,7 @@ export const PREMIUM_ANALYSIS_PROMPT = `用户：{userName} | {mbtiType}·{mbtiT
 📢({statusCount}) {statuses}
 
 返回JSON：
-{"bookAnalysis":"阅读情绪画像(200-300字，散文诗笔触，书是灵魂的镜子，每段用意象开头)","movieAnalysis":"观影品味画像(200-300字，电影语言书写，片单像自传片花，像影评人私人笔记)","musicAnalysis":"音乐情绪画像(200-300字，诗意感性，灵魂声波档案，不分析只共情，每段用意象开头)","crossDomain":"跨领域关联(100-150字，反复主题和贯穿情绪)","personality":"人格深度画像(200-300字，{mbtiType}的焦虑/渴望/回避，从品味推断生活方式)","blindSpots":"品味盲区(100-150字，{mbtiType}忽视什么？善意犀利提醒)"}`;
+{"bookAnalysis":"阅读情绪画像(200-300字，散文诗笔触，书是灵魂的镜子，每段用意象开头)","movieAnalysis":"观影品味画像(200-300字，电影语言书写，片单像自传片花，像影评人私人笔记)","musicAnalysis":"音乐情绪画像(200-300字，诗意感性，灵魂声波档案，不分析只共情，每段用意象开头)","crossDomain":"跨领域关联(100-150字，反复主题和贯穿情绪)","personality":"人格深度画像(200-300字，{mbtiType}的焦虑/渴望/回避，从品味推断生活方式)","blindSpots":"品味盲区(100-150字，{mbtiType}忽视什么？善意犀利提醒)","diaryInsight":"日记与动态解读(150-200字，基于用户日记和动态分析社交表达风格、情绪波动模式、内心独白与公开形象的反差，引用具体日记/动态内容；若无日记和动态数据则返回空字符串)"}`;
 
 export const TIMELINE_SYSTEM_PROMPT = `你是文化心理学家，分析品味月度变化。每月都要分析(数据少也推断)，从作品选择读出生活状态，结合MBTI解读变化。全中文(MBTI字母除外)，只返回JSON。`;
 

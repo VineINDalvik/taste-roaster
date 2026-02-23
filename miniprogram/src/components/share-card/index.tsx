@@ -2,6 +2,8 @@ import { useCallback, useState } from 'react'
 import { View, Text, Image } from '@tarojs/components'
 import Taro from '@tarojs/taro'
 import type { MBTIDimension, RadarData } from '@/utils/types'
+import DimensionBar from '@/components/dimension-bar'
+import RadarChart from '@/components/radar-chart'
 import './index.scss'
 
 const VERCEL_BASE = 'https://app-theta-puce.vercel.app'
@@ -93,37 +95,97 @@ export default function ShareCard(props: Props) {
     }
   }, [previewUrl])
 
+  if (renderTrigger) {
+    return (
+      <>
+        {previewUrl && <PreviewOverlay url={previewUrl} onClose={() => setPreviewUrl(null)} onSave={handleSaveToAlbum} />}
+        {renderTrigger(handleSaveImage)}
+      </>
+    )
+  }
+
   return (
-    <>
-      {/* Preview overlay */}
-      {previewUrl && (
-        <View className='share-preview-overlay' onClick={() => setPreviewUrl(null)}>
-          <Text className='share-preview-hint'>长按图片保存到相册</Text>
-          <Image
-            className='share-preview-image'
-            src={previewUrl}
-            mode='widthFix'
-            showMenuByLongpress
-            onClick={(e) => e.stopPropagation()}
-          />
-          <View className='share-preview-actions'>
-            <View className='share-preview-btn' onClick={(e) => { e.stopPropagation(); handleSaveToAlbum() }}>
-              <Text>保存到相册</Text>
-            </View>
-            <View className='share-preview-btn share-preview-close' onClick={() => setPreviewUrl(null)}>
-              <Text>关闭</Text>
+    <View className='share-card-wrap'>
+      {previewUrl && <PreviewOverlay url={previewUrl} onClose={() => setPreviewUrl(null)} onSave={handleSaveToAlbum} />}
+
+      <View className='card-visual'>
+        <View className='card-glow-1' />
+        <View className='card-glow-2' />
+        <View className='card-content'>
+          <Text className='card-label'>
+            {doubanName ? `${doubanName} 的` : ''}书影音 MBTI
+          </Text>
+          <Text className='card-mbti-type'>{mbtiType}</Text>
+          <Text className='card-mbti-title'>{mbtiTitle}</Text>
+
+          <View className='card-roast-box'>
+            <Text className='card-roast'>&ldquo;{roast}&rdquo;</Text>
+          </View>
+
+          <View className='card-dims'>
+            {(['ie', 'ns', 'tf', 'jp'] as const).map(k => (
+              <DimensionBar key={k} dimKey={k} dim={dimensions[k]} />
+            ))}
+          </View>
+
+          <View className='card-radar-stats'>
+            <RadarChart data={radarData as unknown as Record<string, number>} size={120} canvasId='shareRadar' />
+            <View className='card-stats'>
+              {bookCount != null && (
+                <View className='mini-stat'>
+                  <Text className='stat-emoji'>📚</Text>
+                  <Text className='stat-val'>{bookCount}</Text>
+                  <Text className='stat-label'>本书</Text>
+                </View>
+              )}
+              {movieCount != null && (
+                <View className='mini-stat'>
+                  <Text className='stat-emoji'>🎬</Text>
+                  <Text className='stat-val'>{movieCount}</Text>
+                  <Text className='stat-label'>部电影</Text>
+                </View>
+              )}
+              {musicCount != null && (
+                <View className='mini-stat'>
+                  <Text className='stat-emoji'>🎵</Text>
+                  <Text className='stat-val'>{musicCount}</Text>
+                  <Text className='stat-label'>首音乐</Text>
+                </View>
+              )}
             </View>
           </View>
-        </View>
-      )}
 
-      {renderTrigger ? (
-        renderTrigger(handleSaveImage)
-      ) : (
-        <View className='share-card-trigger' onClick={handleSaveImage}>
-          <Text>保存卡片</Text>
+          <Text className='card-summary'>{summary}</Text>
+
+          <View className='card-footer'>
+            <Text className='card-footer-left'>豆瓣书影音 MBTI</Text>
+            <Text className='card-footer-right'>测测你的书影音 MBTI →</Text>
+          </View>
         </View>
-      )}
-    </>
+      </View>
+    </View>
+  )
+}
+
+function PreviewOverlay({ url, onClose, onSave }: { url: string; onClose: () => void; onSave: () => void }) {
+  return (
+    <View className='share-preview-overlay' onClick={onClose}>
+      <Text className='share-preview-hint'>长按图片保存到相册</Text>
+      <Image
+        className='share-preview-image'
+        src={url}
+        mode='widthFix'
+        showMenuByLongpress
+        onClick={(e) => e.stopPropagation()}
+      />
+      <View className='share-preview-actions'>
+        <View className='share-preview-btn' onClick={(e) => { e.stopPropagation(); onSave() }}>
+          <Text>保存到相册</Text>
+        </View>
+        <View className='share-preview-btn share-preview-close' onClick={onClose}>
+          <Text>关闭</Text>
+        </View>
+      </View>
+    </View>
   )
 }

@@ -164,7 +164,7 @@ export async function saveAnalysisCard(
         ctx.font = `bold 18px ${F}`
         ctx.textAlign = 'left'
         ctx.fillStyle = '#e94560'
-        ctx.fillText(`${opts.icon} ${opts.title}`, PAD, y)
+        ctx.fillText(opts.title, PAD, y)
         y += 34
 
         ctx.font = `14px ${F}`
@@ -272,9 +272,9 @@ export async function saveFullReport(
 
         // Stats
         const stats = [
-          { emoji: '📚', val: opts.bookCount, label: '本书' },
-          { emoji: '🎬', val: opts.movieCount, label: '部电影' },
-          { emoji: '🎵', val: opts.musicCount, label: '首音乐' },
+          { val: opts.bookCount, label: '本书' },
+          { val: opts.movieCount, label: '部电影' },
+          { val: opts.musicCount, label: '首音乐' },
         ].filter(s => s.val > 0)
 
         if (stats.length > 0) {
@@ -282,19 +282,17 @@ export async function saveFullReport(
           stats.forEach((s, i) => {
             const sx = PAD + i * statW + statW / 2
             ctx.fillStyle = 'rgba(255,255,255,0.05)'
-            rrect(ctx, PAD + i * statW + 4, y, statW - 8, 58, 8)
+            rrect(ctx, PAD + i * statW + 4, y, statW - 8, 50, 8)
             ctx.fill()
             ctx.textAlign = 'center'
-            ctx.font = `14px ${F}`
+            ctx.font = `bold 20px ${F}`
             ctx.fillStyle = '#fff'
-            ctx.fillText(s.emoji, sx, y + 20)
-            ctx.font = `bold 18px ${F}`
-            ctx.fillText(String(s.val), sx, y + 40)
+            ctx.fillText(String(s.val), sx, y + 26)
             ctx.font = `11px ${F}`
             ctx.fillStyle = '#9ca3af'
-            ctx.fillText(s.label, sx, y + 54)
+            ctx.fillText(s.label, sx, y + 44)
           })
-          y += 76
+          y += 68
         }
 
         // Summary — wrap
@@ -310,9 +308,9 @@ export async function saveFullReport(
 
         // Analysis sections
         const sections = [
-          { icon: '📚', title: '阅读画像', text: opts.bookAnalysis },
-          { icon: '🎬', title: '观影画像', text: opts.movieAnalysis },
-          { icon: '🎵', title: '音乐画像', text: opts.musicAnalysis },
+          { title: '阅读画像', text: opts.bookAnalysis },
+          { title: '观影画像', text: opts.movieAnalysis },
+          { title: '音乐画像', text: opts.musicAnalysis },
         ].filter(s => s.text)
 
         for (const sec of sections) {
@@ -326,7 +324,7 @@ export async function saveFullReport(
           ctx.font = `bold 16px ${F}`
           ctx.fillStyle = '#e94560'
           ctx.textAlign = 'left'
-          ctx.fillText(`${sec.icon} ${sec.title}`, PAD, y)
+          ctx.fillText(sec.title, PAD, y)
           y += 28
 
           ctx.font = `14px ${F}`
