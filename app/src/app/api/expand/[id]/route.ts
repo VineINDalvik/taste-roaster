@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { generatePremiumReport, generateTimeline } from "@/lib/analyzer";
 import { resetUsage, getAccumulatedUsage } from "@/lib/openai";
+import { getCachedExpand, cacheExpand } from "@/lib/kv";
 import type { TasteReport, TasteInput, CulturalMBTI } from "@/lib/types";
 
 export const maxDuration = 60;
@@ -35,6 +36,17 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    // Check cache by douban ID
+    const doubanId = input.doubanId;
+    if (doubanId) {
+      const cached = await getCachedExpand(doubanId);
+      if (cached) {
+        console.log(`[Cache HIT] expand:${doubanId}`);
+        return NextResponse.json({ ...cached, _cached: true });
+      }
+      console.log(`[Cache MISS] expand:${doubanId}`);
+    }
+
     const report: TasteReport = {
       id: body.id ?? "temp",
       createdAt: new Date().toISOString(),
@@ -66,14 +78,21 @@ export async function POST(req: NextRequest) {
       })),
     ]);
 
-    return NextResponse.json({
+    const result = {
       bookAnalysis: premium.bookAnalysis,
       movieAnalysis: premium.movieAnalysis,
       musicAnalysis: premium.musicAnalysis,
       timelineMonths: timeline.months,
       timelineText: `${timeline.trend}\n\n${timeline.prediction}`,
       _usage: getAccumulatedUsage(),
-    });
+    };
+
+    // Save to cache (fire-and-forget)
+    if (doubanId) {
+      cacheExpand(doubanId, result);
+    }
+
+    return NextResponse.json(result);
   } catch (error) {
     console.error("Expand error:", error);
     const message =

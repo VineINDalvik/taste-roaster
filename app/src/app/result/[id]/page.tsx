@@ -89,7 +89,7 @@ const UNLOCK_MESSAGES = [
   "深入解读你的文化人格...",
   "分析跨领域品味关联...",
   "挖掘你的品味盲区...",
-  "生成专属推荐（排除已读）...",
+  "生成专属推荐...",
   "AI 正在写深度人格画像...",
   "快好了，最后的打磨...",
 ];
@@ -417,12 +417,7 @@ export default function ResultPage({
           {report.musicCount > 0 && <StatBlock value={report.musicCount} label="首音乐" emoji="🎵" />}
         </div>
 
-        {report.sampleCount && (
-          <div className="text-center text-xs text-gray-500 animate-fade-in-up">
-            基于 {report.sampleCount} 条数据分析 · 实际总量{" "}
-            {report.bookCount + report.movieCount + report.musicCount}
-          </div>
-        )}
+        {/* sample count hidden — avoid showing small numbers */}
 
         {/* === FREE CONTENT: Book/Movie/Music Analysis === */}
         <div className="space-y-4 animate-fade-in-up animate-delay-200">
@@ -553,7 +548,7 @@ export default function ResultPage({
                   </li>
                   <li className="flex items-start gap-2">
                     <span className="text-[#e94560]">✦</span>
-                    AI 专属推荐（排除已读/已看/已听）
+                    AI 专属推荐
                   </li>
                 </ul>
                 <button
@@ -597,7 +592,7 @@ export default function ResultPage({
                   💡 {mbtiType} 专属推荐
                 </h3>
                 <p className="text-xs text-gray-500">
-                  已排除你读过/看过/听过的作品 · 点击可跳转豆瓣
+                  点击可跳转豆瓣搜索
                 </p>
                 <div className="space-y-3">
                   {report.recommendations

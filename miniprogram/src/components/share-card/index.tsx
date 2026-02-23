@@ -32,8 +32,8 @@ const DIM_LABELS: Record<string, [string, string]> = {
   tf: ['T 思维', 'F 情感'],
   jp: ['J 判断', 'P 感知'],
 }
-const RADAR_KEYS = ['depth', 'breadth', 'uniqueness', 'emotionSensitivity', 'timeSpan']
-const RADAR_LABELS_CN = ['深度', '广度', '独特性', '情感力', '时代感']
+const RADAR_KEYS = ['wenqing', 'emo', 'shekong', 'kaogu', 'shangtou', 'chouxiang']
+const RADAR_LABELS_CN = ['文青浓度', 'emo指数', '社恐值', '考古癖', '上头指数', '活人感']
 
 export default function ShareCard(props: Props) {
   const {
@@ -43,13 +43,13 @@ export default function ShareCard(props: Props) {
   } = props
 
   const handleSaveImage = useCallback(async () => {
-    try {
-      Taro.showLoading({ title: '生成中...' })
+    Taro.showLoading({ title: '生成中...' })
 
-      const query = Taro.createSelectorQuery()
-      query.select('#shareCanvas')
-        .fields({ node: true, size: true })
-        .exec(async (res) => {
+    const query = Taro.createSelectorQuery()
+    query.select('#shareCanvas')
+      .fields({ node: true, size: true })
+      .exec((res) => {
+        try {
           if (!res?.[0]?.node) {
             Taro.hideLoading()
             Taro.showToast({ title: '生成失败', icon: 'error' })
@@ -58,9 +58,9 @@ export default function ShareCard(props: Props) {
 
           const canvas = res[0].node
           const ctx = canvas.getContext('2d')
-          const dpr = 1.5
-          const w = 500
-          const h = 750
+          const dpr = 2
+          const w = 375
+          const h = 560
           canvas.width = w * dpr
           canvas.height = h * dpr
           ctx.scale(dpr, dpr)
@@ -70,32 +70,28 @@ export default function ShareCard(props: Props) {
           setTimeout(() => {
             Taro.canvasToTempFilePath({
               canvas,
-              width: w * dpr,
-              height: h * dpr,
-              destWidth: w * dpr,
-              destHeight: h * dpr,
-              fileType: 'png',
+              fileType: 'jpg',
+              quality: 0.92,
               success: (result) => {
                 Taro.hideLoading()
-                Taro.saveImageToPhotosAlbum({
-                  filePath: result.tempFilePath,
-                  success: () => Taro.showToast({ title: '已保存到相册', icon: 'success' }),
-                  fail: () => {
-                    Taro.showToast({ title: '请授权相册权限', icon: 'none' })
-                  }
+                Taro.previewImage({
+                  current: result.tempFilePath,
+                  urls: [result.tempFilePath],
                 })
               },
-              fail: () => {
+              fail: (err) => {
+                console.error('canvasToTempFilePath fail:', err)
                 Taro.hideLoading()
                 Taro.showToast({ title: '生成失败', icon: 'error' })
               }
             })
-          }, 150)
-        })
-    } catch {
-      Taro.hideLoading()
-      Taro.showToast({ title: '保存失败', icon: 'error' })
-    }
+          }, 500)
+        } catch (e) {
+          console.error('Canvas draw error:', e)
+          Taro.hideLoading()
+          Taro.showToast({ title: '生成失败', icon: 'error' })
+        }
+      })
   }, [props])
 
   if (renderTrigger) {
@@ -106,7 +102,7 @@ export default function ShareCard(props: Props) {
           id='shareCanvas'
           canvasId='shareCanvas'
           className='share-canvas-hidden'
-          style={{ width: '500px', height: '750px' }}
+          style={{ width: '375px', height: '560px' }}
         />
         {renderTrigger(handleSaveImage)}
       </>
@@ -165,7 +161,7 @@ export default function ShareCard(props: Props) {
           <Text className='card-summary'>{summary}</Text>
 
           <View className='card-footer'>
-            <Text className='card-footer-left'>基于 {itemCount} 条书影音数据</Text>
+            <Text className='card-footer-left'>豆瓣书影音 MBTI</Text>
             <Text className='card-footer-right'>测测你的书影音 MBTI →</Text>
           </View>
         </View>
@@ -176,10 +172,24 @@ export default function ShareCard(props: Props) {
         id='shareCanvas'
         canvasId='shareCanvas'
         className='share-canvas-hidden'
-        style={{ width: '500px', height: '750px' }}
+        style={{ width: '375px', height: '560px' }}
       />
     </View>
   )
+}
+
+function roundRect(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number) {
+  ctx.beginPath()
+  ctx.moveTo(x + r, y)
+  ctx.lineTo(x + w - r, y)
+  ctx.arcTo(x + w, y, x + w, y + r, r)
+  ctx.lineTo(x + w, y + h - r)
+  ctx.arcTo(x + w, y + h, x + w - r, y + h, r)
+  ctx.lineTo(x + r, y + h)
+  ctx.arcTo(x, y + h, x, y + h - r, r)
+  ctx.lineTo(x, y + r)
+  ctx.arcTo(x, y, x + r, y, r)
+  ctx.closePath()
 }
 
 function drawShareCard(ctx: CanvasRenderingContext2D, w: number, h: number, p: Props) {
@@ -250,8 +260,7 @@ function drawShareCard(ctx: CanvasRenderingContext2D, w: number, h: number, p: P
     y += 12
 
     ctx.fillStyle = 'rgba(255,255,255,0.1)'
-    ctx.beginPath()
-    ctx.roundRect(barX, y, barW, 5, 2.5)
+    roundRect(ctx, barX, y, barW, 5, 2.5)
     ctx.fill()
 
     const fillW = barW * (d.score / 100)
@@ -260,15 +269,13 @@ function drawShareCard(ctx: CanvasRenderingContext2D, w: number, h: number, p: P
       fillGrad.addColorStop(0, '#667eea')
       fillGrad.addColorStop(1, '#764ba2')
       ctx.fillStyle = fillGrad
-      ctx.beginPath()
-      ctx.roundRect(barX, y, fillW, 5, 2.5)
+      roundRect(ctx, barX, y, fillW, 5, 2.5)
       ctx.fill()
     } else {
       fillGrad.addColorStop(0, '#e94560')
       fillGrad.addColorStop(1, '#f5c518')
       ctx.fillStyle = fillGrad
-      ctx.beginPath()
-      ctx.roundRect(barX + barW - fillW, y, fillW, 5, 2.5)
+      roundRect(ctx, barX + barW - fillW, y, fillW, 5, 2.5)
       ctx.fill()
     }
 
@@ -286,8 +293,7 @@ function drawShareCard(ctx: CanvasRenderingContext2D, w: number, h: number, p: P
   stats.forEach((s, i) => {
     const sx = 30 + i * statW + statW / 2
     ctx.fillStyle = 'rgba(255,255,255,0.05)'
-    ctx.beginPath()
-    ctx.roundRect(30 + i * statW + 3, y, statW - 6, 48, 6)
+    roundRect(ctx, 30 + i * statW + 3, y, statW - 6, 48, 6)
     ctx.fill()
 
     ctx.font = '12px sans-serif'
@@ -322,7 +328,7 @@ function drawShareCard(ctx: CanvasRenderingContext2D, w: number, h: number, p: P
   ctx.font = '9px sans-serif'
   ctx.textAlign = 'left'
   ctx.fillStyle = '#4b5563'
-  ctx.fillText(`基于 ${p.itemCount} 条书影音数据`, 25, y)
+  ctx.fillText('豆瓣书影音 MBTI', 25, y)
   ctx.textAlign = 'right'
   ctx.fillStyle = '#667eea'
   ctx.fillText('测测你的书影音 MBTI →', w - 25, y)

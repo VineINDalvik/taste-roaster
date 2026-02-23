@@ -2,7 +2,7 @@ import { useState, useRef, useCallback } from 'react'
 import { View, Text, Input } from '@tarojs/components'
 import Taro from '@tarojs/taro'
 import { callApi } from '@/utils/api'
-import { setReport } from '@/utils/storage'
+import { setReport, getCachedByDoubanId, setCacheByDoubanId } from '@/utils/storage'
 import './index.scss'
 
 const PROGRESS_MESSAGES = [
@@ -50,8 +50,20 @@ export default function UploadPage() {
   }, [])
 
   const handleAnalyze = useCallback(async () => {
-    const id = doubanId.trim()
-    if (!id) return
+    const rawId = doubanId.trim()
+    if (!rawId) return
+
+    const cleanId = rawId
+      .replace(/^https?:\/\/.*\/people\//, '')
+      .replace(/\/$/, '')
+
+    // Check local cache by douban ID
+    const cached = getCachedByDoubanId(cleanId)
+    if (cached && cached.id) {
+      setReport(cached.id, cached)
+      Taro.navigateTo({ url: `/pages/result/index?id=${cached.id}` })
+      return
+    }
 
     setIsLoading(true)
     setError(null)
@@ -73,7 +85,7 @@ export default function UploadPage() {
     try {
       const result = await callApi<Record<string, unknown>>(
         '/api/analyze',
-        { doubanId: id }
+        { doubanId: cleanId }
       )
 
       if (!result || !result.id) {
@@ -81,6 +93,7 @@ export default function UploadPage() {
       }
 
       setReport(result.id as string, result)
+      setCacheByDoubanId(cleanId, result)
       Taro.navigateTo({ url: `/pages/result/index?id=${result.id}` })
     } catch (err) {
       const msg = err instanceof Error ? err.message : '分析失败'

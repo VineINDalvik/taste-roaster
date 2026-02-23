@@ -22,8 +22,14 @@ async function getRedis(): Promise<RedisClientType> {
   return connecting;
 }
 
+export function isKvConfigured(): boolean {
+  return !!process.env.REDIS_URL;
+}
+
 const INVITE_TTL = 7 * 24 * 60 * 60; // 7 days
 const COMPARE_TTL = 30 * 24 * 60 * 60; // 30 days
+const ANALYZE_TTL = 7 * 24 * 60 * 60; // 7 days
+const EXPAND_TTL = 7 * 24 * 60 * 60; // 7 days
 
 export interface InviteData {
   name: string;
@@ -67,6 +73,56 @@ export async function getCompare(id: string): Promise<any | null> {
   return JSON.parse(raw);
 }
 
-export function isKvConfigured(): boolean {
-  return !!process.env.REDIS_URL;
+// --- Analyze cache (by douban ID) ---
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export async function cacheAnalyze(doubanId: string, data: any): Promise<void> {
+  if (!isKvConfigured()) return;
+  try {
+    const r = await getRedis();
+    await r.set(`analyze:${doubanId}`, JSON.stringify(data), { EX: ANALYZE_TTL });
+  } catch (e) {
+    console.error("Cache analyze write failed:", e);
+  }
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export async function getCachedAnalyze(doubanId: string): Promise<any | null> {
+  if (!isKvConfigured()) return null;
+  try {
+    const r = await getRedis();
+    const raw = await r.get(`analyze:${doubanId}`);
+    if (!raw) return null;
+    return JSON.parse(raw);
+  } catch (e) {
+    console.error("Cache analyze read failed:", e);
+    return null;
+  }
+}
+
+// --- Expand cache (by douban ID) ---
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export async function cacheExpand(doubanId: string, data: any): Promise<void> {
+  if (!isKvConfigured()) return;
+  try {
+    const r = await getRedis();
+    await r.set(`expand:${doubanId}`, JSON.stringify(data), { EX: EXPAND_TTL });
+  } catch (e) {
+    console.error("Cache expand write failed:", e);
+  }
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export async function getCachedExpand(doubanId: string): Promise<any | null> {
+  if (!isKvConfigured()) return null;
+  try {
+    const r = await getRedis();
+    const raw = await r.get(`expand:${doubanId}`);
+    if (!raw) return null;
+    return JSON.parse(raw);
+  } catch (e) {
+    console.error("Cache expand read failed:", e);
+    return null;
+  }
 }

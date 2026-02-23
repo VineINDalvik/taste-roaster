@@ -693,3 +693,76 @@
   font-size: 22rpx;
   color: #6b7280;
 }
+
+// Save canvas (hidden offscreen)
+.save-canvas-hidden {
+  position: fixed;
+  left: -9999px;
+  top: -9999px;
+}
+
+// Section header with save button
+.section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.save-card-btn {
+  width: 48rpx;
+  height: 48rpx;
+  border-radius: 12rpx;
+  background: rgba(255, 255, 255, 0.06);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+
+  &:active {
+    background: rgba(255, 255, 255, 0.12);
+    transform: scale(0.92);
+  }
+}
+
+.save-card-icon {
+  font-size: 22rpx;
+}
+
+// Full report save button in share bar
+.share-bar-report {
+  background: linear-gradient(135deg, #667eea, #764ba2);
+}
+
+// Tip / Donation card
+.tip-card {
+  border-radius: 32rpx;
+  padding: 40rpx;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16rpx;
+}
+
+.tip-title {
+  font-size: 30rpx;
+  font-weight: bold;
+  color: #fff;
+}
+
+.tip-desc {
+  font-size: 24rpx;
+  color: #9ca3af;
+}
+
+.tip-qrcode {
+  width: 280rpx;
+  height: 280rpx;
+  border-radius: 16rpx;
+  margin: 12rpx 0;
+}
+
+.tip-hint {
+  font-size: 20rpx;
+  color: #6b7280;
+}

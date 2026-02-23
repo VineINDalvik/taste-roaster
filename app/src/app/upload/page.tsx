@@ -22,6 +22,26 @@ export default function UploadPage() {
 
   const handleAnalyze = async () => {
     if (!doubanId.trim()) return;
+
+    const cleanId = doubanId
+      .trim()
+      .replace(/^https?:\/\/.*\/people\//, "")
+      .replace(/\/$/, "");
+
+    // Check local cache by douban ID
+    const localKey = `taste-douban-${cleanId}`;
+    const localCached = localStorage.getItem(localKey);
+    if (localCached) {
+      try {
+        const cached = JSON.parse(localCached);
+        if (cached.id) {
+          localStorage.setItem(`taste-report-${cached.id}`, localCached);
+          router.push(`/result/${cached.id}`);
+          return;
+        }
+      } catch { /* ignore parse errors */ }
+    }
+
     setIsLoading(true);
     setError(null);
     setProgressIdx(0);
@@ -36,7 +56,7 @@ export default function UploadPage() {
       const res = await fetch("/api/analyze", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ doubanId: doubanId.trim() }),
+        body: JSON.stringify({ doubanId: cleanId }),
       });
 
       const ct = res.headers.get("content-type") ?? "";
@@ -53,7 +73,13 @@ export default function UploadPage() {
       if (result._usage) {
         console.log("[LLM Usage]", result._usage);
       }
-      localStorage.setItem(`taste-report-${result.id}`, JSON.stringify(result));
+      if (result._cached) {
+        console.log("[Cache HIT] 使用缓存结果");
+      }
+
+      const json = JSON.stringify(result);
+      localStorage.setItem(`taste-report-${result.id}`, json);
+      localStorage.setItem(localKey, json);
       router.push(`/result/${result.id}`);
     } catch (err) {
       setError(err instanceof Error ? err.message : "分析失败，请重试");

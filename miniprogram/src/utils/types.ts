@@ -36,11 +36,12 @@ export interface CulturalMBTI {
 }
 
 export interface RadarData {
-  depth: number
-  breadth: number
-  uniqueness: number
-  emotionSensitivity: number
-  timeSpan: number
+  wenqing: number
+  emo: number
+  shekong: number
+  kaogu: number
+  shangtou: number
+  chouxiang: number
 }
 
 export interface MonthSnapshot {

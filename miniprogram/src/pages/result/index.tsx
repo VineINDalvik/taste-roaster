@@ -1,11 +1,12 @@
 import { useEffect, useState, useRef, useMemo, useCallback } from 'react'
-import { View, Text, Button } from '@tarojs/components'
+import { View, Text, Button, Canvas, Image } from '@tarojs/components'
 import Taro, { useRouter, useShareAppMessage, useShareTimeline } from '@tarojs/taro'
 import ShareCard from '@/components/share-card'
 import EvolutionCurve from '@/components/evolution-curve'
 import MusicEmotionPortrait from '@/components/music-emotion'
 import { callApi } from '@/utils/api'
 import { getReport, setReport } from '@/utils/storage'
+import { saveAnalysisCard, saveFullReport } from '@/utils/canvas-saver'
 import type { ReportData, RecommendationItem, MonthSnapshot, MBTIDimension, EvolutionPoint, MusicEmotion } from '@/utils/types'
 import './index.scss'
 
@@ -15,7 +16,7 @@ const UNLOCK_MESSAGES = [
   '深入解读你的文化人格...',
   '分析跨领域品味关联...',
   '挖掘你的品味盲区...',
-  '生成专属推荐（排除已读）...',
+  '生成专属推荐...',
   'AI 正在写深度人格画像...',
   '快好了，最后的打磨...',
 ]
@@ -267,12 +268,7 @@ export default function ResultPage() {
           <StatBlock value={report.musicCount} label='首音乐' emoji='🎵' />
         </View>
 
-        {report.sampleCount && (
-          <Text className='sample-info animate-fade-in-up'>
-            基于 {report.sampleCount} 条数据分析 · 实际总量{' '}
-            {report.bookCount + report.movieCount + report.musicCount}
-          </Text>
-        )}
+        {/* sample count hidden — avoid showing small numbers */}
 
         {/* Taste Analysis Section — button-triggered */}
         <View className='animate-fade-in-up animate-delay-200'>
@@ -282,9 +278,18 @@ export default function ResultPage() {
 
           {hasExpandContent ? (
             <View className='analysis-sections'>
-              <AnalysisSection icon='📚' title={`${mbtiType} 的阅读品味`} content={ft(report.bookAnalysis)} />
-              <AnalysisSection icon='🎬' title={`${mbtiType} 的观影品味`} content={ft(report.movieAnalysis)} />
-              <AnalysisSection icon='🎵' title={`${mbtiType} 的音乐品味`} content={ft(report.musicAnalysis)} />
+              <AnalysisSection
+                icon='📚' title={`${mbtiType} 的阅读品味`} content={ft(report.bookAnalysis)}
+                onSave={() => saveAnalysisCard('analysisCanvas', { icon: '📚', title: `${mbtiType} 的阅读品味`, content: ft(report.bookAnalysis) || '', mbtiType, doubanName: report.doubanName })}
+              />
+              <AnalysisSection
+                icon='🎬' title={`${mbtiType} 的观影品味`} content={ft(report.movieAnalysis)}
+                onSave={() => saveAnalysisCard('analysisCanvas', { icon: '🎬', title: `${mbtiType} 的观影品味`, content: ft(report.movieAnalysis) || '', mbtiType, doubanName: report.doubanName })}
+              />
+              <AnalysisSection
+                icon='🎵' title={`${mbtiType} 的音乐品味`} content={ft(report.musicAnalysis)}
+                onSave={() => saveAnalysisCard('analysisCanvas', { icon: '🎵', title: `${mbtiType} 的音乐品味`, content: ft(report.musicAnalysis) || '', mbtiType, doubanName: report.doubanName })}
+              />
             </View>
           ) : expanding ? (
             <View className='section-card card-glass center-text'>
@@ -374,7 +379,7 @@ export default function ResultPage() {
                 <Text className='unlock-item'><Text className='text-red'>✦</Text> 跨领域品味关联分析</Text>
                 <Text className='unlock-item'><Text className='text-red'>✦</Text> {mbtiType} 深度人格画像</Text>
                 <Text className='unlock-item'><Text className='text-red'>✦</Text> 品味盲区诊断</Text>
-                <Text className='unlock-item'><Text className='text-red'>✦</Text> AI 专属推荐（排除已读/已看/已听）</Text>
+                <Text className='unlock-item'><Text className='text-red'>✦</Text> AI 专属推荐</Text>
               </View>
               <View className='btn-unlock' onClick={handleDeepUnlock}>
                 <Text className='btn-action-text'>分享并解锁 (免费)</Text>
@@ -388,15 +393,24 @@ export default function ResultPage() {
               <Text className='text-red'>✦</Text> 深度解读
             </Text>
             <View className='analysis-sections'>
-              <AnalysisSection icon='🔗' title='跨领域品味关联' content={ft(report.crossDomain)} />
-              <AnalysisSection icon='🧠' title={`${mbtiType} 深度人格画像`} content={ft(report.personality)} />
-              <AnalysisSection icon='🎯' title='品味盲区' content={ft(report.blindSpots)} />
+              <AnalysisSection
+                icon='🔗' title='跨领域品味关联' content={ft(report.crossDomain)}
+                onSave={() => saveAnalysisCard('analysisCanvas', { icon: '🔗', title: '跨领域品味关联', content: ft(report.crossDomain) || '', mbtiType, doubanName: report.doubanName })}
+              />
+              <AnalysisSection
+                icon='🧠' title={`${mbtiType} 深度人格画像`} content={ft(report.personality)}
+                onSave={() => saveAnalysisCard('analysisCanvas', { icon: '🧠', title: `${mbtiType} 深度人格画像`, content: ft(report.personality) || '', mbtiType, doubanName: report.doubanName })}
+              />
+              <AnalysisSection
+                icon='🎯' title='品味盲区' content={ft(report.blindSpots)}
+                onSave={() => saveAnalysisCard('analysisCanvas', { icon: '🎯', title: '品味盲区', content: ft(report.blindSpots) || '', mbtiType, doubanName: report.doubanName })}
+              />
             </View>
 
             {report.recommendations && report.recommendations.length > 0 && (
               <View className='section-card card-glass'>
                 <Text className='section-title text-red'>💡 {mbtiType} 专属推荐</Text>
-                <Text className='rec-hint'>已排除你读过/看过/听过的作品 · 点击复制豆瓣搜索链接</Text>
+                <Text className='rec-hint'>点击可复制豆瓣搜索链接</Text>
                 <View className='rec-list'>
                   {report.recommendations.filter(r => !r.alreadyConsumed).map((rec, i) => (
                     <View
@@ -459,6 +473,19 @@ export default function ResultPage() {
           </View>
         </View>
 
+        {/* Tip / Donation */}
+        <View className='tip-card card-glass animate-fade-in-up animate-delay-300'>
+          <Text className='tip-title'>☕ 请作者喝杯咖啡</Text>
+          <Text className='tip-desc'>如果觉得有趣，可以赞赏支持一下</Text>
+          <Image
+            className='tip-qrcode'
+            src='https://app-theta-puce.vercel.app/images/tip-qrcode.jpg'
+            mode='aspectFit'
+            showMenuByLongpress
+          />
+          <Text className='tip-hint'>长按识别二维码赞赏</Text>
+        </View>
+
         {/* Privacy footer */}
         <View className='privacy-footer animate-fade-in-up animate-delay-300'>
           <Text className='privacy-footer-text'>
@@ -477,6 +504,10 @@ export default function ResultPage() {
           <Text className='footer-text'>分享给朋友，看看谁是什么书影音 MBTI</Text>
         </View>
       </View>
+
+      {/* Hidden Canvas elements for image saving */}
+      <Canvas type='2d' id='analysisCanvas' canvasId='analysisCanvas' className='save-canvas-hidden' style={{ width: '375px', height: '800px' }} />
+      <Canvas type='2d' id='fullReportCanvas' canvasId='fullReportCanvas' className='save-canvas-hidden' style={{ width: '375px', height: '2000px' }} />
 
       {/* Bottom Share Action Bar */}
       <View className='share-bar'>
@@ -499,10 +530,33 @@ export default function ResultPage() {
           renderTrigger={(onSave) => (
             <View className='share-bar-btn share-bar-save' onClick={onSave}>
               <Text className='share-bar-icon'>📷</Text>
-              <Text className='share-bar-label'>保存卡片</Text>
+              <Text className='share-bar-label'>MBTI卡片</Text>
             </View>
           )}
         />
+        {hasExpandContent && (
+          <View
+            className='share-bar-btn share-bar-report'
+            onClick={() => {
+              saveFullReport('fullReportCanvas', {
+                mbtiType,
+                mbtiTitle: ft(report.mbti.title),
+                roast: ft(report.roast),
+                summary: ft(report.summary),
+                doubanName: report.doubanName,
+                bookCount: report.bookCount,
+                movieCount: report.movieCount,
+                musicCount: report.musicCount,
+                bookAnalysis: ft(report.bookAnalysis),
+                movieAnalysis: ft(report.movieAnalysis),
+                musicAnalysis: ft(report.musicAnalysis),
+              })
+            }}
+          >
+            <Text className='share-bar-icon'>📋</Text>
+            <Text className='share-bar-label'>完整报告</Text>
+          </View>
+        )}
       </View>
 
       {/* Share Guide Modal — shown before deep unlock */}
@@ -576,11 +630,18 @@ function StatBlock({ value, label, emoji }: { value: number; label: string; emoj
   )
 }
 
-function AnalysisSection({ icon, title, content }: { icon: string; title: string; content?: string }) {
+function AnalysisSection({ icon, title, content, onSave }: { icon: string; title: string; content?: string; onSave?: () => void }) {
   if (!content) return null
   return (
     <View className='section-card card-glass'>
-      <Text className='section-title text-red'>{icon} {title}</Text>
+      <View className='section-header'>
+        <Text className='section-title text-red'>{icon} {title}</Text>
+        {onSave && (
+          <View className='save-card-btn' onClick={onSave}>
+            <Text className='save-card-icon'>💾</Text>
+          </View>
+        )}
+      </View>
       <Text className='section-content'>{content}</Text>
     </View>
   )

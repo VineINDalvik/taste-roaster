@@ -3,8 +3,8 @@ import { View, Text, Canvas } from '@tarojs/components'
 import Taro from '@tarojs/taro'
 import './index.scss'
 
-const LABELS = ['深度', '广度', '独特性', '情感力', '时代感']
-const KEYS = ['depth', 'breadth', 'uniqueness', 'emotionSensitivity', 'timeSpan']
+const LABELS = ['文青浓度', 'emo指数', '社恐值', '考古癖', '上头指数', '活人感']
+const KEYS = ['wenqing', 'emo', 'shekong', 'kaogu', 'shangtou', 'chouxiang']
 
 interface Props {
   dataA: Record<string, number>

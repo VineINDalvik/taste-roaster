@@ -17,6 +17,21 @@ export function setReport(id: string, data: unknown) {
   }
 }
 
+export function getCachedByDoubanId(doubanId: string) {
+  try {
+    const data = Taro.getStorageSync(`taste-douban-${doubanId}`)
+    return data ? (typeof data === 'string' ? JSON.parse(data) : data) : null
+  } catch {
+    return null
+  }
+}
+
+export function setCacheByDoubanId(doubanId: string, data: unknown) {
+  try {
+    Taro.setStorageSync(`taste-douban-${doubanId}`, JSON.stringify(data))
+  } catch {}
+}
+
 export function getCompare(id: string) {
   try {
     const data = Taro.getStorageSync(`taste-compare-${id}`)

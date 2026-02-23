@@ -3,6 +3,7 @@ import { v4 as uuidv4 } from "uuid";
 import { scrapeDoubanQuick } from "@/lib/douban-scraper";
 import { generateBasicReport } from "@/lib/analyzer";
 import { resetUsage, getAccumulatedUsage } from "@/lib/openai";
+import { getCachedAnalyze, cacheAnalyze } from "@/lib/kv";
 import type { TasteInput } from "@/lib/types";
 
 export const maxDuration = 60;
@@ -25,6 +26,14 @@ export async function POST(req: NextRequest) {
       .trim()
       .replace(/^https?:\/\/.*\/people\//, "")
       .replace(/\/$/, "");
+
+    // Check cache first
+    const cached = await getCachedAnalyze(cleanId);
+    if (cached) {
+      console.log(`[Cache HIT] analyze:${cleanId}`);
+      return NextResponse.json({ ...cached, _cached: true });
+    }
+    console.log(`[Cache MISS] analyze:${cleanId}`);
 
     resetUsage();
     const doubanData = await scrapeDoubanQuick(cleanId);
@@ -57,10 +66,11 @@ export async function POST(req: NextRequest) {
     const sampleCount =
       input.books.length + input.movies.length + input.music.length;
 
-    return NextResponse.json({
+    const result = {
       id,
       createdAt: new Date().toISOString(),
       doubanName: doubanData.profile.name,
+      doubanId: cleanId,
       mbti: basicResult.mbti,
       roast: basicResult.roast,
       radarData: basicResult.radar,
@@ -81,7 +91,12 @@ export async function POST(req: NextRequest) {
         (doubanData.profile.realCounts.movies || fullInput.movies.length) +
         (doubanData.profile.realCounts.music || fullInput.music.length),
       _usage: getAccumulatedUsage(),
-    });
+    };
+
+    // Save to cache (fire-and-forget)
+    cacheAnalyze(cleanId, result);
+
+    return NextResponse.json(result);
   } catch (error) {
     console.error("Analysis error:", error);
     const message =

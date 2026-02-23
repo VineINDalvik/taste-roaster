@@ -337,7 +337,7 @@ export default function ShareCard({
 
           {/* Footer */}
           <div className="flex items-center justify-between text-[10px] text-gray-600 border-t border-white/5 pt-3">
-            <span>基于 {itemCount} 条书影音数据</span>
+            <span>豆瓣书影音 MBTI</span>
             <span className="text-[#667eea]">测测你的书影音 MBTI →</span>
           </div>
         </div>
