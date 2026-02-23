@@ -6,7 +6,6 @@ import { resetUsage, getAccumulatedUsage } from "@/lib/openai";
 import type { TasteInput } from "@/lib/types";
 
 export const maxDuration = 60;
-export const preferredRegion = "hkg1";
 
 export async function POST(req: NextRequest) {
   if (process.env.NEXT_PUBLIC_DEV_MOCK === "true") {
