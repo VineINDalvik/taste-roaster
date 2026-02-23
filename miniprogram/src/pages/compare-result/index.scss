@@ -1,0 +1,227 @@
+.compare-result-page {
+  min-height: 100vh;
+  padding: 16rpx 24rpx;
+}
+
+.center-page {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.cr-container {
+  max-width: 640rpx;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 32rpx;
+}
+
+.nav-back {
+  font-size: 26rpx;
+  color: #9ca3af;
+}
+
+.section-card {
+  border-radius: 20rpx;
+  padding: 32rpx;
+  display: flex;
+  flex-direction: column;
+  gap: 16rpx;
+}
+
+.section-title { font-size: 26rpx; font-weight: bold; }
+.section-sub { font-size: 22rpx; color: #6b7280; }
+.section-content { font-size: 26rpx; color: #d1d5db; line-height: 1.7; }
+
+.text-blue { color: #667eea; }
+.text-red { color: #e94560; }
+.text-green { color: #4ade80; }
+.text-yellow { color: #f5c518; }
+
+.error-emoji { font-size: 56rpx; display: block; margin-bottom: 16rpx; }
+.error-msg { font-size: 28rpx; color: #9ca3af; margin-bottom: 24rpx; display: block; }
+
+// Compare Card
+.compare-card-wrap { position: relative; }
+
+.compare-card {
+  position: relative;
+  overflow: hidden;
+  border-radius: 32rpx;
+  background: linear-gradient(135deg, #0f0c29, #1a1a2e, #16213e, #0f3460);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.cc-glow-1 {
+  position: absolute; top: -80rpx; right: -80rpx;
+  width: 280rpx; height: 280rpx; border-radius: 50%;
+  opacity: 0.15; background: radial-gradient(circle, #667eea, transparent);
+}
+
+.cc-glow-2 {
+  position: absolute; bottom: -60rpx; left: -60rpx;
+  width: 220rpx; height: 220rpx; border-radius: 50%;
+  opacity: 0.15; background: radial-gradient(circle, #e94560, transparent);
+}
+
+.cc-content {
+  position: relative; z-index: 1; padding: 40rpx;
+  display: flex; flex-direction: column; align-items: center; gap: 16rpx;
+}
+
+.cc-label { font-size: 20rpx; letter-spacing: 0.3em; color: #6b7280; text-transform: uppercase; }
+
+.cc-vs {
+  display: flex; align-items: center; justify-content: center;
+  gap: 24rpx; width: 100%;
+}
+
+.cc-person { text-align: center; flex: 1; }
+
+.cc-type { display: block; font-size: 40rpx; font-weight: 900; letter-spacing: 0.1em; }
+.cc-name { display: block; font-size: 20rpx; color: #9ca3af; margin-top: 4rpx; }
+.cc-title-sub { display: block; font-size: 18rpx; color: #6b7280; margin-top: 2rpx; }
+
+.cc-score-col { display: flex; flex-direction: column; align-items: center; }
+.cc-score { font-size: 52rpx; font-weight: 900; }
+.cc-match-label { font-size: 16rpx; color: #6b7280; text-transform: uppercase; letter-spacing: 0.1em; }
+
+.cc-match-badge {
+  padding: 4rpx 20rpx; border-radius: 999rpx;
+  border: 1px solid; text-align: center;
+}
+
+.cc-overview {
+  font-size: 22rpx; color: #9ca3af; text-align: center; line-height: 1.6;
+}
+
+.cc-footer {
+  display: flex; justify-content: space-between; align-items: center;
+  width: 100%; border-top: 1px solid rgba(255, 255, 255, 0.05);
+  padding-top: 16rpx;
+}
+
+.cc-footer-left { font-size: 20rpx; color: #4b5563; }
+.cc-footer-right { font-size: 20rpx; color: #667eea; }
+
+.canvas-hidden { position: fixed; left: -9999px; top: -9999px; }
+
+.cc-actions {
+  display: flex; gap: 20rpx; margin-top: 24rpx;
+}
+
+.btn-save {
+  flex: 1; padding: 20rpx 0; border-radius: 20rpx;
+  background: linear-gradient(135deg, #e94560, #ff6b81);
+  text-align: center;
+}
+
+.btn-copy {
+  flex: 1; padding: 20rpx 0; border-radius: 20rpx;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  text-align: center;
+}
+
+.btn-action-text { color: #fff; font-size: 28rpx; font-weight: 500; }
+
+.btn-small {
+  padding: 16rpx 40rpx; border-radius: 20rpx; text-align: center;
+}
+
+// Dual Dimension Bar
+.dual-dim { margin-bottom: 12rpx; }
+
+.dual-dim-labels {
+  display: flex; justify-content: space-between;
+}
+
+.dual-dim-letter { font-size: 20rpx; color: #9ca3af; }
+
+.dual-dim-track {
+  position: relative; height: 20rpx;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 10rpx; overflow: visible;
+  margin: 8rpx 0;
+}
+
+.dual-dim-center {
+  position: absolute; left: 50%; top: 0;
+  width: 2rpx; height: 100%; background: rgba(255, 255, 255, 0.1);
+}
+
+.dual-dim-dot {
+  position: absolute; top: 4rpx;
+  width: 12rpx; height: 12rpx; border-radius: 50%;
+  transform: translateX(-50%);
+}
+
+.dual-dim-info {
+  display: flex; justify-content: space-between;
+}
+
+.dual-dim-name-a { font-size: 18rpx; color: #667eea; }
+.dual-dim-name-b { font-size: 18rpx; color: #e94560; }
+
+// Points
+.point-item {
+  display: flex; flex-direction: column; gap: 4rpx;
+}
+
+.point-title { font-size: 24rpx; font-weight: 500; color: #fff; }
+.point-detail { font-size: 22rpx; color: #9ca3af; line-height: 1.6; }
+
+// Tags
+.tags-wrap {
+  display: flex; flex-wrap: wrap; gap: 12rpx;
+}
+
+.tag-item {
+  padding: 8rpx 20rpx; border-radius: 999rpx;
+  font-size: 22rpx; font-weight: 500;
+  background: rgba(102, 126, 234, 0.1);
+  color: #a5b4fc;
+  border: 1px solid rgba(102, 126, 234, 0.2);
+}
+
+// Recs
+.rec-list { display: flex; flex-direction: column; gap: 16rpx; }
+
+.rec-item {
+  display: flex; align-items: flex-start; gap: 16rpx;
+  padding: 16rpx; border-radius: 12rpx;
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.rec-icon {
+  flex-shrink: 0; width: 52rpx; height: 52rpx;
+  border-radius: 12rpx; background: rgba(255, 255, 255, 0.05);
+  display: flex; align-items: center; justify-content: center;
+}
+
+.rec-info { flex: 1; min-width: 0; }
+.rec-title { font-size: 26rpx; color: #fff; font-weight: 500; display: block; margin-bottom: 4rpx; }
+.rec-reason { font-size: 22rpx; color: #9ca3af; line-height: 1.5; }
+
+// Stats compare
+.stats-compare {
+  display: flex; gap: 24rpx;
+}
+
+.stats-person {
+  flex: 1; text-align: center;
+  display: flex; flex-direction: column; gap: 8rpx;
+}
+
+.stats-name { font-size: 22rpx; color: #6b7280; font-weight: 500; }
+.stats-nums { font-size: 22rpx; color: #9ca3af; }
+
+// Footer
+.page-footer {
+  text-align: center; padding-bottom: 60rpx;
+  display: flex; flex-direction: column; align-items: center; gap: 16rpx;
+}
+
+.footer-text { font-size: 22rpx; color: #6b7280; }

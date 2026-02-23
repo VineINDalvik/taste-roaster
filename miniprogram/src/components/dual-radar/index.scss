@@ -1,0 +1,33 @@
+.dual-radar-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.dual-radar-canvas {
+  display: block;
+}
+
+.legend {
+  display: flex;
+  justify-content: center;
+  gap: 40rpx;
+  margin-top: 16rpx;
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 8rpx;
+}
+
+.legend-dot {
+  width: 20rpx;
+  height: 10rpx;
+  border-radius: 5rpx;
+}
+
+.legend-text {
+  font-size: 20rpx;
+  color: #9ca3af;
+}

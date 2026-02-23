@@ -1,0 +1,46 @@
+.evo-wrap {
+  border-radius: 20rpx;
+  padding: 32rpx;
+  display: flex;
+  flex-direction: column;
+  gap: 16rpx;
+}
+
+.evo-title {
+  font-size: 26rpx;
+  font-weight: bold;
+  color: #667eea;
+}
+
+.evo-canvas {
+  display: block;
+  margin: 0 auto;
+}
+
+.evo-labels {
+  display: flex;
+  justify-content: space-between;
+  padding: 0 16rpx;
+}
+
+.evo-label-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2rpx;
+}
+
+.evo-label-month {
+  font-size: 18rpx;
+  color: #6b7280;
+}
+
+.evo-label-genre {
+  font-size: 16rpx;
+  color: #9ca3af;
+  max-width: 80rpx;
+  text-align: center;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

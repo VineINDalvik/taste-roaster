@@ -1,0 +1,17 @@
+name = "taste-mbti-proxy"
+main = "worker.js"
+compatibility_date = "2024-01-01"
+
+# 默认的 workers.dev 域名在中国被墙
+# 需要绑定自定义域名才能在国内访问
+#
+# 使用步骤：
+# 1. 在 Cloudflare 注册并添加一个域名（如 example.com）
+# 2. 在 Cloudflare Dashboard → Workers → 你的 worker → Settings → Domains & Routes
+# 3. 添加自定义域名路由（如 mbti.example.com/*）
+# 4. Cloudflare 会自动配置 DNS 和 SSL
+#
+# 或者通过 wrangler.toml 配置（取消下面的注释并填入你的域名）：
+# routes = [
+#   { pattern = "mbti.yourdomain.com/*", zone_name = "yourdomain.com" }
+# ]

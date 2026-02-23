@@ -1,36 +1,44 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+---
+type: project
+status: active
+area: "[[商业化+相关创业产品idea+Agent]]"
+tags:
+  - 创业
+  - AI
+  - 小程序
+created: 2026-02-22
+---
+# 毒舌品味官
 
-## Getting Started
+用 AI 把你的豆瓣书影音记录变成一份"又准又毒的品味人格报告"。
 
-First, run the development server:
+## 快速启动
 
 ```bash
+cd app
+cp .env.example .env.local
+# 编辑 .env.local 填入你的 OpenAI API Key
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+访问 http://localhost:3000
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## 功能
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+- **截图解析**：上传豆瓣截图，AI自动识别书影音列表
+- **手动输入**：直接输入书名/电影名/音乐名
+- **品味鉴定**：生成品味人格标签 + 毒舌评语 + 雷达图
+- **分享卡片**：精美报告卡片，一键保存/分享
+- **完整报告**（付费）：深度分析 + 品味时间线 + 盲区推荐
 
-## Learn More
+## 技术栈
 
-To learn more about Next.js, take a look at the following resources:
+- Next.js 16 + TypeScript + Tailwind CSS
+- OpenAI GPT-4o（截图解析）+ GPT-4o-mini（报告生成）
+- html2canvas（分享卡片导出）
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## 相关链接
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- [[轻量级AI小应用创业Ideas]]
+- [[商业化+相关创业产品idea+Agent]]
