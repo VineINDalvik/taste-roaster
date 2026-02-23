@@ -410,7 +410,7 @@ export default function ResultPage({
 
         {report.sampleCount && (
           <div className="text-center text-xs text-gray-500 animate-fade-in-up">
-            基于 {report.sampleCount} 条采样数据 · 实际总量{" "}
+            基于 {report.sampleCount} 条数据分析 · 实际总量{" "}
             {report.bookCount + report.movieCount + report.musicCount}
           </div>
         )}

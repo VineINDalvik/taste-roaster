@@ -10,7 +10,7 @@ J/P：规律系统(系列控/类型集中)→J；随性发散(跨类型/杂食/�
 
 规则：每维度引用具体作品；接近50/50也要判断但说明；犀利有洞察；参考评论/日记语言风格；全中文(MBTI字母除外)；只返回JSON`;
 
-export const MBTI_ANALYSIS_PROMPT = `用户「{userName}」数据（采样{sampleCount}条，实际{realBooks}书/{realMovies}影/{realMusic}音{truncateNote}）：
+export const MBTI_ANALYSIS_PROMPT = `用户「{userName}」数据（精选{sampleCount}条，实际{realBooks}书/{realMovies}影/{realMusic}音{truncateNote}）：
 
 📚({bookCount})
 {books}
@@ -67,16 +67,16 @@ export const RECOMMENDATION_PROMPT = `{userName} | {mbtiType}·{mbtiTitle}
 {"recommendations":[{"title":"作品名","type":"book/movie/music","reason":"推荐理由(30-60字，犀利)","matchScore":0-100}]}`;
 
 export const COMPARE_SYSTEM_PROMPT = `你是文化心理学家，分析两人品味匹配度。犀利有趣有洞察。
-similarities≥3,differences≥3。sharedWorks找真正交集。crossRecommend：forA从B列表选2-3个,forB从A列表选2-3个。所有推荐标题严格来自数据列表，不要编造。90+=灵魂伴侣,70-89=品味知己,50-69=互补,30-49=平行世界,<30=反义词。全中文(MBTI字母除外)，只返回JSON。`;
+similarities≥3,differences≥3。sharedWorks找真正交集。crossRecommend：forA从第二个人列表选2-3个,forB从第一个人列表选2-3个。所有推荐标题严格来自数据列表，不要编造。90+=灵魂伴侣,70-89=品味知己,50-69=互补,30-49=平行世界,<30=反义词。在文本中使用双方的真名（不要用A/B或甲乙）。全中文(MBTI字母除外)，只返回JSON。`;
 
-export const COMPARE_PROMPT = `A：{nameA}|{mbtiTypeA}·{mbtiTitleA}|{summaryA}
+export const COMPARE_PROMPT = `「{nameA}」|{mbtiTypeA}·{mbtiTitleA}|{summaryA}
 📚{booksA} 🎬{moviesA} 🎵{musicA}
 
-B：{nameB}|{mbtiTypeB}·{mbtiTitleB}|{summaryB}
+「{nameB}」|{mbtiTypeB}·{mbtiTitleB}|{summaryB}
 📚{booksB} 🎬{moviesB} 🎵{musicB}
 
-返回JSON：
-{"matchScore":0-100,"matchTitle":"匹配称号(6-12字)","overview":"整体解读(80-120字)","similarities":[{"point":"标题(4-8字)","detail":"解释(30-60字)"}],"differences":[{"point":"标题","detail":"解释"}],"chemistry":"化学反应(100-150字)","sharedWorks":["共同作品"],"crossRecommend":{"forA":[{"title":"B的作品","type":"book/movie/music","reason":"20-40字"}],"forB":[{"title":"A的作品","type":"book/movie/music","reason":"20-40字"}]}}`;
+返回JSON（文本中用真名"{nameA}"和"{nameB}"，不要用A/B）：
+{"matchScore":0-100,"matchTitle":"匹配称号(6-12字)","overview":"整体解读(80-120字，用真名)","similarities":[{"point":"标题(4-8字)","detail":"解释(30-60字，用真名)"}],"differences":[{"point":"标题","detail":"解释(用真名)"}],"chemistry":"化学反应(100-150字，用真名)","sharedWorks":["共同作品"],"crossRecommend":{"forA":[{"title":"第二人的作品","type":"book/movie/music","reason":"20-40字"}],"forB":[{"title":"第一人的作品","type":"book/movie/music","reason":"20-40字"}]}}`;
 
 export function formatItems(
   items: { title: string; rating?: number; date?: string; comment?: string }[]

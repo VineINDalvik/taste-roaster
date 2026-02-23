@@ -5,9 +5,9 @@ import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 
 const PROGRESS_MESSAGES = [
-  "正在爬取对方的豆瓣数据...",
-  "采样对方读过的书...",
-  "采样对方看过的电影...",
+  "正在潜入对方的豆瓣主页...",
+  "翻看对方读过的书...",
+  "扒拉对方看过的电影...",
   "推导对方的书影音 MBTI...",
   "寻找你们的品味交集...",
   "AI 正在犀利点评你们的匹配度...",

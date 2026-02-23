@@ -69,7 +69,7 @@ export default function Home() {
             <div className="text-xs text-gray-500">
               豆瓣 ID 或链接
               <br />
-              智能采样数据
+              智能读取数据
             </div>
           </div>
           <div className="space-y-2">

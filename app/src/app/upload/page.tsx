@@ -5,11 +5,11 @@ import { useRouter } from "next/navigation";
 
 const PROGRESS_MESSAGES = [
   "正在潜入ta的豆瓣主页...",
-  "采样ta读过的书...",
-  "采样ta看过的电影...",
-  "采样ta听过的音乐...",
-  "AI 正在分析 MBTI 四维度...",
-  "从品味中推导人格类型...",
+  "翻看ta读过的书...",
+  "扒拉ta看过的电影...",
+  "偷听ta循环的歌单...",
+  "AI 正在推理人格密码...",
+  "从品味里看穿ta的灵魂...",
   "生成书影音 MBTI 报告...",
 ];
 
@@ -72,9 +72,9 @@ export default function UploadPage() {
             输入豆瓣 ID
           </h1>
           <p className="text-sm text-gray-400">
-            AI 将采样你的书影音数据
+            AI 翻遍你的书影音记录
             <br />
-            推导你的书影音 MBTI
+            看穿你的品味人格
           </p>
         </div>
 

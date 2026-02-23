@@ -100,7 +100,7 @@ function buildPromptData(
   if (wasTruncated && originalCounts) {
     const origTotal =
       originalCounts.books + originalCounts.movies + originalCounts.music;
-    truncateNote = `，已从${origTotal}条中采样${sampleCount}条用于分析`;
+    truncateNote = `，已从${origTotal}条中精选${sampleCount}条用于分析`;
   }
 
   return {
@@ -160,7 +160,7 @@ export async function generateBasicReport(
       { role: "user", content: prompt },
     ],
     max_tokens: 2000,
-    temperature: 0.8,
+    temperature: 0,
     response_format: { type: "json_object" },
   });
   const parsed = safeParseJSON(text);
@@ -235,7 +235,7 @@ export async function generatePremiumReport(
       { role: "user", content: prompt },
     ],
     max_tokens: 3000,
-    temperature: 0.85,
+    temperature: 0,
     response_format: { type: "json_object" },
   });
   return safeParseJSON(text) as {
@@ -296,7 +296,7 @@ export async function generateTimeline(
       { role: "user", content: prompt },
     ],
     max_tokens: 2000,
-    temperature: 0.85,
+    temperature: 0,
     response_format: { type: "json_object" },
   });
   const parsed = safeParseJSON(text);
@@ -352,7 +352,7 @@ export async function generateRecommendations(
       { role: "user", content: prompt },
     ],
     max_tokens: 2000,
-    temperature: 0.85,
+    temperature: 0,
     response_format: { type: "json_object" },
   });
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -448,7 +448,7 @@ export async function generateComparison(
       { role: "user", content: prompt },
     ],
     max_tokens: 3000,
-    temperature: 0.85,
+    temperature: 0,
     response_format: { type: "json_object" },
   });
   const parsed = safeParseJSON(text);
