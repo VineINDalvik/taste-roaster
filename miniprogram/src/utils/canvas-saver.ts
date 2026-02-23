@@ -2,7 +2,8 @@ import Taro from '@tarojs/taro'
 
 const VERCEL_BASE = 'https://app-theta-puce.vercel.app'
 
-async function fetchImageAndPreview(apiPath: string, body: Record<string, unknown>) {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+async function fetchImageAndPreview(apiPath: string, body: Record<string, any>) {
   Taro.showLoading({ title: '生成中...' })
 
   try {
