@@ -279,15 +279,15 @@ export default function ResultPage() {
           {hasExpandContent ? (
             <View className='analysis-sections'>
               <AnalysisSection
-                icon='📚' title={`${mbtiType} 的阅读品味`} content={ft(report.bookAnalysis)}
+                icon='📚' title='阅读情绪画像' content={ft(report.bookAnalysis)} theme='book'
                 onSave={() => saveAnalysisCard('analysisCanvas', { icon: '📚', title: `${mbtiType} 的阅读品味`, content: ft(report.bookAnalysis) || '', mbtiType, doubanName: report.doubanName })}
               />
               <AnalysisSection
-                icon='🎬' title={`${mbtiType} 的观影品味`} content={ft(report.movieAnalysis)}
+                icon='🎬' title='观影品味画像' content={ft(report.movieAnalysis)} theme='movie'
                 onSave={() => saveAnalysisCard('analysisCanvas', { icon: '🎬', title: `${mbtiType} 的观影品味`, content: ft(report.movieAnalysis) || '', mbtiType, doubanName: report.doubanName })}
               />
               <AnalysisSection
-                icon='🎵' title={`${mbtiType} 的音乐品味`} content={ft(report.musicAnalysis)}
+                icon='🎵' title='音乐情绪画像' content={ft(report.musicAnalysis)} theme='music'
                 onSave={() => saveAnalysisCard('analysisCanvas', { icon: '🎵', title: `${mbtiType} 的音乐品味`, content: ft(report.musicAnalysis) || '', mbtiType, doubanName: report.doubanName })}
               />
             </View>
@@ -630,19 +630,95 @@ function StatBlock({ value, label, emoji }: { value: number; label: string; emoj
   )
 }
 
-function AnalysisSection({ icon, title, content, onSave }: { icon: string; title: string; content?: string; onSave?: () => void }) {
+function AnalysisSection({ icon, title, content, onSave, theme }: { icon: string; title: string; content?: string; onSave?: () => void; theme?: 'book' | 'movie' | 'music' }) {
   if (!content) return null
+
+  const sentences = content
+    .split(/(?<=[。！？\n])/)
+    .map(s => s.trim())
+    .filter(s => s.length > 0)
+
+  const [visibleCount, setVisibleCount] = useState(0)
+
+  useEffect(() => {
+    if (visibleCount >= sentences.length) return
+    const timer = setTimeout(() => setVisibleCount(v => v + 1), 350)
+    return () => clearTimeout(timer)
+  }, [visibleCount, sentences.length])
+
+  const themeClass = theme ? `themed-section themed-${theme}` : ''
+  const themeConfig = {
+    book: { subtitle: '的书架密码', color: '#fcd393', dimColor: 'rgba(252,211,147,0.4)', titleColor: '#fbbf24' },
+    movie: { subtitle: '的光影密码', color: '#93c5fd', dimColor: 'rgba(147,197,253,0.4)', titleColor: '#60a5fa' },
+    music: { subtitle: '的声波密码', color: '#d8b4fe', dimColor: 'rgba(216,180,254,0.5)', titleColor: '#a78bfa' },
+  }
+  const tc = theme ? themeConfig[theme] : null
+
   return (
-    <View className='section-card card-glass'>
+    <View className={`section-card ${themeClass}`}>
+      {/* Decorations */}
+      {theme === 'book' && (
+        <View className='deco-book'>
+          {['📖', '📝', '✦', '📄', '🔖'].map((ic, i) => (
+            <Text key={i} className={`float-icon float-book-${i}`}>{ic}</Text>
+          ))}
+        </View>
+      )}
+      {theme === 'movie' && (
+        <>
+          <View className='deco-film-strip deco-film-left'>
+            {Array.from({ length: 10 }).map((_, i) => <View key={i} className='film-hole' />)}
+          </View>
+          <View className='deco-film-strip deco-film-right'>
+            {Array.from({ length: 10 }).map((_, i) => <View key={i} className='film-hole' />)}
+          </View>
+          <View className='deco-film-reel'>
+            <View className='reel-outer'>
+              <View className='reel-inner' />
+            </View>
+          </View>
+        </>
+      )}
+      {theme === 'music' && (
+        <View className='deco-equalizer'>
+          {Array.from({ length: 20 }).map((_, i) => (
+            <View key={i} className='eq-bar' style={{ animationDelay: `${i * 0.12}s`, height: `${10 + Math.random() * 30}px` }} />
+          ))}
+        </View>
+      )}
+
+      {/* Header */}
       <View className='section-header'>
-        <Text className='section-title text-red'>{icon} {title}</Text>
+        <View className='themed-header'>
+          <View className={`themed-icon-circle ${theme ? `icon-${theme}` : ''}`}>
+            <Text className='themed-icon-emoji'>{icon}</Text>
+          </View>
+          <View className='themed-header-text'>
+            <Text className='section-title' style={tc ? { color: tc.titleColor } : { color: '#e94560' }}>
+              {title}
+            </Text>
+            {tc && <Text className='themed-subtitle' style={{ color: tc.dimColor }}>{tc.subtitle}</Text>}
+          </View>
+        </View>
         {onSave && (
           <View className='save-card-btn' onClick={onSave}>
             <Text className='save-card-icon'>💾</Text>
           </View>
         )}
       </View>
-      <Text className='section-content'>{content}</Text>
+
+      {/* Animated sentences */}
+      <View className='themed-sentences'>
+        {sentences.map((sentence, i) => (
+          <Text
+            key={i}
+            className={`themed-sentence ${i < visibleCount ? 'sentence-visible' : 'sentence-hidden'} ${theme === 'movie' ? 'slide-right' : 'slide-up'}`}
+            style={tc && i === 0 ? { color: tc.color, fontSize: '28rpx', fontWeight: '500' } : undefined}
+          >
+            {sentence}
+          </Text>
+        ))}
+      </View>
     </View>
   )
 }
