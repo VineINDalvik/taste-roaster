@@ -42,15 +42,15 @@ let client: OpenAI | null = null;
 let resolvedModel: string | null = null;
 
 function resolveConfig() {
-  const provider = (process.env.LLM_PROVIDER || "openai").toLowerCase();
+  const provider = (process.env.LLM_PROVIDER || "openai").trim().toLowerCase();
   const config = PROVIDERS[provider];
 
   const baseURL =
-    process.env.LLM_BASE_URL || config?.baseURL || PROVIDERS.openai.baseURL;
+    (process.env.LLM_BASE_URL || config?.baseURL || PROVIDERS.openai.baseURL).trim();
   const apiKey =
-    process.env.LLM_API_KEY || process.env.OPENAI_API_KEY || "";
+    (process.env.LLM_API_KEY || process.env.OPENAI_API_KEY || "").trim();
   const model =
-    process.env.LLM_MODEL || config?.defaultModel || "gpt-4o-mini";
+    (process.env.LLM_MODEL || config?.defaultModel || "gpt-4o-mini").trim();
 
   return { baseURL, apiKey, model };
 }
