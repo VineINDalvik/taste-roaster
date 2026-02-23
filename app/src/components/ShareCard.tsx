@@ -46,8 +46,8 @@ const RADAR_LABELS: [string, string][] = [
   ["emo", "emo指数"],
   ["shekong", "社恐值"],
   ["kaogu", "考古癖"],
-  ["shangtou", "上头度"],
-  ["chouxiang", "抽象浓度"],
+  ["shangtou", "上头指数"],
+  ["chouxiang", "活人感"],
 ];
 
 function DimensionBar({

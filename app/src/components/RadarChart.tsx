@@ -14,7 +14,7 @@ interface RadarChartProps {
   size?: number;
 }
 
-const LABELS = ["文青浓度", "emo指数", "社恐值", "考古癖", "上头度", "抽象浓度"];
+const LABELS = ["文青浓度", "emo指数", "社恐值", "考古癖", "上头指数", "活人感"];
 
 export default function RadarChart({ data, size = 240 }: RadarChartProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);

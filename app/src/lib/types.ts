@@ -58,8 +58,8 @@ export interface RadarData {
   emo: number;         // emo 指数 0=天天嗨 100=深夜emo循环
   shekong: number;     // 社恐值 0=社交话题王 100=没人聊得来
   kaogu: number;       // 考古癖 0=只追新的 100=活在上个世纪
-  shangtou: number;    // 上头程度 0=浅尝辄止 100=入坑就疯
-  chouxiang: number;   // 抽象浓度 0=正常人类审美 100=脑回路无法被理解
+  shangtou: number;    // 上头指数 0=浅尝辄止 100=入坑就疯
+  chouxiang: number;   // 活人感 0=活人审美 100=已经不像活人了
 }
 
 export interface TasteReport {
