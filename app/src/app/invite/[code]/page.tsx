@@ -3,6 +3,12 @@
 import { useState, useEffect, use } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import PaymentGate from "@/components/PaymentGate";
+import {
+  canCompareForFree,
+  getCompareCount,
+  recordCompare,
+} from "@/lib/compare-limit";
 
 const PROGRESS_MESSAGES = [
   "正在潜入你的豆瓣主页...",
@@ -36,6 +42,7 @@ export default function InvitePage({
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [progressIdx, setProgressIdx] = useState(0);
+  const [showPaywall, setShowPaywall] = useState(false);
 
   useEffect(() => {
     fetch(`/api/invite/${code}`)
@@ -65,6 +72,11 @@ export default function InvitePage({
 
   const handleAccept = async () => {
     if (!doubanId.trim() || !inviter?.full) return;
+
+    if (!canCompareForFree()) {
+      setShowPaywall(true);
+      return;
+    }
 
     setIsLoading(true);
     setError(null);
@@ -149,6 +161,7 @@ export default function InvitePage({
         `taste-compare-${result.compareId}`,
         JSON.stringify(result)
       );
+      recordCompare();
       router.push(`/compare/${result.compareId}`);
     } catch (err) {
       setError(err instanceof Error ? err.message : "对比失败，请重试");
@@ -296,6 +309,13 @@ export default function InvitePage({
           </div>
         )}
       </div>
+
+      {showPaywall && (
+        <PaymentGate
+          usedCount={getCompareCount()}
+          onClose={() => setShowPaywall(false)}
+        />
+      )}
     </main>
   );
 }

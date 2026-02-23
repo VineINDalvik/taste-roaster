@@ -3,6 +3,14 @@
 import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
+import PaymentGate from "@/components/PaymentGate";
+import {
+  canCompareForFree,
+  getCompareCount,
+  getRemainingFree,
+  recordCompare,
+  PRICE_CNY,
+} from "@/lib/compare-limit";
 
 const PROGRESS_MESSAGES = [
   "正在潜入对方的豆瓣主页...",
@@ -23,6 +31,7 @@ function CompareContent() {
   const [error, setError] = useState<string | null>(null);
   const [progressIdx, setProgressIdx] = useState(0);
   const [myName, setMyName] = useState("");
+  const [showPaywall, setShowPaywall] = useState(false);
 
   useEffect(() => {
     if (fromId) {
@@ -51,6 +60,11 @@ function CompareContent() {
 
   const handleCompare = async () => {
     if (!doubanIdB.trim() || !fromId) return;
+
+    if (!canCompareForFree()) {
+      setShowPaywall(true);
+      return;
+    }
 
     const stored = localStorage.getItem(`taste-report-${fromId}`);
     if (!stored) {
@@ -143,6 +157,7 @@ function CompareContent() {
         `taste-compare-${result.compareId}`,
         JSON.stringify(result)
       );
+      recordCompare();
       router.push(`/compare/${result.compareId}`);
     } catch (err) {
       setError(err instanceof Error ? err.message : "对比失败，请重试");
@@ -216,10 +231,19 @@ function CompareContent() {
               </div>
             )}
 
-            <div className="card-glass rounded-xl p-4 text-center">
+            <div className="card-glass rounded-xl p-4 text-center space-y-1">
               <p className="text-xs text-gray-500">
                 对方的豆瓣标记需为公开状态 · 分析约需 25-35 秒
               </p>
+              {canCompareForFree() ? (
+                <p className="text-[10px] text-gray-600">
+                  免费对比剩余 {getRemainingFree()} 次
+                </p>
+              ) : (
+                <p className="text-[10px] text-[#e94560]">
+                  免费次数已用完 · ¥{PRICE_CNY}/次
+                </p>
+              )}
             </div>
           </div>
         )}
@@ -252,6 +276,13 @@ function CompareContent() {
           </div>
         )}
       </div>
+
+      {showPaywall && (
+        <PaymentGate
+          usedCount={getCompareCount()}
+          onClose={() => setShowPaywall(false)}
+        />
+      )}
     </main>
   );
 }
