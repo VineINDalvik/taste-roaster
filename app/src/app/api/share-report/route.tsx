@@ -99,18 +99,23 @@ export async function POST(req: NextRequest) {
       { text: data.musicAnalysis, theme: SECTION_THEMES[2] },
     ].filter((s): s is { text: string; theme: typeof SECTION_THEMES[0] } => !!s.text);
 
-    const CHARS_PER_LINE = 22;
-    const LINE_H = 24;
-    const countVisualLines = (text: string) => {
+    // Tight height: header(36+20) + type(60+6) + title(22+18) + roast + stats(56+20) + summary + divider(34) + sections + footer(40) + padding(60)
+    const CW = 22;
+    const LH = 22;
+    const countSentH = (text: string) => {
       const sents = text.split(/(?<=[。！？\n])/).map((s) => s.trim()).filter((s) => s.length > 0);
-      return sents.reduce((sum, s) => sum + Math.max(1, Math.ceil(s.length / CHARS_PER_LINE)), 0) + sents.length;
+      return sents.reduce((sum, s, i) => {
+        const lines = Math.max(1, Math.ceil(s.length / CW));
+        return sum + lines * LH + (i === 0 ? 24 : 0); // first sentence has highlight box padding
+      }, 0) + (sents.length - 1) * 6;
     };
 
-    const roastLines = Math.max(1, Math.ceil((data.roast?.length || 0) / CHARS_PER_LINE));
-    const summaryLines = countVisualLines(data.summary || "");
-    const sectionLines = sections.reduce((sum, s) => sum + countVisualLines(s.text) + 4, 0);
-    const estimatedHeight = Math.max(900, 420 + (roastLines + summaryLines) * LINE_H + sectionLines * LINE_H + sections.length * 60 + 120);
-    const height = Math.min(estimatedHeight, 6000);
+    const roastH = Math.max(1, Math.ceil((data.roast?.length || 0) / CW)) * 21 + 32; // padding+border
+    const summaryH = Math.max(1, Math.ceil((data.summary?.length || 0) / CW)) * 20;
+    const sectionH = sections.reduce((sum, s) => sum + countSentH(s.text) + 56, 0); // 56 = header + margins
+    const statsH = 56 + 20;
+    const fixedH = 36 + 20 + 60 + 6 + 22 + 18 + 34 + 40 + 60; // header/type/title/divider/footer/padding
+    const height = Math.min(Math.max(500, fixedH + roastH + statsH + summaryH + sectionH + 22), 6000);
 
     const stats = [
       { val: data.bookCount, label: "本书", icon: "📚", color: "#fbbf24" },
@@ -146,7 +151,7 @@ export async function POST(req: NextRequest) {
           ))}
 
           {/* Main content */}
-          <div style={{ display: "flex", flexDirection: "column", padding: "36px 28px 24px", position: "relative", zIndex: 1, flex: 1 }}>
+          <div style={{ display: "flex", flexDirection: "column", padding: "36px 28px 24px", position: "relative", zIndex: 1 }}>
             {/* Top accent */}
             <div style={{ display: "flex", position: "absolute", top: 0, left: 28, right: 28, height: 2, background: "linear-gradient(90deg, transparent, rgba(102,126,234,0.4), rgba(233,69,96,0.4), transparent)" }} />
 
@@ -240,7 +245,7 @@ export async function POST(req: NextRequest) {
               style={{
                 display: "flex",
                 height: 1,
-                marginTop: "auto",
+                marginTop: 20,
                 marginBottom: 14,
                 background: "linear-gradient(90deg, rgba(102,126,234,0.3), rgba(233,69,96,0.2), rgba(245,197,24,0.3))",
               }}

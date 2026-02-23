@@ -91,14 +91,16 @@ export async function POST(req: NextRequest) {
       .map((s) => s.trim())
       .filter((s) => s.length > 0);
 
-    const CHARS_PER_LINE = 22;
-    const LINE_H = 26;
-    const visualLines = sentences.reduce(
-      (sum, s) => sum + Math.max(1, Math.ceil(s.length / CHARS_PER_LINE)),
-      0
-    );
-    const estimatedHeight = Math.max(480, 200 + visualLines * LINE_H + sentences.length * 10 + 120);
-    const height = Math.min(estimatedHeight, 4000);
+    // Tight height calc: header(68) + badge(~40 if present) + content + footer(60) + padding(60)
+    const CW = 22; // chars per line at 13-15px in 344px content width
+    const LH = 24; // line height per visual line
+    const firstSentExtra = 26; // padding + border for highlight block
+    const contentH = sentences.reduce((sum, s, i) => {
+      const lines = Math.max(1, Math.ceil(s.length / CW));
+      return sum + lines * LH + (i === 0 ? firstSentExtra : 0);
+    }, 0) + (sentences.length - 1) * 10; // gap between sentences
+    const fixedH = 68 + (data.doubanName ? 40 : 0) + 60 + 60;
+    const height = Math.min(Math.max(360, fixedH + contentH), 4000);
 
     return new ImageResponse(
       (
@@ -168,7 +170,6 @@ export async function POST(req: NextRequest) {
               padding: "36px 28px 24px",
               position: "relative",
               zIndex: 1,
-              flex: 1,
             }}
           >
             {/* Subtle top accent line */}
@@ -235,7 +236,7 @@ export async function POST(req: NextRequest) {
             )}
 
             {/* Sentences with first-sentence highlight */}
-            <div style={{ display: "flex", flexDirection: "column", gap: 10, flex: 1 }}>
+            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
               {sentences.map((sentence, i) => (
                 <div
                   key={i}
