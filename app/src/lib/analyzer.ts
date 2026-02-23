@@ -1,8 +1,13 @@
-import { getOpenAI } from "./openai";
+import OpenAI from "openai";
+import { getOpenAI, getModel, trackUsage } from "./openai";
 import {
+  MBTI_SYSTEM_PROMPT,
   MBTI_ANALYSIS_PROMPT,
+  PREMIUM_SYSTEM_PROMPT,
   PREMIUM_ANALYSIS_PROMPT,
+  TIMELINE_SYSTEM_PROMPT,
   TIMELINE_PROMPT,
+  RECOMMENDATION_SYSTEM_PROMPT,
   RECOMMENDATION_PROMPT,
   formatItems,
   formatReviews,
@@ -19,6 +24,17 @@ import type {
   RecommendationItem,
   RealCounts,
 } from "./types";
+
+async function llmCall(
+  openai: ReturnType<typeof getOpenAI>,
+  params: Parameters<typeof openai.chat.completions.create>[0]
+): Promise<string> {
+  const response = await openai.chat.completions.create(params) as OpenAI.Chat.ChatCompletion;
+  if (response.usage) {
+    trackUsage(response.usage.prompt_tokens, response.usage.completion_tokens);
+  }
+  return response.choices[0]?.message?.content ?? "{}";
+}
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function safeParseJSON(text: string): Record<string, any> {
@@ -137,15 +153,16 @@ export async function generateBasicReport(
   const data = buildPromptData(truncated, realCounts, originalCounts, wasTruncated);
   const prompt = fillTemplate(MBTI_ANALYSIS_PROMPT, data);
 
-  const response = await openai.chat.completions.create({
-    model: "gpt-4o-mini",
-    messages: [{ role: "user", content: prompt }],
+  const text = await llmCall(openai, {
+    model: getModel(),
+    messages: [
+      { role: "system", content: MBTI_SYSTEM_PROMPT },
+      { role: "user", content: prompt },
+    ],
     max_tokens: 2000,
     temperature: 0.8,
     response_format: { type: "json_object" },
   });
-
-  const text = response.choices[0]?.message?.content ?? "{}";
   const parsed = safeParseJSON(text);
 
   const mbti: CulturalMBTI = {
@@ -185,6 +202,7 @@ export async function generateBasicReport(
       shekong: parsed.radar?.shekong ?? 50,
       kaogu: parsed.radar?.kaogu ?? 50,
       shangtou: parsed.radar?.shangtou ?? 50,
+      chouxiang: parsed.radar?.chouxiang ?? 50,
     },
     summary: parsed.summary ?? "",
   };
@@ -210,15 +228,16 @@ export async function generatePremiumReport(
   };
   const prompt = fillTemplate(PREMIUM_ANALYSIS_PROMPT, data);
 
-  const response = await openai.chat.completions.create({
-    model: "gpt-4o-mini",
-    messages: [{ role: "user", content: prompt }],
+  const text = await llmCall(openai, {
+    model: getModel(),
+    messages: [
+      { role: "system", content: PREMIUM_SYSTEM_PROMPT },
+      { role: "user", content: prompt },
+    ],
     max_tokens: 3000,
     temperature: 0.85,
     response_format: { type: "json_object" },
   });
-
-  const text = response.choices[0]?.message?.content ?? "{}";
   return safeParseJSON(text) as {
     bookAnalysis: string;
     movieAnalysis: string;
@@ -270,15 +289,16 @@ export async function generateTimeline(
   };
   const prompt = fillTemplate(TIMELINE_PROMPT, data);
 
-  const response = await openai.chat.completions.create({
-    model: "gpt-4o-mini",
-    messages: [{ role: "user", content: prompt }],
+  const text = await llmCall(openai, {
+    model: getModel(),
+    messages: [
+      { role: "system", content: TIMELINE_SYSTEM_PROMPT },
+      { role: "user", content: prompt },
+    ],
     max_tokens: 2000,
     temperature: 0.85,
     response_format: { type: "json_object" },
   });
-
-  const text = response.choices[0]?.message?.content ?? "{}";
   const parsed = safeParseJSON(text);
   const months: MonthSnapshot[] = (parsed.months as Array<{ month: string; mood?: string; moodScore?: number; tasteShift?: string; roast?: string }> ?? []).map(
     (m: { month: string; mood?: string; moodScore?: number; tasteShift?: string; roast?: string }) => {
@@ -325,15 +345,16 @@ export async function generateRecommendations(
 
   const prompt = fillTemplate(RECOMMENDATION_PROMPT, data);
 
-  const response = await openai.chat.completions.create({
-    model: "gpt-4o-mini",
-    messages: [{ role: "user", content: prompt }],
+  const text = await llmCall(openai, {
+    model: getModel(),
+    messages: [
+      { role: "system", content: RECOMMENDATION_SYSTEM_PROMPT },
+      { role: "user", content: prompt },
+    ],
     max_tokens: 2000,
     temperature: 0.85,
     response_format: { type: "json_object" },
   });
-
-  const text = response.choices[0]?.message?.content ?? "{}";
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let parsed: Record<string, any>;
   try {
@@ -369,9 +390,12 @@ export async function generateComparison(
   differences: { point: string; detail: string }[];
   chemistry: string;
   sharedWorks: string[];
-  recommendTogether: { title: string; type: string; reason: string }[];
+  crossRecommend: {
+    forA: { title: string; type: string; reason: string }[];
+    forB: { title: string; type: string; reason: string }[];
+  };
 }> {
-  const { COMPARE_PROMPT } = await import("./prompts");
+  const { COMPARE_SYSTEM_PROMPT, COMPARE_PROMPT } = await import("./prompts");
   const openai = getOpenAI();
 
   const data = {
@@ -417,15 +441,16 @@ export async function generateComparison(
 
   const prompt = fillTemplate(COMPARE_PROMPT, data);
 
-  const response = await openai.chat.completions.create({
-    model: "gpt-4o-mini",
-    messages: [{ role: "user", content: prompt }],
+  const text = await llmCall(openai, {
+    model: getModel(),
+    messages: [
+      { role: "system", content: COMPARE_SYSTEM_PROMPT },
+      { role: "user", content: prompt },
+    ],
     max_tokens: 3000,
     temperature: 0.85,
     response_format: { type: "json_object" },
   });
-
-  const text = response.choices[0]?.message?.content ?? "{}";
   const parsed = safeParseJSON(text);
   return {
     matchScore: parsed.matchScore ?? 50,
@@ -435,6 +460,6 @@ export async function generateComparison(
     differences: parsed.differences ?? [],
     chemistry: parsed.chemistry ?? "",
     sharedWorks: parsed.sharedWorks ?? [],
-    recommendTogether: parsed.recommendTogether ?? [],
+    crossRecommend: parsed.crossRecommend ?? { forA: [], forB: [] },
   };
 }

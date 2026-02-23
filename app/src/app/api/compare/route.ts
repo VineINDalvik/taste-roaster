@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { v4 as uuidv4 } from "uuid";
 import { generateComparison } from "@/lib/analyzer";
+import { resetUsage, getAccumulatedUsage } from "@/lib/openai";
+import { saveCompare, isKvConfigured } from "@/lib/kv";
 import type { TasteReport, CulturalMBTI, RadarData } from "@/lib/types";
 
 export const maxDuration = 30;
@@ -26,6 +28,11 @@ interface PersonSummary {
  * Only generates AI comparison (~5s).
  */
 export async function POST(req: NextRequest) {
+  if (process.env.NEXT_PUBLIC_DEV_MOCK === "true") {
+    const { MOCK_COMPARE } = await import("@/lib/mock-data");
+    return NextResponse.json(MOCK_COMPARE);
+  }
+
   try {
     const body = await req.json();
     const { personA, personB } = body as {
@@ -93,10 +100,11 @@ export async function POST(req: NextRequest) {
       isPremium: false,
     };
 
+    resetUsage();
     const comparison = await generateComparison(reportA, reportB);
     const compareId = uuidv4();
 
-    return NextResponse.json({
+    const result = {
       compareId,
       personA: {
         name: personA.name,
@@ -119,7 +127,17 @@ export async function POST(req: NextRequest) {
         musicCount: personB.musicCount,
       },
       comparison,
-    });
+    };
+
+    if (isKvConfigured()) {
+      try {
+        await saveCompare(compareId, result);
+      } catch (e) {
+        console.warn("Failed to save compare to KV:", e);
+      }
+    }
+
+    return NextResponse.json({ ...result, _usage: getAccumulatedUsage() });
   } catch (error) {
     console.error("Compare error:", error);
     const message =

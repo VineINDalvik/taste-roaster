@@ -8,6 +8,7 @@ import MusicPortrait from "@/components/MusicPortrait";
 import BookPortrait from "@/components/BookPortrait";
 import MoviePortrait from "@/components/MoviePortrait";
 import ShareableCard from "@/components/ShareableCard";
+import InviteModal from "@/components/InviteModal";
 
 interface MBTIDimension {
   letter: string;
@@ -56,6 +57,7 @@ interface ReportData {
     shekong: number;
     kaogu: number;
     shangtou: number;
+    chouxiang: number;
   };
   summary: string;
   isPremium: boolean;
@@ -141,6 +143,7 @@ export default function ResultPage({
   const stepInterval = useRef<NodeJS.Timeout>(undefined);
 
   const [expanding, setExpanding] = useState(false);
+  const [showInviteModal, setShowInviteModal] = useState(false);
 
   const mbtiType = useMemo(() => {
     if (!report?.mbti?.dimensions) return report?.mbti?.type || "????";
@@ -200,6 +203,7 @@ export default function ResultPage({
       const ct = res.headers.get("content-type") ?? "";
       if (!ct.includes("application/json")) throw new Error("返回格式异常");
       const data = await res.json();
+      if (data._usage) console.log("[LLM Usage] expand:", data._usage);
       setReport((prev) => {
         if (!prev) return prev;
         const updated = {
@@ -279,6 +283,7 @@ export default function ResultPage({
       }
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
+      if (data._usage) console.log("[LLM Usage] share-unlock:", data._usage);
 
       const updated: ReportData = {
         ...report,
@@ -335,12 +340,12 @@ export default function ResultPage({
           >
             ← 重新测试
           </Link>
-          <Link
-            href={`/compare?from=${id}`}
+          <button
+            onClick={() => setShowInviteModal(true)}
             className="inline-flex items-center gap-1.5 text-sm text-[#e94560] hover:text-[#f5c518] transition-colors font-medium"
           >
             👥 邀请TA来测
-          </Link>
+          </button>
         </div>
 
         {/* Share Card */}
@@ -608,12 +613,12 @@ export default function ResultPage({
             <p className="text-sm text-gray-400">
               邀请另一个人来测，看看你们的书影音 MBTI 有多配
             </p>
-            <Link
-              href={`/compare?from=${id}`}
-              className="inline-block w-full py-3 rounded-xl accent-gradient text-white font-medium hover:opacity-90 transition-opacity"
+            <button
+              onClick={() => setShowInviteModal(true)}
+              className="w-full py-3 rounded-xl accent-gradient text-white font-medium hover:opacity-90 transition-opacity"
             >
               邀请 TA 来对比
-            </Link>
+            </button>
           </div>
         </div>
 
@@ -651,6 +656,28 @@ export default function ResultPage({
           </div>
         </div>
 
+        {/* Tip / Donation */}
+        <div className="animate-fade-in-up animate-delay-400">
+          <div className="card-glass rounded-2xl p-6 text-center space-y-4">
+            <div className="text-2xl">☕</div>
+            <h3 className="text-sm font-bold text-white">
+              请作者喝杯咖啡
+            </h3>
+            <p className="text-xs text-gray-400 leading-relaxed">
+              如果这个工具给你带来了快乐，可以赞赏支持一下
+            </p>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src="/images/tip-qrcode.jpg"
+              alt="赞赏二维码"
+              className="w-40 h-40 mx-auto rounded-xl"
+            />
+            <p className="text-[10px] text-gray-500">
+              长按识别 / 扫码赞赏
+            </p>
+          </div>
+        </div>
+
         {/* Footer */}
         <div className="text-center space-y-3 pb-8 animate-fade-in-up animate-delay-400">
           <Link
@@ -664,6 +691,14 @@ export default function ResultPage({
           </p>
         </div>
       </div>
+
+      {showInviteModal && (
+        <InviteModal
+          reportId={id}
+          report={report}
+          onClose={() => setShowInviteModal(false)}
+        />
+      )}
     </main>
   );
 }

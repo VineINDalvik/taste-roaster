@@ -50,6 +50,9 @@ export default function UploadPage() {
         throw new Error(result.error || "分析失败");
       }
 
+      if (result._usage) {
+        console.log("[LLM Usage]", result._usage);
+      }
       localStorage.setItem(`taste-report-${result.id}`, JSON.stringify(result));
       router.push(`/result/${result.id}`);
     } catch (err) {

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { v4 as uuidv4 } from "uuid";
 import { scrapeDoubanQuick } from "@/lib/douban-scraper";
 import { generateBasicReport } from "@/lib/analyzer";
+import { resetUsage, getAccumulatedUsage } from "@/lib/openai";
 import type { TasteInput } from "@/lib/types";
 
 export const maxDuration = 60;
@@ -25,6 +26,7 @@ export async function POST(req: NextRequest) {
       .replace(/^https?:\/\/.*\/people\//, "")
       .replace(/\/$/, "");
 
+    resetUsage();
     const doubanData = await scrapeDoubanQuick(cleanId);
 
     const input: TasteInput = {
@@ -70,6 +72,7 @@ export async function POST(req: NextRequest) {
         (doubanData.profile.realCounts.books || input.books.length) +
         (doubanData.profile.realCounts.movies || input.movies.length) +
         (doubanData.profile.realCounts.music || input.music.length),
+      _usage: getAccumulatedUsage(),
     });
   } catch (error) {
     console.error("Analysis error:", error);

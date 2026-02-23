@@ -230,7 +230,7 @@ export const MOCK_ANALYZE = {
     summary: "你的品味像一座私人博物馆——每件藏品都经过精心挑选，陈列着你对世界的理解。你不追热门，但你追的东西往往在几年后变成经典。",
   },
   roast: "你的豆瓣主页就是一部《我很有品味但我不说》的默片。书架上全是让人望而生畏的大部头，片单里一半是没人听过的小众片，音乐品味更是像在参加一场只有你一个人的音乐节。恭喜你，你是文化荒漠里最孤独的绿洲。",
-  radarData: { wenqing: 88, emo: 76, shekong: 82, kaogu: 61, shangtou: 73 },
+  radarData: { wenqing: 88, emo: 76, shekong: 82, kaogu: 61, shangtou: 73, chouxiang: 58 },
   summary: "一个被文字和光影喂养长大的灵魂，在文青浓度和社恐值上远超同龄人，但偶尔也该走出舒适区看看烂片，毕竟生活不只是艺术。",
   isPremium: false,
   input: {
@@ -323,6 +323,67 @@ export const MOCK_EXPAND = {
   ],
   timelineText:
     "你的品味轨迹像一条深海潜水曲线——九月和十一月分别探到两个低点，一月短暂上浮之后二月又潜下去了。你的消费模式暴露了一个典型INFJ的循环：积累压力→通过高强度文艺消费释放→短暂回归日常→再次下潜。你的书影音不是娱乐，是你的情绪调节系统。\n\n下个月你可能会突然迷上一部轻松的喜剧或者一张电子专辑——不是因为你变肤浅了，而是你的灵魂需要喘口气。建议试试韦斯安德森或者Tame Impala的新专辑。",
+};
+
+export const MOCK_COMPARE = {
+  compareId: "mock-compare-001",
+  personA: {
+    name: "Mock用户A",
+    mbtiType: "INFJ",
+    mbtiTitle: "孤独的灵魂考古者",
+    dimensions: {
+      ie: { letter: "I", score: 72, evidence: "偏好独处型文艺消费" },
+      ns: { letter: "N", score: 78, evidence: "热衷抽象哲学与科幻" },
+      tf: { letter: "F", score: 65, evidence: "选片偏情感驱动" },
+      jp: { letter: "J", score: 60, evidence: "系列控特征明显" },
+    },
+    radarData: { wenqing: 82, emo: 76, shekong: 68, kaogu: 71, shangtou: 85, chouxiang: 63 },
+    bookCount: 56,
+    movieCount: 56,
+    musicCount: 56,
+  },
+  personB: {
+    name: "Mock用户B",
+    mbtiType: "ENFP",
+    mbtiTitle: "社交型文化杂食者",
+    dimensions: {
+      ie: { letter: "E", score: 68, evidence: "热衷社交话题作品" },
+      ns: { letter: "N", score: 70, evidence: "喜欢创意类作品" },
+      tf: { letter: "F", score: 75, evidence: "感性驱动的选择" },
+      jp: { letter: "P", score: 72, evidence: "跨类型杂食" },
+    },
+    radarData: { wenqing: 45, emo: 55, shekong: 30, kaogu: 35, shangtou: 90, chouxiang: 72 },
+    bookCount: 42,
+    movieCount: 78,
+    musicCount: 63,
+  },
+  comparison: {
+    matchScore: 72,
+    matchTitle: "灵魂共振体",
+    overview: "一个是深海里的发光体，一个是天空中的烟花——你们看似不在同一个频道，但对美的追求让你们殊途同归。INFJ的深度和ENFP的广度形成完美互补。",
+    similarities: [
+      { point: "都是N型直觉派", detail: "你们都被抽象概念吸引：一个读博尔赫斯，一个追黑镜，但都在追问「如果世界不是这样呢」" },
+      { point: "情感驱动选择", detail: "你们都是F型——选书选片不看评分看感觉，宁可被一部烂片感动也不要看无聊的高分片" },
+      { point: "上头就是一辈子", detail: "两人的上头程度都80+，区别只在于一个是安静地沉迷，一个是到处安利" },
+    ],
+    differences: [
+      { point: "社恐vs社牛", detail: "A的社恐值68，看完电影独自消化；B的社恐值30，看完恨不得发十条朋友圈" },
+      { point: "考古vs追新", detail: "A还在读陀思妥耶夫斯基，B已经在追最新的Netflix原创剧了" },
+      { point: "文青浓度天差地别", detail: "A的文青浓度82是「只看塔可夫斯基」级别，B的45是「漫威文艺片我都爱」" },
+    ],
+    chemistry: "让你们一起选电影会很有趣：A想看阿巴斯的长镜头，B想看诺兰的时间线，最后你们会妥协看维伦纽瓦的《降临》——然后发现这才是最佳选择。A会被B拉出舒适区去看漫威，B会被A安利去看王家卫，三个月后你们的品味会变得越来越像。",
+    sharedWorks: ["百年孤独", "三体", "花样年华", "Radiohead"],
+    crossRecommend: {
+      forA: [
+        { title: "黑镜", type: "movie", reason: "B看过的黑镜完美契合你的N型大脑——每集都是一个思想实验" },
+        { title: "Lorde", type: "music", reason: "B听的Lorde有你喜欢的那种忧郁质感，但比Elliott Smith明亮" },
+      ],
+      forB: [
+        { title: "索拉里斯星", type: "book", reason: "A读过的莱姆会让你发现科幻也可以像诗一样美" },
+        { title: "花样年华", type: "movie", reason: "A最爱的王家卫会教你什么叫做用光影写情书" },
+      ],
+    },
+  },
 };
 
 export const MOCK_SHARE_UNLOCK = {

@@ -24,6 +24,7 @@ interface ShareCardProps {
     shekong: number;
     kaogu: number;
     shangtou: number;
+    chouxiang: number;
   };
   summary: string;
   itemCount: number;
@@ -46,6 +47,7 @@ const RADAR_LABELS: [string, string][] = [
   ["shekong", "社恐值"],
   ["kaogu", "考古癖"],
   ["shangtou", "上头度"],
+  ["chouxiang", "抽象浓度"],
 ];
 
 function DimensionBar({

@@ -25,6 +25,12 @@ interface PersonData {
   musicCount: number;
 }
 
+interface CrossRecItem {
+  title: string;
+  type: string;
+  reason: string;
+}
+
 interface ComparisonData {
   matchScore: number;
   matchTitle: string;
@@ -33,7 +39,11 @@ interface ComparisonData {
   differences: { point: string; detail: string }[];
   chemistry: string;
   sharedWorks: string[];
-  recommendTogether: { title: string; type: string; reason: string }[];
+  crossRecommend?: {
+    forA: CrossRecItem[];
+    forB: CrossRecItem[];
+  };
+  recommendTogether?: CrossRecItem[];
 }
 
 interface CompareData {
@@ -57,6 +67,7 @@ const RADAR_LABELS: [string, string][] = [
   ["shekong", "社恐值"],
   ["kaogu", "考古癖"],
   ["shangtou", "上头度"],
+  ["chouxiang", "抽象浓度"],
 ];
 
 function getMatchColor(score: number) {
@@ -88,12 +99,20 @@ export default function CompareResultPage({
     if (stored) {
       try {
         setData(JSON.parse(stored));
+        return;
       } catch {
-        setError("对比数据损坏");
+        // fall through to remote
       }
-    } else {
-      setError("对比报告不存在");
     }
+
+    fetch(`/api/compare/${id}`)
+      .then(async (res) => {
+        if (!res.ok) throw new Error("not found");
+        const remote = await res.json();
+        setData(remote);
+        localStorage.setItem(`taste-compare-${id}`, JSON.stringify(remote));
+      })
+      .catch(() => setError("对比报告不存在或已过期"));
   }, [id]);
 
   if (error || !data) {
@@ -251,44 +270,41 @@ export default function CompareResultPage({
           </div>
         )}
 
-        {/* Recommend Together */}
-        {comparison.recommendTogether.length > 0 && (
-          <div className="card-glass rounded-xl p-5 space-y-3 animate-fade-in-up animate-delay-300">
-            <h3 className="text-sm font-bold text-[#e94560]">
-              💡 推荐你们一起
-            </h3>
-            <div className="space-y-3">
-              {comparison.recommendTogether.map((rec, i) => (
-                <a
-                  key={i}
-                  href={`https://search.douban.com/${rec.type === "book" ? "book" : rec.type === "movie" ? "movie" : "music"}/subject_search?search_text=${encodeURIComponent(rec.title)}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-start gap-3 p-3 rounded-lg bg-white/[0.03] hover:bg-white/[0.08] transition-colors group"
-                >
-                  <div className="flex-shrink-0 w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center text-sm">
-                    {rec.type === "book"
-                      ? "📖"
-                      : rec.type === "movie"
-                        ? "🎬"
-                        : "🎵"}
+        {/* Cross Recommendations */}
+        {comparison.crossRecommend &&
+          (comparison.crossRecommend.forA.length > 0 ||
+            comparison.crossRecommend.forB.length > 0) && (
+            <div className="card-glass rounded-xl p-5 space-y-4 animate-fade-in-up animate-delay-300">
+              <h3 className="text-sm font-bold text-[#e94560]">
+                💡 交叉推荐
+              </h3>
+              <p className="text-xs text-gray-500">
+                从对方的书影音中，挑出你可能会喜欢的
+              </p>
+
+              {comparison.crossRecommend.forA.length > 0 && (
+                <div className="space-y-2">
+                  <div className="text-xs font-medium text-[#667eea]">
+                    推荐给 {personA.name}
                   </div>
-                  <div className="flex-1 min-w-0">
-                    <span className="text-sm text-white font-medium group-hover:text-[#e94560] transition-colors">
-                      {rec.title}
-                    </span>
-                    <p className="text-xs text-gray-400 mt-0.5">
-                      {rec.reason}
-                    </p>
+                  {comparison.crossRecommend.forA.map((rec, i) => (
+                    <RecItem key={i} rec={rec} />
+                  ))}
+                </div>
+              )}
+
+              {comparison.crossRecommend.forB.length > 0 && (
+                <div className="space-y-2">
+                  <div className="text-xs font-medium text-[#e94560]">
+                    推荐给 {personB.name}
                   </div>
-                  <span className="text-[10px] text-gray-600 opacity-0 group-hover:opacity-100 transition-opacity mt-1">
-                    ↗
-                  </span>
-                </a>
-              ))}
+                  {comparison.crossRecommend.forB.map((rec, i) => (
+                    <RecItem key={i} rec={rec} />
+                  ))}
+                </div>
+              )}
             </div>
-          </div>
-        )}
+          )}
 
         {/* Stats comparison */}
         <div className="card-glass rounded-xl p-5 animate-fade-in-up animate-delay-300">
@@ -661,5 +677,30 @@ function DualRadar({
         </div>
       </div>
     </div>
+  );
+}
+
+function RecItem({ rec }: { rec: CrossRecItem }) {
+  const searchUrl = `https://search.douban.com/${rec.type === "book" ? "book" : rec.type === "movie" ? "movie" : "music"}/subject_search?search_text=${encodeURIComponent(rec.title)}`;
+  return (
+    <a
+      href={searchUrl}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="flex items-start gap-3 p-3 rounded-lg bg-white/[0.03] hover:bg-white/[0.08] transition-colors group"
+    >
+      <div className="flex-shrink-0 w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center text-sm">
+        {rec.type === "book" ? "📖" : rec.type === "movie" ? "🎬" : "🎵"}
+      </div>
+      <div className="flex-1 min-w-0">
+        <span className="text-sm text-white font-medium group-hover:text-[#e94560] transition-colors">
+          {rec.title}
+        </span>
+        <p className="text-xs text-gray-400 mt-0.5">{rec.reason}</p>
+      </div>
+      <span className="text-[10px] text-gray-600 opacity-0 group-hover:opacity-100 transition-opacity mt-1">
+        ↗
+      </span>
+    </a>
   );
 }

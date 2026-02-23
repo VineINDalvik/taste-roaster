@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { generatePremiumReport, generateTimeline } from "@/lib/analyzer";
+import { resetUsage, getAccumulatedUsage } from "@/lib/openai";
 import type { TasteReport, TasteInput, CulturalMBTI } from "@/lib/types";
 
 export const maxDuration = 60;
@@ -42,12 +43,13 @@ export async function POST(req: NextRequest) {
       roast: roast ?? "",
       radarData: radarData ?? {
         wenqing: 50, emo: 50, shekong: 50,
-        kaogu: 50, shangtou: 50,
+        kaogu: 50, shangtou: 50, chouxiang: 50,
       },
       summary: summary ?? "",
       isPremium: false,
     };
 
+    resetUsage();
     const [premium, timeline] = await Promise.all([
       generatePremiumReport(report).catch(() => ({
         bookAnalysis: "",
@@ -70,6 +72,7 @@ export async function POST(req: NextRequest) {
       musicAnalysis: premium.musicAnalysis,
       timelineMonths: timeline.months,
       timelineText: `${timeline.trend}\n\n${timeline.prediction}`,
+      _usage: getAccumulatedUsage(),
     });
   } catch (error) {
     console.error("Expand error:", error);

@@ -9,11 +9,12 @@ interface RadarChartProps {
     shekong: number;
     kaogu: number;
     shangtou: number;
+    chouxiang: number;
   };
   size?: number;
 }
 
-const LABELS = ["文青浓度", "emo指数", "社恐值", "考古癖", "上头度"];
+const LABELS = ["文青浓度", "emo指数", "社恐值", "考古癖", "上头度", "抽象浓度"];
 
 export default function RadarChart({ data, size = 240 }: RadarChartProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -23,6 +24,7 @@ export default function RadarChart({ data, size = 240 }: RadarChartProps) {
     data.shekong,
     data.kaogu,
     data.shangtou,
+    data.chouxiang,
   ];
 
   useEffect(() => {
@@ -39,7 +41,7 @@ export default function RadarChart({ data, size = 240 }: RadarChartProps) {
     const cx = size / 2;
     const cy = size / 2;
     const radius = size * 0.35;
-    const sides = 5;
+    const sides = 6;
     const angleStep = (Math.PI * 2) / sides;
     const startAngle = -Math.PI / 2;
 

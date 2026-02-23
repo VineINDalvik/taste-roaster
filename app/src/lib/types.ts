@@ -59,6 +59,7 @@ export interface RadarData {
   shekong: number;     // 社恐值 0=社交话题王 100=没人聊得来
   kaogu: number;       // 考古癖 0=只追新的 100=活在上个世纪
   shangtou: number;    // 上头程度 0=浅尝辄止 100=入坑就疯
+  chouxiang: number;   // 抽象浓度 0=正常人类审美 100=脑回路无法被理解
 }
 
 export interface TasteReport {

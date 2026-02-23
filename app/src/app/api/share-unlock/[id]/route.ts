@@ -3,6 +3,7 @@ import {
   generatePremiumReport,
   generateRecommendations,
 } from "@/lib/analyzer";
+import { resetUsage, getAccumulatedUsage } from "@/lib/openai";
 import type { TasteReport, TasteInput, CulturalMBTI } from "@/lib/types";
 
 export const maxDuration = 60;
@@ -39,12 +40,13 @@ export async function POST(req: NextRequest) {
       roast: report.roast ?? "",
       radarData: report.radarData ?? {
         wenqing: 50, emo: 50, shekong: 50,
-        kaogu: 50, shangtou: 50,
+        kaogu: 50, shangtou: 50, chouxiang: 50,
       },
       summary: report.summary ?? "",
       isPremium: false,
     };
 
+    resetUsage();
     const [premium, recommendations] = await Promise.all([
       generatePremiumReport(fullReport),
       generateRecommendations(fullReport),
@@ -55,6 +57,7 @@ export async function POST(req: NextRequest) {
       personality: premium.personality,
       blindSpots: premium.blindSpots,
       recommendations: recommendations.filter((r) => !r.alreadyConsumed),
+      _usage: getAccumulatedUsage(),
     });
   } catch (error) {
     console.error("Share unlock error:", error);
