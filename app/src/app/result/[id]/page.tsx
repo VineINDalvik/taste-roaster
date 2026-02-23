@@ -5,6 +5,9 @@ import Link from "next/link";
 import ShareCard from "@/components/ShareCard";
 import EvolutionCurve from "@/components/EvolutionCurve";
 import MusicPortrait from "@/components/MusicPortrait";
+import BookPortrait from "@/components/BookPortrait";
+import MoviePortrait from "@/components/MoviePortrait";
+import ShareableCard from "@/components/ShareableCard";
 
 interface MBTIDimension {
   letter: string;
@@ -399,21 +402,29 @@ export default function ResultPage({
           </h2>
           {hasExpandContent ? (
             <>
-              <AnalysisSection
-                icon="📚"
-                title={`${mbtiType} 的阅读品味`}
-                content={ft(report.bookAnalysis)}
-              />
-              <AnalysisSection
-                icon="🎬"
-                title={`${mbtiType} 的观影品味`}
-                content={ft(report.movieAnalysis)}
-              />
+              {report.bookAnalysis ? (
+                <ShareableCard filename={`阅读画像-${mbtiType}`}>
+                  <BookPortrait
+                    analysis={ft(report.bookAnalysis)!}
+                    mbtiType={mbtiType}
+                  />
+                </ShareableCard>
+              ) : null}
+              {report.movieAnalysis ? (
+                <ShareableCard filename={`观影画像-${mbtiType}`}>
+                  <MoviePortrait
+                    analysis={ft(report.movieAnalysis)!}
+                    mbtiType={mbtiType}
+                  />
+                </ShareableCard>
+              ) : null}
               {report.musicAnalysis ? (
-                <MusicPortrait
-                  analysis={ft(report.musicAnalysis)!}
-                  mbtiType={mbtiType}
-                />
+                <ShareableCard filename={`音乐画像-${mbtiType}`}>
+                  <MusicPortrait
+                    analysis={ft(report.musicAnalysis)!}
+                    mbtiType={mbtiType}
+                  />
+                </ShareableCard>
               ) : null}
             </>
           ) : expanding ? (
@@ -445,15 +456,17 @@ export default function ResultPage({
         {/* === FREE CONTENT: Evolution Curve === */}
         {report.timelineMonths && report.timelineMonths.length > 0 && (
           <div className="animate-fade-in-up animate-delay-200">
-            <EvolutionCurve
-              months={report.timelineMonths}
-              trend={ft(report.timelineText?.split("\n")[0])}
-              prediction={ft(
-                report.timelineText?.includes("预测")
-                  ? report.timelineText.split("\n").slice(1).join("\n")
-                  : undefined
-              )}
-            />
+            <ShareableCard filename={`品味进化-${mbtiType}`}>
+              <EvolutionCurve
+                months={report.timelineMonths}
+                trend={ft(report.timelineText?.split("\n")[0])}
+                prediction={ft(
+                  report.timelineText?.includes("预测")
+                    ? report.timelineText.split("\n").slice(1).join("\n")
+                    : undefined
+                )}
+              />
+            </ShareableCard>
           </div>
         )}
 

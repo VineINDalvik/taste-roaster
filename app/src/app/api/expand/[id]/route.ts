@@ -10,6 +10,11 @@ export const maxDuration = 60;
  * Uses existing sampled data, no re-scraping.
  */
 export async function POST(req: NextRequest) {
+  if (process.env.NEXT_PUBLIC_DEV_MOCK === "true") {
+    const { MOCK_EXPAND } = await import("@/lib/mock-data");
+    return NextResponse.json(MOCK_EXPAND);
+  }
+
   try {
     const body = await req.json();
 

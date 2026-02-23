@@ -7,6 +7,11 @@ import type { TasteInput } from "@/lib/types";
 export const maxDuration = 60;
 
 export async function POST(req: NextRequest) {
+  if (process.env.NEXT_PUBLIC_DEV_MOCK === "true") {
+    const { MOCK_ANALYZE } = await import("@/lib/mock-data");
+    return NextResponse.json(MOCK_ANALYZE);
+  }
+
   try {
     const body = await req.json();
     const { doubanId } = body as { doubanId: string };

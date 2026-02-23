@@ -94,3 +94,31 @@ body {
 .music-float-note {
   animation: floatUp 6s ease-in-out infinite;
 }
+
+@keyframes bookPageFlip {
+  0%, 100% { transform: translateX(-50%) rotateX(65deg); }
+  50% { transform: translateX(-50%) rotateX(45deg); }
+}
+
+.book-page-flip {
+  animation: bookPageFlip 3s ease-in-out infinite;
+}
+
+@keyframes bookFloat {
+  0% { opacity: 0; transform: translateY(0) rotate(0deg); }
+  15% { opacity: 0.8; }
+  100% { opacity: 0; transform: translateY(-250px) rotate(-15deg); }
+}
+
+.book-float {
+  animation: bookFloat 7s ease-in-out infinite;
+}
+
+@keyframes filmReelSpin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.film-reel-spin {
+  animation: filmReelSpin 6s linear infinite;
+}
