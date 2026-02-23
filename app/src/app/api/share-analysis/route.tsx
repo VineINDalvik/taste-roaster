@@ -26,9 +26,14 @@ export async function POST(req: NextRequest) {
     const data: CardData = await req.json();
     const fonts = await loadFonts();
 
-    const lines = data.content.split(/\n/).filter(Boolean);
-    const estimatedHeight = Math.max(400, 120 + lines.length * 28 + 80);
-    const height = Math.min(estimatedHeight, 2000);
+    // Content area is 400 - 32*2 = 336px; at 14px CJK font ≈ 24 chars/line; lineHeight 1.8 ≈ 25px/line
+    const CHARS_PER_LINE = 24;
+    const LINE_H = 25;
+    const paragraphs = data.content.split(/\n/);
+    const visualLines = paragraphs.reduce((sum, p) => sum + Math.max(1, Math.ceil(p.length / CHARS_PER_LINE)), 0);
+    // header(40) + name(30) + title(42) + content + footer(60) + padding
+    const estimatedHeight = Math.max(400, 120 + visualLines * LINE_H + 100);
+    const height = Math.min(estimatedHeight, 4000);
 
     return new ImageResponse(
       (

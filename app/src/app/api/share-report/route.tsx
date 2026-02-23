@@ -53,10 +53,18 @@ export async function POST(req: NextRequest) {
       { title: "音乐画像", text: data.musicAnalysis },
     ].filter((s): s is { title: string; text: string } => !!s.text);
 
-    const totalTextLen = (data.roast?.length || 0) + (data.summary?.length || 0) +
-      sections.reduce((sum, s) => sum + s.text.length, 0);
-    const estimatedHeight = Math.max(800, 500 + Math.ceil(totalTextLen / 18) * 24);
-    const height = Math.min(estimatedHeight, 4000);
+    // Content area 336px; 14px CJK ≈ 24 chars/line; lineHeight 1.8 ≈ 25px/line
+    const CHARS_PER_LINE = 24;
+    const LINE_H = 25;
+    const countVisualLines = (text: string) =>
+      text.split(/\n/).reduce((sum, p) => sum + Math.max(1, Math.ceil(p.length / CHARS_PER_LINE)), 0);
+
+    const roastLines = countVisualLines(data.roast || "");
+    const summaryLines = countVisualLines(data.summary || "");
+    const sectionLines = sections.reduce((sum, s) => sum + countVisualLines(s.text) + 3, 0);
+    // header(70) + type(80) + title(30) + roast box + stats(80) + summary + sections + footer(60)
+    const estimatedHeight = Math.max(800, 300 + (roastLines + summaryLines + sectionLines) * LINE_H + sections.length * 50 + 200);
+    const height = Math.min(estimatedHeight, 6000);
 
     const stats = [
       { val: data.bookCount, label: "本书" },
