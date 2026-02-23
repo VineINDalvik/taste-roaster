@@ -1,6 +1,9 @@
 import { ImageResponse } from "next/og";
 import { NextRequest } from "next/server";
 
+export const runtime = "nodejs";
+export const maxDuration = 30;
+
 interface Dimension {
   letter: string;
   score: number;
