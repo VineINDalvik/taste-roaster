@@ -90,6 +90,22 @@ function radarLabelPositions(): { x: number; y: number; label: string }[] {
   });
 }
 
+export async function GET() {
+  try {
+    return new ImageResponse(
+      (
+        <div style={{ display: "flex", fontSize: 40, color: "white", background: "#1a1a2e", width: "100%", height: "100%", alignItems: "center", justifyContent: "center" }}>
+          Hello Share Card
+        </div>
+      ),
+      { width: 400, height: 200 }
+    );
+  } catch (e) {
+    const msg = e instanceof Error ? `${e.message}\n${e.stack}` : String(e);
+    return new Response(`GET failed: ${msg}`, { status: 500 });
+  }
+}
+
 export async function POST(req: NextRequest) {
   try {
     const data: CardData = await req.json();
