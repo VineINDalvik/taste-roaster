@@ -49,6 +49,7 @@ export async function saveAnalysisCard(
   opts: AnalysisCardOpts
 ) {
   await fetchImageAndPreview('/api/share-analysis', {
+    icon: opts.icon,
     title: opts.title,
     content: opts.content,
     mbtiType: opts.mbtiType,
