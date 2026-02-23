@@ -46,7 +46,7 @@ async function loadFonts(): Promise<{ regular: ArrayBuffer; bold: ArrayBuffer }>
   if (!fontBold) {
     fontBold = await fetch(`${FONT_CDN}/NotoSansSC-Bold.otf`).then((r) => r.arrayBuffer());
   }
-  return { regular: fontRegular, bold: fontBold };
+  return { regular: fontRegular!, bold: fontBold! };
 }
 
 function radarSvgPath(data: Record<string, number>): string {
