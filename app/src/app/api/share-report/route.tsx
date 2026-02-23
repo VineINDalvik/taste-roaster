@@ -36,48 +36,25 @@ const SECTION_THEMES = [
 
 function AnalysisBlock({ text, theme }: { text: string; theme: typeof SECTION_THEMES[0] }) {
   const sentences = text.split(/(?<=[。！？\n])/).map((s) => s.trim()).filter((s) => s.length > 0);
-
   return (
-    <div style={{ display: "flex", flexDirection: "column", marginBottom: 16 }}>
-      {/* Section header */}
-      <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 14 }}>
-        <div
-          style={{
-            display: "flex",
-            width: 32,
-            height: 32,
-            borderRadius: "50%",
-            background: theme.dim,
-            border: `1px solid ${theme.border}`,
-            alignItems: "center",
-            justifyContent: "center",
-            fontSize: 16,
-          }}
-        >
+    <div style={{ display: "flex", flexDirection: "column", marginBottom: 32 }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 20, marginBottom: 28 }}>
+        <div style={{ display: "flex", width: 64, height: 64, borderRadius: "50%", background: theme.dim, border: `2px solid ${theme.border}`, alignItems: "center", justifyContent: "center", fontSize: 32 }}>
           {theme.icon}
         </div>
-        <span style={{ fontSize: 15, fontWeight: 700, color: theme.color }}>{theme.title}</span>
+        <span style={{ fontSize: 30, fontWeight: 700, color: theme.color }}>{theme.title}</span>
       </div>
-
-      {/* Sentences with first highlighted */}
-      <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+      <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
         {sentences.map((sentence, i) => (
           <div
             key={i}
             style={{
               display: "flex",
-              fontSize: i === 0 ? 14 : 13,
+              fontSize: i === 0 ? 28 : 26,
               fontWeight: i === 0 ? 600 : 400,
               color: i === 0 ? theme.highlight : "rgba(209,213,219,0.8)",
               lineHeight: 1.75,
-              ...(i === 0
-                ? {
-                    padding: "8px 12px",
-                    background: theme.dim,
-                    borderRadius: 6,
-                    borderLeft: `3px solid ${theme.color}80`,
-                  }
-                : {}),
+              ...(i === 0 ? { padding: "16px 24px", background: theme.dim, borderRadius: 12, borderLeft: `6px solid ${theme.color}80` } : {}),
             }}
           >
             {sentence}
@@ -99,23 +76,22 @@ export async function POST(req: NextRequest) {
       { text: data.musicAnalysis, theme: SECTION_THEMES[2] },
     ].filter((s): s is { text: string; theme: typeof SECTION_THEMES[0] } => !!s.text);
 
-    // Tight height: header(36+20) + type(60+6) + title(22+18) + roast + stats(56+20) + summary + divider(34) + sections + footer(40) + padding(60)
-    const CW = 22;
-    const LH = 22;
+    // Height at 2x: content width ~688px at 26px font ≈ 26 chars/line
+    const CW = 26;
     const countSentH = (text: string) => {
       const sents = text.split(/(?<=[。！？\n])/).map((s) => s.trim()).filter((s) => s.length > 0);
       return sents.reduce((sum, s, i) => {
         const lines = Math.max(1, Math.ceil(s.length / CW));
-        return sum + lines * LH + (i === 0 ? 24 : 0); // first sentence has highlight box padding
-      }, 0) + (sents.length - 1) * 6;
+        return sum + lines * 46 + (i === 0 ? 40 : 0);
+      }, 0) + (sents.length - 1) * 12;
     };
 
-    const roastH = Math.max(1, Math.ceil((data.roast?.length || 0) / CW)) * 21 + 32; // padding+border
-    const summaryH = Math.max(1, Math.ceil((data.summary?.length || 0) / CW)) * 20;
-    const sectionH = sections.reduce((sum, s) => sum + countSentH(s.text) + 56, 0); // 56 = header + margins
-    const statsH = 56 + 20;
-    const fixedH = 36 + 20 + 60 + 6 + 22 + 18 + 34 + 40 + 60; // header/type/title/divider/footer/padding
-    const height = Math.min(Math.max(500, fixedH + roastH + statsH + summaryH + sectionH + 22), 6000);
+    const roastH = Math.max(1, Math.ceil((data.roast?.length || 0) / CW)) * 42 + 64;
+    const summaryH = Math.max(1, Math.ceil((data.summary?.length || 0) / CW)) * 40;
+    const sectionH = sections.reduce((sum, s) => sum + countSentH(s.text) + 124, 0);
+    const statsH = 130;
+    const fixedH = 72 + 40 + 110 + 12 + 40 + 36 + 68 + 80 + 120;
+    const height = Math.min(Math.max(1000, fixedH + roastH + statsH + summaryH + sectionH + 40), 12000);
 
     const stats = [
       { val: data.bookCount, label: "本书", icon: "📚", color: "#fbbf24" },
@@ -127,134 +103,71 @@ export async function POST(req: NextRequest) {
       (
         <div
           style={{
-            display: "flex",
-            flexDirection: "column",
-            width: "100%",
-            height: "100%",
+            display: "flex", flexDirection: "column", width: "100%", height: "100%",
             background: "linear-gradient(135deg, #0f0c29 0%, #1a1a2e 30%, #16213e 60%, #0f3460 100%)",
-            fontFamily: "NotoSansSC",
-            color: "#ffffff",
-            position: "relative",
-            overflow: "hidden",
+            fontFamily: "NotoSansSC", color: "#ffffff", position: "relative", overflow: "hidden",
           }}
         >
-          {/* Decorative glows */}
-          <div style={{ display: "flex", position: "absolute", top: -60, right: -40, width: 200, height: 200, borderRadius: "50%", background: "rgba(102,126,234,0.04)" }} />
-          <div style={{ display: "flex", position: "absolute", bottom: -40, left: -30, width: 160, height: 160, borderRadius: "50%", background: "rgba(233,69,96,0.04)" }} />
-          <div style={{ display: "flex", position: "absolute", top: "40%", right: -20, width: 120, height: 120, borderRadius: "50%", background: "rgba(168,85,247,0.03)" }} />
+          <div style={{ display: "flex", position: "absolute", top: -120, right: -80, width: 400, height: 400, borderRadius: "50%", background: "rgba(102,126,234,0.04)" }} />
+          <div style={{ display: "flex", position: "absolute", bottom: -80, left: -60, width: 320, height: 320, borderRadius: "50%", background: "rgba(233,69,96,0.04)" }} />
+          <div style={{ display: "flex", position: "absolute", top: "40%", right: -40, width: 240, height: 240, borderRadius: "50%", background: "rgba(168,85,247,0.03)" }} />
 
-          {/* Decorative star pattern */}
           {["✦", "◆", "✧", "●", "✦"].map((s, i) => (
-            <div key={i} style={{ display: "flex", position: "absolute", fontSize: 10 + i * 2, opacity: 0.04, left: `${5 + i * 22}%`, top: `${15 + (i % 3) * 30}%` }}>
+            <div key={i} style={{ display: "flex", position: "absolute", fontSize: 20 + i * 4, opacity: 0.04, left: `${5 + i * 22}%`, top: `${15 + (i % 3) * 30}%` }}>
               {s}
             </div>
           ))}
 
-          {/* Main content */}
-          <div style={{ display: "flex", flexDirection: "column", padding: "36px 28px 24px", position: "relative", zIndex: 1 }}>
-            {/* Top accent */}
-            <div style={{ display: "flex", position: "absolute", top: 0, left: 28, right: 28, height: 2, background: "linear-gradient(90deg, transparent, rgba(102,126,234,0.4), rgba(233,69,96,0.4), transparent)" }} />
+          <div style={{ display: "flex", flexDirection: "column", padding: "72px 56px 48px", position: "relative", zIndex: 1 }}>
+            <div style={{ display: "flex", position: "absolute", top: 0, left: 56, right: 56, height: 4, background: "linear-gradient(90deg, transparent, rgba(102,126,234,0.4), rgba(233,69,96,0.4), transparent)" }} />
 
-            {/* Header */}
-            <div style={{ display: "flex", justifyContent: "center", fontSize: 12, color: "#6b7280", marginBottom: 20 }}>
+            <div style={{ display: "flex", justifyContent: "center", fontSize: 24, color: "#6b7280", marginBottom: 40 }}>
               {data.doubanName ? `${data.doubanName} 的书影音品味报告` : "书影音品味报告"}
             </div>
 
-            {/* MBTI Type with gradient */}
-            <div
-              style={{
-                display: "flex",
-                justifyContent: "center",
-                fontSize: 52,
-                fontWeight: 900,
-                letterSpacing: "0.12em",
-                background: "linear-gradient(90deg, #667eea 0%, #e94560 50%, #f5c518 100%)",
-                backgroundClip: "text",
-                color: "transparent",
-                marginBottom: 6,
-              }}
-            >
+            <div style={{ display: "flex", justifyContent: "center", fontSize: 104, fontWeight: 900, letterSpacing: "0.12em", background: "linear-gradient(90deg, #667eea 0%, #e94560 50%, #f5c518 100%)", backgroundClip: "text", color: "transparent", marginBottom: 12 }}>
               {data.mbtiType}
             </div>
 
-            {/* Title */}
-            <div style={{ display: "flex", justifyContent: "center", fontSize: 16, fontWeight: 600, color: "#e94560", marginBottom: 18 }}>
+            <div style={{ display: "flex", justifyContent: "center", fontSize: 32, fontWeight: 600, color: "#e94560", marginBottom: 36 }}>
               {data.mbtiTitle}
             </div>
 
-            {/* Roast box */}
-            <div
-              style={{
-                display: "flex",
-                justifyContent: "center",
-                background: "rgba(255,255,255,0.03)",
-                border: "1px solid rgba(255,255,255,0.06)",
-                borderRadius: 10,
-                padding: "12px 16px",
-                marginBottom: 20,
-              }}
-            >
-              <div style={{ display: "flex", fontSize: 13, color: "#d1d5db", textAlign: "center", lineHeight: 1.6, fontStyle: "italic" }}>
+            <div style={{ display: "flex", justifyContent: "center", background: "rgba(255,255,255,0.03)", border: "2px solid rgba(255,255,255,0.06)", borderRadius: 20, padding: "24px 32px", marginBottom: 40 }}>
+              <div style={{ display: "flex", fontSize: 26, color: "#d1d5db", textAlign: "center", lineHeight: 1.6, fontStyle: "italic" }}>
                 &ldquo;{data.roast}&rdquo;
               </div>
             </div>
 
-            {/* Stats row */}
-            <div style={{ display: "flex", flexDirection: "row", gap: 8, marginBottom: 20 }}>
+            <div style={{ display: "flex", flexDirection: "row", gap: 16, marginBottom: 40 }}>
               {stats.map((s) => (
-                <div
-                  key={s.label}
-                  style={{
-                    display: "flex",
-                    flex: 1,
-                    flexDirection: "column",
-                    alignItems: "center",
-                    background: "rgba(255,255,255,0.03)",
-                    border: "1px solid rgba(255,255,255,0.05)",
-                    borderRadius: 10,
-                    padding: "10px 6px",
-                    gap: 2,
-                  }}
-                >
-                  <span style={{ fontSize: 14 }}>{s.icon}</span>
-                  <span style={{ fontSize: 20, fontWeight: 700, color: s.color }}>{s.val}</span>
-                  <span style={{ fontSize: 10, color: "#6b7280" }}>{s.label}</span>
+                <div key={s.label} style={{ display: "flex", flex: 1, flexDirection: "column", alignItems: "center", background: "rgba(255,255,255,0.03)", border: "2px solid rgba(255,255,255,0.05)", borderRadius: 20, padding: "20px 12px", gap: 4 }}>
+                  <span style={{ fontSize: 28 }}>{s.icon}</span>
+                  <span style={{ fontSize: 40, fontWeight: 700, color: s.color }}>{s.val}</span>
+                  <span style={{ fontSize: 20, color: "#6b7280" }}>{s.label}</span>
                 </div>
               ))}
             </div>
 
-            {/* Summary */}
-            <div style={{ display: "flex", fontSize: 12, color: "#9ca3af", lineHeight: 1.7, marginBottom: 22 }}>
+            <div style={{ display: "flex", fontSize: 24, color: "#9ca3af", lineHeight: 1.7, marginBottom: 44 }}>
               {data.summary}
             </div>
 
-            {/* Section divider */}
-            <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 18 }}>
-              <div style={{ display: "flex", flex: 1, height: 1, background: "linear-gradient(90deg, transparent, rgba(255,255,255,0.08))" }} />
-              <span style={{ fontSize: 11, color: "#4b5563" }}>深度画像</span>
-              <div style={{ display: "flex", flex: 1, height: 1, background: "linear-gradient(90deg, rgba(255,255,255,0.08), transparent)" }} />
+            <div style={{ display: "flex", alignItems: "center", gap: 20, marginBottom: 36 }}>
+              <div style={{ display: "flex", flex: 1, height: 2, background: "linear-gradient(90deg, transparent, rgba(255,255,255,0.08))" }} />
+              <span style={{ fontSize: 22, color: "#4b5563" }}>深度画像</span>
+              <div style={{ display: "flex", flex: 1, height: 2, background: "linear-gradient(90deg, rgba(255,255,255,0.08), transparent)" }} />
             </div>
 
-            {/* Analysis sections */}
             {sections.map((sec) => (
               <AnalysisBlock key={sec.theme.title} text={sec.text} theme={sec.theme} />
             ))}
 
-            {/* Bottom accent divider */}
-            <div
-              style={{
-                display: "flex",
-                height: 1,
-                marginTop: 20,
-                marginBottom: 14,
-                background: "linear-gradient(90deg, rgba(102,126,234,0.3), rgba(233,69,96,0.2), rgba(245,197,24,0.3))",
-              }}
-            />
+            <div style={{ display: "flex", height: 2, marginTop: 40, marginBottom: 28, background: "linear-gradient(90deg, rgba(102,126,234,0.3), rgba(233,69,96,0.2), rgba(245,197,24,0.3))" }} />
 
-            {/* Footer */}
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: 11 }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                <div style={{ display: "flex", width: 4, height: 4, borderRadius: "50%", background: "#667eea" }} />
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: 22 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                <div style={{ display: "flex", width: 8, height: 8, borderRadius: "50%", background: "#667eea" }} />
                 <span style={{ color: "#4b5563" }}>豆瓣书影音 MBTI</span>
               </div>
               <span style={{ color: "#667eea", opacity: 0.7 }}>品味即人格 →</span>
@@ -263,7 +176,7 @@ export async function POST(req: NextRequest) {
         </div>
       ),
       {
-        width: 400,
+        width: 800,
         height,
         fonts: [
           { name: "NotoSansSC", data: fonts.regular, weight: 400 as const, style: "normal" as const },
