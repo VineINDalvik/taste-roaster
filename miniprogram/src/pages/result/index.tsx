@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef, useMemo, useCallback } from 'react'
-import { View, Text, Button, Canvas, Image } from '@tarojs/components'
+import { View, Text, Button, Image } from '@tarojs/components'
 import Taro, { useRouter, useShareAppMessage, useShareTimeline } from '@tarojs/taro'
 import ShareCard from '@/components/share-card'
 import EvolutionCurve from '@/components/evolution-curve'
@@ -555,10 +555,6 @@ export default function ResultPage() {
           <Text className='footer-text'>分享给朋友，看看谁是什么书影音 MBTI</Text>
         </View>
       </View>
-
-      {/* Hidden Canvas elements for image saving */}
-      <Canvas type='2d' id='analysisCanvas' canvasId='analysisCanvas' className='save-canvas-hidden' style={{ width: '375px', height: '1200px' }} />
-      <Canvas type='2d' id='fullReportCanvas' canvasId='fullReportCanvas' className='save-canvas-hidden' style={{ width: '375px', height: '3000px' }} />
 
       {/* Bottom Share Action Bar */}
       <View className='share-bar'>
