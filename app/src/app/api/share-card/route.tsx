@@ -1,5 +1,7 @@
 import { ImageResponse } from "next/og";
 import { NextRequest } from "next/server";
+import { readFileSync } from "fs";
+import { join } from "path";
 
 export const runtime = "nodejs";
 
@@ -36,17 +38,25 @@ const RADAR_KEYS = [
   ["chouxiang", "活人感"],
 ];
 
-const fontRegularPromise = fetch(
-  new URL("../../../../public/fonts/NotoSansSC-Regular.otf", import.meta.url)
-).then((r) => r.arrayBuffer());
+let fontRegular: ArrayBuffer | undefined;
+let fontBold: ArrayBuffer | undefined;
 
-const fontBoldPromise = fetch(
-  new URL("../../../../public/fonts/NotoSansSC-Bold.otf", import.meta.url)
-).then((r) => r.arrayBuffer());
+function toArrayBuffer(buf: Buffer): ArrayBuffer {
+  return buf.buffer.slice(buf.byteOffset, buf.byteOffset + buf.byteLength);
+}
 
-async function loadFonts() {
-  const [regular, bold] = await Promise.all([fontRegularPromise, fontBoldPromise]);
-  return { regular, bold };
+function loadFonts() {
+  if (!fontRegular) {
+    fontRegular = toArrayBuffer(
+      readFileSync(join(process.cwd(), "public", "fonts", "NotoSansSC-Regular.otf"))
+    );
+  }
+  if (!fontBold) {
+    fontBold = toArrayBuffer(
+      readFileSync(join(process.cwd(), "public", "fonts", "NotoSansSC-Bold.otf"))
+    );
+  }
+  return { regular: fontRegular, bold: fontBold };
 }
 
 function radarSvgPath(data: Record<string, number>): string {
@@ -90,7 +100,7 @@ function radarLabelPositions(): { x: number; y: number; label: string }[] {
 export async function POST(req: NextRequest) {
   try {
     const data: CardData = await req.json();
-    const fonts = await loadFonts();
+    const fonts = loadFonts();
 
     const stats = [
       { val: data.bookCount, label: "本书" },
@@ -296,7 +306,8 @@ export async function POST(req: NextRequest) {
       }
     );
   } catch (e) {
-    console.error("Share card generation error:", e);
-    return new Response("生成失败", { status: 500 });
+    const msg = e instanceof Error ? e.message : String(e);
+    console.error("Share card generation error:", msg, e);
+    return new Response(`生成失败: ${msg}`, { status: 500 });
   }
 }
