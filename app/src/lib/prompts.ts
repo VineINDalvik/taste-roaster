@@ -60,16 +60,17 @@ export const MBTI_ANALYSIS_PROMPT = `你是一位文化心理学家，擅长通�
   },
   "roast": "一句话犀利点评(30-60字，基于MBTI类型的精准吐槽，让人觉得'被看穿了')",
   "radar": {
-    "depth": 0-100,
-    "breadth": 0-100,
-    "uniqueness": 0-100,
-    "emotionSensitivity": 0-100,
-    "timeSpan": 0-100
+    "wenqing": 0-100,
+    "emo": 0-100,
+    "shekong": 0-100,
+    "kaogu": 0-100,
+    "shangtou": 0-100
   },
   "summary": "品味概述(2-3句话，结合MBTI类型总结这个人的整体文化消费画像)"
 }
 
-雷达图维度：depth=深度, breadth=广度, uniqueness=独特性, emotionSensitivity=情感敏感度, timeSpan=时代跨度
+雷达图维度（用年轻人的方式打分，要毒舌）：
+wenqing=文青浓度(0=看的全是大众爆款 100=小众到没朋友聊), emo=emo指数(0=天天看喜剧听嗨歌 100=深夜emo循环播放), shekong=社恐值(0=消费的全是社交话题作品 100=品味孤独到没人能聊), kaogu=考古癖(0=只追最新潮流 100=活在上个世纪的老灵魂), shangtou=上头程度(0=什么都浅尝辄止 100=一入坑就疯狂沉迷无法自拔)
 
 要求：
 - MBTI判定必须有理有据，每个维度都要引用具体作品

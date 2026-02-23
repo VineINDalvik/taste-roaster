@@ -54,11 +54,11 @@ export interface CulturalMBTI {
 }
 
 export interface RadarData {
-  depth: number; // 0-100
-  breadth: number;
-  uniqueness: number;
-  emotionSensitivity: number;
-  timeSpan: number;
+  wenqing: number;     // 文青浓度 0=大众爆款 100=小众到没朋友
+  emo: number;         // emo 指数 0=天天嗨 100=深夜emo循环
+  shekong: number;     // 社恐值 0=社交话题王 100=没人聊得来
+  kaogu: number;       // 考古癖 0=只追新的 100=活在上个世纪
+  shangtou: number;    // 上头程度 0=浅尝辄止 100=入坑就疯
 }
 
 export interface TasteReport {

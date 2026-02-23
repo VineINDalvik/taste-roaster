@@ -4,25 +4,25 @@ import { useEffect, useRef } from "react";
 
 interface RadarChartProps {
   data: {
-    depth: number;
-    breadth: number;
-    uniqueness: number;
-    emotionSensitivity: number;
-    timeSpan: number;
+    wenqing: number;
+    emo: number;
+    shekong: number;
+    kaogu: number;
+    shangtou: number;
   };
   size?: number;
 }
 
-const LABELS = ["深度", "广度", "独特性", "情感", "时代跨度"];
+const LABELS = ["文青浓度", "emo指数", "社恐值", "考古癖", "上头度"];
 
 export default function RadarChart({ data, size = 240 }: RadarChartProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const values = [
-    data.depth,
-    data.breadth,
-    data.uniqueness,
-    data.emotionSensitivity,
-    data.timeSpan,
+    data.wenqing,
+    data.emo,
+    data.shekong,
+    data.kaogu,
+    data.shangtou,
   ];
 
   useEffect(() => {

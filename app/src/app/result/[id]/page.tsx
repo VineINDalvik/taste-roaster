@@ -51,11 +51,11 @@ interface ReportData {
   mbti: CulturalMBTI;
   roast: string;
   radarData: {
-    depth: number;
-    breadth: number;
-    uniqueness: number;
-    emotionSensitivity: number;
-    timeSpan: number;
+    wenqing: number;
+    emo: number;
+    shekong: number;
+    kaogu: number;
+    shangtou: number;
   };
   summary: string;
   isPremium: boolean;

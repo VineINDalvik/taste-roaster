@@ -52,11 +52,11 @@ const DIM_LABELS: Record<string, [string, string]> = {
 };
 
 const RADAR_LABELS: [string, string][] = [
-  ["depth", "深度"],
-  ["breadth", "广度"],
-  ["uniqueness", "独特性"],
-  ["emotionSensitivity", "情感力"],
-  ["timeSpan", "时代感"],
+  ["wenqing", "文青浓度"],
+  ["emo", "emo指数"],
+  ["shekong", "社恐值"],
+  ["kaogu", "考古癖"],
+  ["shangtou", "上头度"],
 ];
 
 function getMatchColor(score: number) {

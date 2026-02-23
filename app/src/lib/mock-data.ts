@@ -18,7 +18,7 @@ export const MOCK_ANALYZE = {
     summary: "你的品味像一座私人博物馆——每件藏品都经过精心挑选，陈列着你对世界的理解。你不追热门，但你追的东西往往在几年后变成经典。",
   },
   roast: "你的豆瓣主页就是一部《我很有品味但我不说》的默片。书架上全是让人望而生畏的大部头，片单里一半是没人听过的小众片，音乐品味更是像在参加一场只有你一个人的音乐节。恭喜你，你是文化荒漠里最孤独的绿洲。",
-  radarData: { depth: 82, breadth: 45, uniqueness: 88, emotionSensitivity: 76, timeSpan: 61 },
+  radarData: { wenqing: 88, emo: 76, shekong: 82, kaogu: 61, shangtou: 73 },
   summary: "一个被文字和光影喂养长大的灵魂，在深度和独特性上远超同龄人，但偶尔也该走出舒适区看看烂片，毕竟生活不只是艺术。",
   isPremium: false,
   input: {

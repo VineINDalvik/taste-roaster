@@ -180,11 +180,11 @@ export async function generateBasicReport(
     mbti,
     roast: parsed.roast ?? "数据太少，品味成谜。",
     radar: {
-      depth: parsed.radar?.depth ?? 50,
-      breadth: parsed.radar?.breadth ?? 50,
-      uniqueness: parsed.radar?.uniqueness ?? 50,
-      emotionSensitivity: parsed.radar?.emotionSensitivity ?? 50,
-      timeSpan: parsed.radar?.timeSpan ?? 50,
+      wenqing: parsed.radar?.wenqing ?? 50,
+      emo: parsed.radar?.emo ?? 50,
+      shekong: parsed.radar?.shekong ?? 50,
+      kaogu: parsed.radar?.kaogu ?? 50,
+      shangtou: parsed.radar?.shangtou ?? 50,
     },
     summary: parsed.summary ?? "",
   };

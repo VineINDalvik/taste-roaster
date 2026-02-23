@@ -41,8 +41,8 @@ export async function POST(req: NextRequest) {
       mbti,
       roast: roast ?? "",
       radarData: radarData ?? {
-        depth: 50, breadth: 50, uniqueness: 50,
-        emotionSensitivity: 50, timeSpan: 50,
+        wenqing: 50, emo: 50, shekong: 50,
+        kaogu: 50, shangtou: 50,
       },
       summary: summary ?? "",
       isPremium: false,
