@@ -108,8 +108,19 @@ export async function GET() {
 
 export async function POST(req: NextRequest) {
   try {
-    const data: CardData = await req.json();
-    const fonts = await loadFonts();
+    let data: CardData;
+    try {
+      data = await req.json();
+    } catch (parseErr) {
+      return new Response(`JSON parse failed: ${parseErr}`, { status: 400 });
+    }
+
+    let fonts: { regular: ArrayBuffer; bold: ArrayBuffer };
+    try {
+      fonts = await loadFonts();
+    } catch (fontErr) {
+      return new Response(`Font load failed: ${fontErr}`, { status: 500 });
+    }
 
     const stats = [
       { val: data.bookCount, label: "本书" },
