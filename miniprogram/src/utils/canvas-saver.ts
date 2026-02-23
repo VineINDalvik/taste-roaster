@@ -4,6 +4,7 @@ const DPR = 2
 const CARD_W = 375
 const PAD = 32
 const CONTENT_W = CARD_W - PAD * 2
+const F = '"PingFang SC", "Hiragino Sans GB", "Noto Sans SC", "Microsoft YaHei", sans-serif'
 
 function rrect(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number) {
   ctx.beginPath()
@@ -62,7 +63,7 @@ function drawFooter(ctx: CanvasRenderingContext2D, w: number, y: number): number
   ctx.stroke()
   y += 24
 
-  ctx.font = '12px sans-serif'
+  ctx.font = `12px ${F}`
   ctx.textAlign = 'left'
   ctx.fillStyle = '#4b5563'
   ctx.fillText('豆瓣书影音 MBTI', PAD, y)
@@ -153,20 +154,20 @@ export async function saveAnalysisCard(
         let y = 44
 
         if (opts.doubanName) {
-          ctx.font = '13px sans-serif'
+          ctx.font = `13px ${F}`
           ctx.textAlign = 'center'
           ctx.fillStyle = '#8b95a5'
           ctx.fillText(`${opts.doubanName} · ${opts.mbtiType}`, w / 2, y)
           y += 30
         }
 
-        ctx.font = 'bold 18px sans-serif'
+        ctx.font = `bold 18px ${F}`
         ctx.textAlign = 'left'
         ctx.fillStyle = '#e94560'
         ctx.fillText(`${opts.icon} ${opts.title}`, PAD, y)
         y += 34
 
-        ctx.font = '14px sans-serif'
+        ctx.font = `14px ${F}`
         ctx.fillStyle = '#d1d5db'
         const lines = wrapText(ctx, opts.content, CONTENT_W)
         for (const line of lines) {
@@ -229,7 +230,7 @@ export async function saveFullReport(
 
         let y = 52
 
-        ctx.font = '14px sans-serif'
+        ctx.font = `14px ${F}`
         ctx.textAlign = 'center'
         ctx.fillStyle = '#8b95a5'
         ctx.fillText(opts.doubanName ? `${opts.doubanName} 的书影音 MBTI` : '书影音 MBTI', w / 2, y)
@@ -239,12 +240,12 @@ export async function saveFullReport(
         typeGrad.addColorStop(0, '#667eea')
         typeGrad.addColorStop(1, '#e94560')
         ctx.fillStyle = typeGrad
-        ctx.font = 'bold 48px sans-serif'
+        ctx.font = `bold 48px ${F}`
         ctx.fillText(opts.mbtiType, w / 2, y)
         y += 32
 
         // Title — wrap
-        ctx.font = '17px sans-serif'
+        ctx.font = `17px ${F}`
         ctx.fillStyle = '#e94560'
         const titleLines = wrapText(ctx, opts.mbtiTitle, CONTENT_W, 2)
         titleLines.forEach(line => {
@@ -254,7 +255,7 @@ export async function saveFullReport(
         y += 18
 
         // Roast — wrap
-        ctx.font = 'italic 14px sans-serif'
+        ctx.font = `italic 14px ${F}`
         const roastLines = wrapText(ctx, `"${opts.roast}"`, CONTENT_W - 24, 5)
         const roastLineH = 22
         const roastBlockH = roastLines.length * roastLineH + 24
@@ -284,12 +285,12 @@ export async function saveFullReport(
             rrect(ctx, PAD + i * statW + 4, y, statW - 8, 58, 8)
             ctx.fill()
             ctx.textAlign = 'center'
-            ctx.font = '14px sans-serif'
+            ctx.font = `14px ${F}`
             ctx.fillStyle = '#fff'
             ctx.fillText(s.emoji, sx, y + 20)
-            ctx.font = 'bold 18px sans-serif'
+            ctx.font = `bold 18px ${F}`
             ctx.fillText(String(s.val), sx, y + 40)
-            ctx.font = '11px sans-serif'
+            ctx.font = `11px ${F}`
             ctx.fillStyle = '#9ca3af'
             ctx.fillText(s.label, sx, y + 54)
           })
@@ -298,7 +299,7 @@ export async function saveFullReport(
 
         // Summary — wrap
         ctx.textAlign = 'left'
-        ctx.font = '13px sans-serif'
+        ctx.font = `13px ${F}`
         ctx.fillStyle = '#9ca3af'
         const summaryLines = wrapText(ctx, opts.summary, CONTENT_W, 10)
         summaryLines.forEach(line => {
@@ -322,13 +323,13 @@ export async function saveFullReport(
           ctx.stroke()
           y += 26
 
-          ctx.font = 'bold 16px sans-serif'
+          ctx.font = `bold 16px ${F}`
           ctx.fillStyle = '#e94560'
           ctx.textAlign = 'left'
           ctx.fillText(`${sec.icon} ${sec.title}`, PAD, y)
           y += 28
 
-          ctx.font = '14px sans-serif'
+          ctx.font = `14px ${F}`
           ctx.fillStyle = '#d1d5db'
           const lines = wrapText(ctx, sec.text!, CONTENT_W, 30)
           for (const line of lines) {

@@ -188,6 +188,8 @@ export default function ShareCard(props: Props) {
 
 // --- Canvas drawing helpers ---
 
+const F = '"PingFang SC", "Hiragino Sans GB", "Noto Sans SC", "Microsoft YaHei", sans-serif'
+
 function rrect(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number) {
   ctx.beginPath()
   ctx.moveTo(x + r, y)
@@ -243,14 +245,14 @@ function drawShareCard(ctx: CanvasRenderingContext2D, w: number, h: number, p: P
 
   // Label
   ctx.fillStyle = '#8b95a5'
-  ctx.font = '14px sans-serif'
+  ctx.font = `14px ${F}`
   ctx.textAlign = 'center'
   const label = p.doubanName ? `${p.doubanName} 的书影音 MBTI` : '书影音 MBTI'
   ctx.fillText(label, w / 2, y)
   y += 52
 
   // MBTI type (large)
-  ctx.font = 'bold 56px sans-serif'
+  ctx.font = `bold 56px ${F}`
   const grad = ctx.createLinearGradient(w / 2 - 80, y, w / 2 + 80, y)
   grad.addColorStop(0, '#667eea')
   grad.addColorStop(0.5, '#e94560')
@@ -260,7 +262,7 @@ function drawShareCard(ctx: CanvasRenderingContext2D, w: number, h: number, p: P
   y += 34
 
   // MBTI title — wrap if too long
-  ctx.font = '17px sans-serif'
+  ctx.font = `17px ${F}`
   ctx.fillStyle = '#e94560'
   const titleLines = wrapText(ctx, p.mbtiTitle, CONTENT_W, 2)
   titleLines.forEach(line => {
@@ -270,7 +272,7 @@ function drawShareCard(ctx: CanvasRenderingContext2D, w: number, h: number, p: P
   y += 20
 
   // Roast — properly wrapped
-  ctx.font = 'italic 14px sans-serif'
+  ctx.font = `italic 14px ${F}`
   const roastLines = wrapText(ctx, `"${p.roast}"`, CONTENT_W - 28, 5)
   const roastLineH = 22
   const roastBlockH = roastLines.length * roastLineH + 24
@@ -302,7 +304,7 @@ function drawShareCard(ctx: CanvasRenderingContext2D, w: number, h: number, p: P
     const barX = PAD + 12
     const barW = CONTENT_W - 24
 
-    ctx.font = '13px sans-serif'
+    ctx.font = `13px ${F}`
     ctx.textAlign = 'left'
     ctx.fillStyle = isLeft ? '#fff' : '#6b7280'
     ctx.fillText(left, barX, y)
@@ -354,13 +356,13 @@ function drawShareCard(ctx: CanvasRenderingContext2D, w: number, h: number, p: P
       rrect(ctx, PAD + i * statW + 4, y, statW - 8, 58, 8)
       ctx.fill()
 
-      ctx.font = '14px sans-serif'
+      ctx.font = `14px ${F}`
       ctx.textAlign = 'center'
       ctx.fillStyle = '#fff'
       ctx.fillText(s.emoji, sx, y + 20)
-      ctx.font = 'bold 18px sans-serif'
+      ctx.font = `bold 18px ${F}`
       ctx.fillText(String(s.val), sx, y + 40)
-      ctx.font = '11px sans-serif'
+      ctx.font = `11px ${F}`
       ctx.fillStyle = '#9ca3af'
       ctx.fillText(s.label, sx, y + 54)
     })
@@ -369,7 +371,7 @@ function drawShareCard(ctx: CanvasRenderingContext2D, w: number, h: number, p: P
 
   // Summary — wrapped
   ctx.fillStyle = '#9ca3af'
-  ctx.font = '13px sans-serif'
+  ctx.font = `13px ${F}`
   ctx.textAlign = 'center'
   const summaryLines = wrapText(ctx, p.summary, CONTENT_W, 10)
   summaryLines.forEach(line => {
@@ -386,7 +388,7 @@ function drawShareCard(ctx: CanvasRenderingContext2D, w: number, h: number, p: P
   ctx.stroke()
   y += 22
 
-  ctx.font = '12px sans-serif'
+  ctx.font = `12px ${F}`
   ctx.textAlign = 'left'
   ctx.fillStyle = '#4b5563'
   ctx.fillText('豆瓣书影音 MBTI', PAD, y)
