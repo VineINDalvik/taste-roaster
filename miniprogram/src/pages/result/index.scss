@@ -950,6 +950,65 @@
   background: linear-gradient(135deg, #667eea, #764ba2);
 }
 
+// Explore More Platforms
+.explore-section-title {
+  font-size: 26rpx;
+  font-weight: bold;
+  color: #9ca3af;
+  display: flex;
+  align-items: center;
+  gap: 8rpx;
+  margin-bottom: 16rpx;
+}
+
+.explore-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12rpx;
+}
+
+.explore-card {
+  width: calc(50% - 6rpx);
+  border-radius: 16rpx;
+  padding: 20rpx;
+  display: flex;
+  flex-direction: column;
+  gap: 8rpx;
+  position: relative;
+  overflow: hidden;
+}
+
+.explore-card-header {
+  display: flex;
+  align-items: center;
+  gap: 8rpx;
+}
+
+.explore-card-icon {
+  font-size: 26rpx;
+}
+
+.explore-card-name {
+  font-size: 22rpx;
+  font-weight: 500;
+  color: #fff;
+}
+
+.explore-card-desc {
+  font-size: 18rpx;
+  color: #6b7280;
+}
+
+.explore-card-badge {
+  position: absolute;
+  top: 12rpx;
+  right: 12rpx;
+  font-size: 16rpx;
+  padding: 2rpx 10rpx;
+  border-radius: 999rpx;
+  font-weight: 500;
+}
+
 // Tip / Donation card
 .tip-card {
   border-radius: 32rpx;

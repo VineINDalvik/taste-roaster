@@ -6,10 +6,23 @@
   gap: 16rpx;
 }
 
+.evo-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
 .evo-title {
   font-size: 26rpx;
   font-weight: bold;
-  color: #667eea;
+  color: #e94560;
+}
+
+.evo-energy-badge {
+  font-size: 22rpx;
+  padding: 4rpx 16rpx;
+  border-radius: 999rpx;
+  font-weight: 500;
 }
 
 .evo-canvas {
@@ -17,30 +30,78 @@
   margin: 0 auto;
 }
 
-.evo-labels {
-  display: flex;
-  justify-content: space-between;
-  padding: 0 16rpx;
+.evo-hint {
+  font-size: 22rpx;
+  color: #6b7280;
+  text-align: center;
 }
 
-.evo-label-item {
+// Detail panel
+.evo-detail {
+  padding: 20rpx;
+  border-radius: 16rpx;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.05);
   display: flex;
   flex-direction: column;
+  gap: 10rpx;
+}
+
+.evo-detail-header {
+  display: flex;
   align-items: center;
-  gap: 2rpx;
+  gap: 12rpx;
+  flex-wrap: wrap;
 }
 
-.evo-label-month {
-  font-size: 18rpx;
-  color: #6b7280;
+.evo-detail-month {
+  font-size: 26rpx;
+  font-weight: bold;
+  color: #fff;
 }
 
-.evo-label-genre {
-  font-size: 16rpx;
+.evo-detail-mood {
+  font-size: 22rpx;
+  padding: 4rpx 16rpx;
+  border-radius: 999rpx;
+}
+
+.evo-detail-line {
+  font-size: 22rpx;
   color: #9ca3af;
-  max-width: 80rpx;
-  text-align: center;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  line-height: 1.6;
+}
+
+.evo-detail-shift {
+  font-size: 22rpx;
+  color: #6b7280;
+  font-style: italic;
+}
+
+.evo-detail-roast {
+  font-size: 22rpx;
+  color: rgba(233, 69, 96, 0.8);
+  margin-top: 4rpx;
+}
+
+// Trend & prediction
+.evo-trend-section {
+  padding-top: 16rpx;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  display: flex;
+  flex-direction: column;
+  gap: 12rpx;
+}
+
+.evo-trend-text {
+  font-size: 26rpx;
+  color: #d1d5db;
+  line-height: 1.7;
+  white-space: pre-line;
+}
+
+.evo-prediction {
+  font-size: 26rpx;
+  color: rgba(245, 197, 24, 0.8);
+  line-height: 1.7;
 }

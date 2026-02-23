@@ -3,11 +3,10 @@ import { View, Text, Button, Canvas, Image } from '@tarojs/components'
 import Taro, { useRouter, useShareAppMessage, useShareTimeline } from '@tarojs/taro'
 import ShareCard from '@/components/share-card'
 import EvolutionCurve from '@/components/evolution-curve'
-import MusicEmotionPortrait from '@/components/music-emotion'
 import { callApi } from '@/utils/api'
 import { getReport, setReport } from '@/utils/storage'
 import { saveAnalysisCard, saveFullReport } from '@/utils/canvas-saver'
-import type { ReportData, RecommendationItem, MonthSnapshot, MBTIDimension, EvolutionPoint, MusicEmotion } from '@/utils/types'
+import type { ReportData, RecommendationItem, MonthSnapshot, MBTIDimension } from '@/utils/types'
 import './index.scss'
 
 const ENABLE_PAID_DEEP = false
@@ -57,8 +56,7 @@ export default function ResultPage() {
   const [showShareModal, setShowShareModal] = useState(false)
   const stepRef = useRef<ReturnType<typeof setInterval>>()
 
-  const [evolutionData] = useState<EvolutionPoint[]>([])
-  const [musicEmotions] = useState<MusicEmotion[]>([])
+  // musicEmotions handled by themed AnalysisSection with theme='music'
 
   const mbtiType = useMemo(() => {
     if (!report?.mbti?.dimensions) return report?.mbti?.type || '????'
@@ -312,46 +310,25 @@ export default function ResultPage() {
         </View>
 
         {/* Evolution Curve */}
-        {evolutionData.length > 0 && (
+        {report.timelineMonths && report.timelineMonths.length > 0 && (
           <View className='animate-fade-in-up animate-delay-200'>
-            <EvolutionCurve data={evolutionData} title='观影品味进化曲线' />
+            <EvolutionCurve
+              months={report.timelineMonths}
+              trend={ft(report.timelineText?.split('\n')[0])}
+              prediction={ft(
+                report.timelineText?.includes('预测')
+                  ? report.timelineText.split('\n').slice(1).join('\n')
+                  : undefined
+              )}
+            />
           </View>
         )}
 
-        {/* Music Emotion Portrait */}
-        {musicEmotions.length > 0 && (
-          <View className='animate-fade-in-up animate-delay-200'>
-            <MusicEmotionPortrait emotions={musicEmotions} />
-          </View>
-        )}
-
-        {/* Timeline — only shows after expand data is loaded */}
-        {hasTimeline && (
-          <View className='section-card card-glass animate-fade-in-up animate-delay-200'>
-            <Text className='section-title text-red'>📅 近 6 个月品味时间线</Text>
-            <View className='timeline'>
-              {report.timelineMonths!.map(m => (
-                <View key={m.month} className='timeline-item'>
-                  <View className='timeline-dot' />
-                  <View className='timeline-content'>
-                    <View className='timeline-header'>
-                      <Text className='timeline-month'>{m.month}</Text>
-                      <Text className='timeline-mood'>{m.mood}</Text>
-                    </View>
-                    {m.books.length > 0 && <Text className='timeline-detail'>📖 {m.books.join('、')}</Text>}
-                    {m.movies.length > 0 && <Text className='timeline-detail'>🎬 {m.movies.join('、')}</Text>}
-                    {m.music.length > 0 && <Text className='timeline-detail'>🎵 {m.music.join('、')}</Text>}
-                    {m.tasteShift && <Text className='timeline-shift'>{m.tasteShift}</Text>}
-                    {m.roast && <Text className='timeline-roast'>💬 {m.roast}</Text>}
-                  </View>
-                </View>
-              ))}
-            </View>
-            {report.timelineText && (
-              <View className='timeline-text-wrap'>
-                <Text className='timeline-text'>{ft(report.timelineText)}</Text>
-              </View>
-            )}
+        {/* Timeline skeleton while loading */}
+        {!hasTimeline && expanding && (
+          <View className='section-card card-glass center-text'>
+            <Text className='loading-emoji animate-pulse'>📅</Text>
+            <Text className='loading-text'>品味进化时间线加载中...</Text>
           </View>
         )}
 
@@ -470,6 +447,30 @@ export default function ResultPage() {
             onClick={() => Taro.navigateTo({ url: `/pages/compare/index?from=${id}` })}
           >
             <Text className='btn-text'>邀请 TA 来对比</Text>
+          </View>
+        </View>
+
+        {/* Explore More Platforms */}
+        <View className='animate-fade-in-up animate-delay-300'>
+          <Text className='explore-section-title'>
+            <Text className='text-blue'>🌐</Text> 探索更多品味维度
+          </Text>
+          <View className='explore-grid'>
+            {[
+              { icon: '🎧', name: '网易云音乐', desc: '听歌品味分析', color: '#e94560' },
+              { icon: '📖', name: '微信读书', desc: '阅读品味画像', color: '#667eea' },
+              { icon: '🎶', name: 'Spotify', desc: '全球音乐品味', color: '#1DB954' },
+              { icon: '🧩', name: 'Chrome 插件', desc: '一键分析浏览器书签', color: '#f5c518' },
+            ].map(item => (
+              <View key={item.name} className='explore-card card-glass'>
+                <View className='explore-card-header'>
+                  <Text className='explore-card-icon'>{item.icon}</Text>
+                  <Text className='explore-card-name'>{item.name}</Text>
+                </View>
+                <Text className='explore-card-desc'>{item.desc}</Text>
+                <Text className='explore-card-badge' style={{ color: item.color, background: item.color + '15' }}>即将上线</Text>
+              </View>
+            ))}
           </View>
         </View>
 
