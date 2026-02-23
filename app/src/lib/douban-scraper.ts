@@ -561,14 +561,74 @@ async function scrapeStatuses(
 
 // ─── Public API ─────────────────────────────────────────────────
 
+/**
+ * Smart sampling: total budget = 20 items, base ratio 4:4:2 (book:movie:music).
+ * When a category is empty, its budget redistributes to others,
+ * but no single category exceeds 60% of total budget.
+ */
+function allocateBudget(
+  bookAvail: number,
+  movieAvail: number,
+  musicAvail: number,
+  total = 20
+): { book: number; movie: number; music: number } {
+  const MAX_SINGLE_RATIO = 0.6;
+  const maxSingle = Math.floor(total * MAX_SINGLE_RATIO);
+
+  let bBase = Math.round(total * 0.4);
+  let mBase = Math.round(total * 0.4);
+  let uBase = total - bBase - mBase;
+
+  const caps = [
+    { key: "book" as const, avail: bookAvail, base: bBase },
+    { key: "movie" as const, avail: movieAvail, base: mBase },
+    { key: "music" as const, avail: musicAvail, base: uBase },
+  ];
+
+  const result = { book: 0, movie: 0, music: 0 };
+  let surplus = 0;
+
+  for (const c of caps) {
+    const want = Math.min(c.base, c.avail);
+    result[c.key] = want;
+    surplus += c.base - want;
+  }
+
+  if (surplus > 0) {
+    const fillable = caps.filter((c) => c.avail > result[c.key]);
+    for (const c of fillable) {
+      const canAdd = Math.min(
+        surplus,
+        c.avail - result[c.key],
+        maxSingle - result[c.key]
+      );
+      result[c.key] += canAdd;
+      surplus -= canAdd;
+    }
+  }
+
+  return result;
+}
+
 export async function scrapeDoubanQuick(userId: string): Promise<DoubanData> {
   const emptyResult = { items: [] as WorkItem[], realCount: 0, nameHint: "" };
 
+  const PAGE_SIZE = 30;
   const [bookResult, movieResult, musicResult] = await Promise.all([
-    scrapeCollectionSampled(userId, "book", 30).catch(() => emptyResult),
-    scrapeCollectionSampled(userId, "movie", 30).catch(() => emptyResult),
-    scrapeCollectionSampled(userId, "music", 30).catch(() => emptyResult),
+    scrapeCollectionSampled(userId, "book", PAGE_SIZE).catch(() => emptyResult),
+    scrapeCollectionSampled(userId, "movie", PAGE_SIZE).catch(() => emptyResult),
+    scrapeCollectionSampled(userId, "music", PAGE_SIZE).catch(() => emptyResult),
   ]);
+
+  const budget = allocateBudget(
+    bookResult.items.length,
+    movieResult.items.length,
+    musicResult.items.length
+  );
+
+  const books = deterministicSelect(bookResult.items, budget.book);
+  const movies = deterministicSelect(movieResult.items, budget.movie);
+  const music = deterministicSelect(musicResult.items, budget.music);
 
   const name =
     bookResult.nameHint || movieResult.nameHint || musicResult.nameHint || userId;
@@ -585,17 +645,16 @@ export async function scrapeDoubanQuick(userId: string): Promise<DoubanData> {
     },
   };
 
-  const totalItems =
-    bookResult.items.length + movieResult.items.length + musicResult.items.length;
+  const totalItems = books.length + movies.length + music.length;
   if (totalItems === 0) {
     throw new Error("未获取到任何数据，该用户可能设置了隐私保护");
   }
 
   return {
     profile,
-    books: bookResult.items,
-    movies: movieResult.items,
-    music: musicResult.items,
+    books,
+    movies,
+    music,
     reviews: [], diaries: [], statuses: [],
   };
 }

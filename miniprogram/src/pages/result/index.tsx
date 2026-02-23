@@ -269,7 +269,7 @@ export default function ResultPage() {
 
         {report.sampleCount && (
           <Text className='sample-info animate-fade-in-up'>
-            基于 {report.sampleCount} 条采样数据 · 实际总量{' '}
+            基于 {report.sampleCount} 条数据分析 · 实际总量{' '}
             {report.bookCount + report.movieCount + report.musicCount}
           </Text>
         )}

@@ -7,9 +7,9 @@ import './index.scss'
 
 const PROGRESS_MESSAGES = [
   '正在潜入ta的豆瓣主页...',
-  '采样ta读过的书...',
-  '采样ta看过的电影...',
-  '采样ta听过的音乐...',
+  '翻看ta读过的书...',
+  '扒拉ta看过的电影...',
+  '偷听ta循环的歌单...',
   'AI 正在分析 MBTI 四维度...',
   '从品味中推导人格类型...',
   '生成书影音 MBTI 报告...',
@@ -102,7 +102,7 @@ export default function UploadPage() {
         <View className='header animate-fade-in-up'>
           <Text className='title'>开始品味鉴定</Text>
           <Text className='subtitle'>
-            AI 将采样你的公开书影音数据{'\n'}推导你的书影音 MBTI
+            AI 翻遍你的书影音记录{'\n'}看穿你的品味人格
           </Text>
         </View>
 

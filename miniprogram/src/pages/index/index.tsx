@@ -54,7 +54,7 @@ export default function IndexPage() {
         <View className='step'>
           <Text className='step-icon'>🔍</Text>
           <Text className='step-title'>输入 ID</Text>
-          <Text className='step-desc'>豆瓣 ID 或链接{'\n'}智能采样数据</Text>
+          <Text className='step-desc'>豆瓣 ID 或链接{'\n'}智能读取数据</Text>
         </View>
         <View className='step'>
           <Text className='step-icon'>🧬</Text>
