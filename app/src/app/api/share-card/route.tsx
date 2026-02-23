@@ -1,9 +1,5 @@
 import { ImageResponse } from "next/og";
 import { NextRequest } from "next/server";
-import { readFileSync } from "fs";
-import { join } from "path";
-
-export const runtime = "nodejs";
 
 interface Dimension {
   letter: string;
@@ -38,26 +34,17 @@ const RADAR_KEYS = [
   ["chouxiang", "活人感"],
 ];
 
+const FONT_CDN = "https://cdn.jsdelivr.net/gh/googlefonts/noto-cjk@main/Sans/SubsetOTF/SC";
+
 let fontRegular: ArrayBuffer | undefined;
 let fontBold: ArrayBuffer | undefined;
 
-function toArrayBuffer(buf: Buffer): ArrayBuffer {
-  const ab = new ArrayBuffer(buf.byteLength);
-  const view = new Uint8Array(ab);
-  view.set(new Uint8Array(buf.buffer, buf.byteOffset, buf.byteLength));
-  return ab;
-}
-
-function loadFonts() {
+async function loadFonts() {
   if (!fontRegular) {
-    fontRegular = toArrayBuffer(
-      readFileSync(join(process.cwd(), "public", "fonts", "NotoSansSC-Regular.otf"))
-    );
+    fontRegular = await fetch(`${FONT_CDN}/NotoSansSC-Regular.otf`).then((r) => r.arrayBuffer());
   }
   if (!fontBold) {
-    fontBold = toArrayBuffer(
-      readFileSync(join(process.cwd(), "public", "fonts", "NotoSansSC-Bold.otf"))
-    );
+    fontBold = await fetch(`${FONT_CDN}/NotoSansSC-Bold.otf`).then((r) => r.arrayBuffer());
   }
   return { regular: fontRegular, bold: fontBold };
 }
@@ -103,7 +90,7 @@ function radarLabelPositions(): { x: number; y: number; label: string }[] {
 export async function POST(req: NextRequest) {
   try {
     const data: CardData = await req.json();
-    const fonts = loadFonts();
+    const fonts = await loadFonts();
 
     const stats = [
       { val: data.bookCount, label: "本书" },
