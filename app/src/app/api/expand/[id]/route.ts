@@ -4,6 +4,7 @@ import { resetUsage, getAccumulatedUsage } from "@/lib/openai";
 import type { TasteReport, TasteInput, CulturalMBTI } from "@/lib/types";
 
 export const maxDuration = 60;
+export const preferredRegion = "hkg1";
 
 /**
  * Expand: generates book/movie/music analysis + timeline.

@@ -6,6 +6,7 @@ import { saveCompare, isKvConfigured } from "@/lib/kv";
 import type { TasteReport, CulturalMBTI, RadarData } from "@/lib/types";
 
 export const maxDuration = 30;
+export const preferredRegion = "hkg1";
 
 interface PersonSummary {
   name: string;
