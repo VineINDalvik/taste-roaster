@@ -42,7 +42,10 @@ let fontRegular: ArrayBuffer | undefined;
 let fontBold: ArrayBuffer | undefined;
 
 function toArrayBuffer(buf: Buffer): ArrayBuffer {
-  return buf.buffer.slice(buf.byteOffset, buf.byteOffset + buf.byteLength);
+  const ab = new ArrayBuffer(buf.byteLength);
+  const view = new Uint8Array(ab);
+  view.set(new Uint8Array(buf.buffer, buf.byteOffset, buf.byteLength));
+  return ab;
 }
 
 function loadFonts() {
