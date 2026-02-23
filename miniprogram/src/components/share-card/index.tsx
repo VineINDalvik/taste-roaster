@@ -228,7 +228,7 @@ function wrapText(ctx: CanvasRenderingContext2D, text: string, maxW: number, max
  * Returns the actual content height (for cropping on export).
  */
 function drawShareCard(ctx: CanvasRenderingContext2D, w: number, h: number, p: Props): number {
-  const PAD = 25
+  const PAD = 32
   const CONTENT_W = w - PAD * 2
 
   // Background
@@ -239,50 +239,51 @@ function drawShareCard(ctx: CanvasRenderingContext2D, w: number, h: number, p: P
   ctx.fillStyle = bg
   ctx.fillRect(0, 0, w, h)
 
-  let y = 40
+  let y = 52
 
   // Label
-  ctx.fillStyle = '#6b7280'
-  ctx.font = '11px sans-serif'
+  ctx.fillStyle = '#8b95a5'
+  ctx.font = '14px sans-serif'
   ctx.textAlign = 'center'
   const label = p.doubanName ? `${p.doubanName} 的书影音 MBTI` : '书影音 MBTI'
   ctx.fillText(label, w / 2, y)
-  y += 40
+  y += 52
 
   // MBTI type (large)
-  ctx.font = 'bold 48px sans-serif'
-  const grad = ctx.createLinearGradient(w / 2 - 70, y, w / 2 + 70, y)
+  ctx.font = 'bold 56px sans-serif'
+  const grad = ctx.createLinearGradient(w / 2 - 80, y, w / 2 + 80, y)
   grad.addColorStop(0, '#667eea')
   grad.addColorStop(0.5, '#e94560')
   grad.addColorStop(1, '#f5c518')
   ctx.fillStyle = grad
   ctx.fillText(p.mbtiType, w / 2, y)
-  y += 28
+  y += 34
 
   // MBTI title — wrap if too long
-  ctx.font = '14px sans-serif'
+  ctx.font = '17px sans-serif'
   ctx.fillStyle = '#e94560'
   const titleLines = wrapText(ctx, p.mbtiTitle, CONTENT_W, 2)
   titleLines.forEach(line => {
     ctx.fillText(line, w / 2, y)
-    y += 20
+    y += 24
   })
-  y += 14
+  y += 20
 
   // Roast — properly wrapped
-  ctx.font = 'italic 11px sans-serif'
-  const roastLines = wrapText(ctx, `"${p.roast}"`, CONTENT_W - 20, 5)
-  const roastBlockH = roastLines.length * 16 + 16
-  ctx.fillStyle = 'rgba(255,255,255,0.03)'
-  rrect(ctx, PAD, y - 8, CONTENT_W, roastBlockH, 8)
+  ctx.font = 'italic 14px sans-serif'
+  const roastLines = wrapText(ctx, `"${p.roast}"`, CONTENT_W - 28, 5)
+  const roastLineH = 22
+  const roastBlockH = roastLines.length * roastLineH + 24
+  ctx.fillStyle = 'rgba(255,255,255,0.04)'
+  rrect(ctx, PAD, y - 10, CONTENT_W, roastBlockH, 10)
   ctx.fill()
   ctx.fillStyle = '#d1d5db'
   ctx.textAlign = 'center'
-  const roastStartY = y + 6
+  const roastStartY = y + 8
   roastLines.forEach((line, i) => {
-    ctx.fillText(line, w / 2, roastStartY + i * 16)
+    ctx.fillText(line, w / 2, roastStartY + i * roastLineH)
   })
-  y += roastBlockH + 12
+  y += roastBlockH + 20
 
   // MBTI dimension bars
   const DIM_LABELS_DRAW: Record<string, [string, string]> = {
@@ -298,10 +299,10 @@ function drawShareCard(ctx: CanvasRenderingContext2D, w: number, h: number, p: P
   dims.forEach(d => {
     const [left, right] = DIM_LABELS_DRAW[d.key] ?? ['?', '?']
     const isLeft = d.letter === left
-    const barX = PAD + 10
-    const barW = CONTENT_W - 20
+    const barX = PAD + 12
+    const barW = CONTENT_W - 24
 
-    ctx.font = '10px sans-serif'
+    ctx.font = '13px sans-serif'
     ctx.textAlign = 'left'
     ctx.fillStyle = isLeft ? '#fff' : '#6b7280'
     ctx.fillText(left, barX, y)
@@ -309,12 +310,12 @@ function drawShareCard(ctx: CanvasRenderingContext2D, w: number, h: number, p: P
     ctx.fillStyle = !isLeft ? '#fff' : '#6b7280'
     ctx.fillText(right, barX + barW, y)
     ctx.textAlign = 'center'
-    ctx.fillStyle = '#4b5563'
+    ctx.fillStyle = '#6b7280'
     ctx.fillText(`${d.score}%`, w / 2, y)
-    y += 12
+    y += 14
 
     ctx.fillStyle = 'rgba(255,255,255,0.1)'
-    rrect(ctx, barX, y, barW, 5, 2.5)
+    rrect(ctx, barX, y, barW, 7, 3.5)
     ctx.fill()
 
     const fillW = barW * (d.score / 100)
@@ -323,20 +324,20 @@ function drawShareCard(ctx: CanvasRenderingContext2D, w: number, h: number, p: P
       fillGrad.addColorStop(0, '#667eea')
       fillGrad.addColorStop(1, '#764ba2')
       ctx.fillStyle = fillGrad
-      rrect(ctx, barX, y, fillW, 5, 2.5)
+      rrect(ctx, barX, y, fillW, 7, 3.5)
       ctx.fill()
     } else {
       fillGrad.addColorStop(0, '#e94560')
       fillGrad.addColorStop(1, '#f5c518')
       ctx.fillStyle = fillGrad
-      rrect(ctx, barX + barW - fillW, y, fillW, 5, 2.5)
+      rrect(ctx, barX + barW - fillW, y, fillW, 7, 3.5)
       ctx.fill()
     }
 
-    y += 20
+    y += 26
   })
 
-  y += 8
+  y += 14
 
   // Stats row
   const stats = [
@@ -350,42 +351,42 @@ function drawShareCard(ctx: CanvasRenderingContext2D, w: number, h: number, p: P
     stats.forEach((s, i) => {
       const sx = PAD + i * statW + statW / 2
       ctx.fillStyle = 'rgba(255,255,255,0.05)'
-      rrect(ctx, PAD + i * statW + 3, y, statW - 6, 48, 6)
+      rrect(ctx, PAD + i * statW + 4, y, statW - 8, 58, 8)
       ctx.fill()
 
-      ctx.font = '12px sans-serif'
+      ctx.font = '14px sans-serif'
       ctx.textAlign = 'center'
       ctx.fillStyle = '#fff'
-      ctx.fillText(s.emoji, sx, y + 16)
-      ctx.font = 'bold 14px sans-serif'
-      ctx.fillText(String(s.val), sx, y + 33)
-      ctx.font = '9px sans-serif'
+      ctx.fillText(s.emoji, sx, y + 20)
+      ctx.font = 'bold 18px sans-serif'
+      ctx.fillText(String(s.val), sx, y + 40)
+      ctx.font = '11px sans-serif'
       ctx.fillStyle = '#9ca3af'
-      ctx.fillText(s.label, sx, y + 45)
+      ctx.fillText(s.label, sx, y + 54)
     })
-    y += 62
+    y += 76
   }
 
   // Summary — wrapped
   ctx.fillStyle = '#9ca3af'
-  ctx.font = '11px sans-serif'
+  ctx.font = '13px sans-serif'
   ctx.textAlign = 'center'
   const summaryLines = wrapText(ctx, p.summary, CONTENT_W, 10)
   summaryLines.forEach(line => {
     ctx.fillText(line, w / 2, y)
-    y += 16
+    y += 20
   })
-  y += 14
+  y += 20
 
   // Footer
-  ctx.strokeStyle = 'rgba(255,255,255,0.05)'
+  ctx.strokeStyle = 'rgba(255,255,255,0.06)'
   ctx.beginPath()
   ctx.moveTo(PAD, y)
   ctx.lineTo(w - PAD, y)
   ctx.stroke()
-  y += 16
+  y += 22
 
-  ctx.font = '9px sans-serif'
+  ctx.font = '12px sans-serif'
   ctx.textAlign = 'left'
   ctx.fillStyle = '#4b5563'
   ctx.fillText('豆瓣书影音 MBTI', PAD, y)
@@ -393,7 +394,7 @@ function drawShareCard(ctx: CanvasRenderingContext2D, w: number, h: number, p: P
   ctx.fillStyle = '#667eea'
   ctx.fillText('测测你的书影音 MBTI →', w - PAD, y)
 
-  y += 24
+  y += 32
 
   return y
 }
