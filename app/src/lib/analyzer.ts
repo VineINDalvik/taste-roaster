@@ -20,7 +20,8 @@ import type {
   RealCounts,
 } from "./types";
 
-function safeParseJSON(text: string): Record<string, unknown> {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function safeParseJSON(text: string): Record<string, any> {
   const jsonMatch = text.match(/\{[\s\S]*\}/);
   if (!jsonMatch) throw new Error("AI 返回内容中未找到 JSON");
 
@@ -332,7 +333,8 @@ export async function generateRecommendations(
   });
 
   const text = response.choices[0]?.message?.content ?? "{}";
-  let parsed: Record<string, unknown>;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let parsed: Record<string, any>;
   try {
     parsed = safeParseJSON(text);
   } catch {
