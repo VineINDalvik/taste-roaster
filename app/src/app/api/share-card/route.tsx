@@ -1,7 +1,5 @@
 import { ImageResponse } from "next/og";
 import { NextRequest } from "next/server";
-import { readFile } from "fs/promises";
-import { join } from "path";
 
 export const runtime = "nodejs";
 
@@ -38,22 +36,17 @@ const RADAR_KEYS = [
   ["chouxiang", "活人感"],
 ];
 
-let fontRegularCache: ArrayBuffer | undefined;
-let fontBoldCache: ArrayBuffer | undefined;
+const fontRegularPromise = fetch(
+  new URL("../../../../public/fonts/NotoSansSC-Regular.otf", import.meta.url)
+).then((r) => r.arrayBuffer());
 
-async function loadFont(path: string): Promise<ArrayBuffer> {
-  const buf = await readFile(join(process.cwd(), path));
-  return buf.buffer.slice(buf.byteOffset, buf.byteOffset + buf.byteLength);
-}
+const fontBoldPromise = fetch(
+  new URL("../../../../public/fonts/NotoSansSC-Bold.otf", import.meta.url)
+).then((r) => r.arrayBuffer());
 
 async function loadFonts() {
-  if (!fontRegularCache) {
-    fontRegularCache = await loadFont("public/fonts/NotoSansSC-Regular.otf");
-  }
-  if (!fontBoldCache) {
-    fontBoldCache = await loadFont("public/fonts/NotoSansSC-Bold.otf");
-  }
-  return { regular: fontRegularCache, bold: fontBoldCache };
+  const [regular, bold] = await Promise.all([fontRegularPromise, fontBoldPromise]);
+  return { regular, bold };
 }
 
 function radarSvgPath(data: Record<string, number>): string {
