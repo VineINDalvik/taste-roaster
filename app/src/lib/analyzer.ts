@@ -280,8 +280,8 @@ export async function generateTimeline(
 
   const text = response.choices[0]?.message?.content ?? "{}";
   const parsed = safeParseJSON(text);
-  const months: MonthSnapshot[] = (parsed.months as Array<{ month: string; mood?: string; tasteShift?: string; roast?: string }> ?? []).map(
-    (m: { month: string; mood?: string; tasteShift?: string; roast?: string }) => {
+  const months: MonthSnapshot[] = (parsed.months as Array<{ month: string; mood?: string; moodScore?: number; tasteShift?: string; roast?: string }> ?? []).map(
+    (m: { month: string; mood?: string; moodScore?: number; tasteShift?: string; roast?: string }) => {
       const bucket = monthlyBuckets.find((b) => b.month === m.month);
       return {
         month: m.month,
@@ -289,6 +289,7 @@ export async function generateTimeline(
         movies: bucket?.movies ?? [],
         music: bucket?.music ?? [],
         mood: m.mood ?? "",
+        moodScore: m.moodScore ?? 50,
         tasteShift: m.tasteShift ?? "",
         roast: m.roast ?? "",
       };

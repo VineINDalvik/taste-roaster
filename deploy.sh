@@ -29,8 +29,12 @@ echo ""
 
 # 2. Vercel deploy (Web App)
 echo -e "${YELLOW}[2/3] Vercel 部署 (Web App)...${NC}"
-cd "$ROOT/app"
+cd "$ROOT"
 if command -v vercel &> /dev/null; then
+  if [ ! -d ".vercel" ]; then
+    echo "  首次部署，链接 Vercel 项目..."
+    vercel link --yes
+  fi
   vercel --prod --yes
   echo -e "${GREEN}  ✓ Vercel 部署完成${NC}"
 else

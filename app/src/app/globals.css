@@ -66,3 +66,31 @@ body {
 .pulse-glow {
   animation: pulse-glow 2s ease-in-out infinite;
 }
+
+@keyframes eqPulse {
+  0%, 100% { transform: scaleY(0.3); }
+  50% { transform: scaleY(1); }
+}
+
+.music-eq-bar {
+  transform-origin: bottom;
+  animation: eqPulse 1.2s ease-in-out infinite alternate;
+}
+
+@keyframes floatUp {
+  0% {
+    opacity: 0;
+    transform: translateY(0) rotate(0deg);
+  }
+  20% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-300px) rotate(25deg);
+  }
+}
+
+.music-float-note {
+  animation: floatUp 6s ease-in-out infinite;
+}

@@ -88,6 +88,7 @@ export interface MonthSnapshot {
   movies: string[];
   music: string[];
   mood: string;
+  moodScore: number; // 0-100 taste energy
   tasteShift: string;
   roast: string;
 }

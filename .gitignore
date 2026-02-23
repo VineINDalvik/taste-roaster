@@ -23,6 +23,7 @@ yarn-error.log*
 app/.env*
 
 # vercel
+.vercel
 app/.vercel
 
 # typescript

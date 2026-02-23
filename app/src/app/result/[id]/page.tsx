@@ -3,6 +3,8 @@
 import { useEffect, useState, useRef, use, useMemo, useCallback } from "react";
 import Link from "next/link";
 import ShareCard from "@/components/ShareCard";
+import EvolutionCurve from "@/components/EvolutionCurve";
+import MusicPortrait from "@/components/MusicPortrait";
 
 interface MBTIDimension {
   letter: string;
@@ -28,6 +30,7 @@ interface MonthSnapshot {
   movies: string[];
   music: string[];
   mood: string;
+  moodScore?: number;
   tasteShift: string;
   roast: string;
 }
@@ -406,11 +409,12 @@ export default function ResultPage({
                 title={`${mbtiType} 的观影品味`}
                 content={ft(report.movieAnalysis)}
               />
-              <AnalysisSection
-                icon="🎵"
-                title={`${mbtiType} 的音乐品味`}
-                content={ft(report.musicAnalysis)}
-              />
+              {report.musicAnalysis ? (
+                <MusicPortrait
+                  analysis={ft(report.musicAnalysis)!}
+                  mbtiType={mbtiType}
+                />
+              ) : null}
             </>
           ) : expanding ? (
             <div className="card-glass rounded-xl p-5 text-center space-y-2">
@@ -438,64 +442,18 @@ export default function ResultPage({
           )}
         </div>
 
-        {/* === FREE CONTENT: Timeline === */}
+        {/* === FREE CONTENT: Evolution Curve === */}
         {report.timelineMonths && report.timelineMonths.length > 0 && (
           <div className="animate-fade-in-up animate-delay-200">
-            <div className="card-glass rounded-xl p-5 space-y-4">
-              <h3 className="text-sm font-bold text-[#e94560]">
-                📅 近 6 个月品味时间线
-              </h3>
-              <div className="space-y-4">
-                {report.timelineMonths.map((m) => (
-                  <div
-                    key={m.month}
-                    className="relative pl-6 border-l-2 border-white/10 space-y-1"
-                  >
-                    <div className="absolute left-[-5px] top-1 w-2 h-2 rounded-full bg-[#e94560]" />
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm font-bold text-white">
-                        {m.month}
-                      </span>
-                      <span className="text-xs px-2 py-0.5 rounded-full bg-white/5 text-gray-400">
-                        {m.mood}
-                      </span>
-                    </div>
-                    {m.books.length > 0 && (
-                      <p className="text-xs text-gray-400">
-                        📖 {m.books.join("、")}
-                      </p>
-                    )}
-                    {m.movies.length > 0 && (
-                      <p className="text-xs text-gray-400">
-                        🎬 {m.movies.join("、")}
-                      </p>
-                    )}
-                    {m.music.length > 0 && (
-                      <p className="text-xs text-gray-400">
-                        🎵 {m.music.join("、")}
-                      </p>
-                    )}
-                    {m.tasteShift && (
-                      <p className="text-xs text-gray-500 italic">
-                        {m.tasteShift}
-                      </p>
-                    )}
-                    {m.roast && (
-                      <p className="text-xs text-[#e94560]/80 mt-1">
-                        💬 {m.roast}
-                      </p>
-                    )}
-                  </div>
-                ))}
-              </div>
-              {report.timelineText && (
-                <div className="mt-3 pt-3 border-t border-white/10">
-                  <p className="text-sm text-gray-300 leading-relaxed whitespace-pre-line">
-                    {ft(report.timelineText)}
-                  </p>
-                </div>
+            <EvolutionCurve
+              months={report.timelineMonths}
+              trend={ft(report.timelineText?.split("\n")[0])}
+              prediction={ft(
+                report.timelineText?.includes("预测")
+                  ? report.timelineText.split("\n").slice(1).join("\n")
+                  : undefined
               )}
-            </div>
+            />
           </div>
         )}
 
@@ -646,8 +604,42 @@ export default function ResultPage({
           </div>
         </div>
 
+        {/* === Explore More Platforms === */}
+        <div className="animate-fade-in-up animate-delay-300">
+          <div className="space-y-3">
+            <h2 className="text-sm font-bold text-gray-400 flex items-center gap-2">
+              <span className="text-[#667eea]">🌐</span> 探索更多品味维度
+            </h2>
+            <div className="grid grid-cols-2 gap-2">
+              {[
+                { icon: "🎧", name: "网易云音乐", desc: "听歌品味分析", color: "#e94560" },
+                { icon: "📖", name: "微信读书", desc: "阅读品味画像", color: "#667eea" },
+                { icon: "🎶", name: "Spotify", desc: "全球音乐品味", color: "#1DB954" },
+                { icon: "🧩", name: "Chrome 插件", desc: "一键分析浏览器书签", color: "#f5c518" },
+              ].map((item) => (
+                <div
+                  key={item.name}
+                  className="card-glass rounded-xl p-3 space-y-1.5 relative overflow-hidden group cursor-default"
+                >
+                  <div className="flex items-center gap-2">
+                    <span className="text-base">{item.icon}</span>
+                    <span className="text-xs font-medium text-white">{item.name}</span>
+                  </div>
+                  <p className="text-[10px] text-gray-500">{item.desc}</p>
+                  <span
+                    className="absolute top-2 right-2 text-[9px] px-1.5 py-0.5 rounded-full font-medium"
+                    style={{ color: item.color, background: `${item.color}15` }}
+                  >
+                    即将上线
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+
         {/* Footer */}
-        <div className="text-center space-y-3 pb-8 animate-fade-in-up animate-delay-300">
+        <div className="text-center space-y-3 pb-8 animate-fade-in-up animate-delay-400">
           <Link
             href="/upload"
             className="inline-block px-6 py-2.5 rounded-xl card-glass text-white text-sm hover:bg-white/10 transition-colors"
