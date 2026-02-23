@@ -38,19 +38,20 @@ const RADAR_KEYS = [
   ["chouxiang", "活人感"],
 ];
 
-let fontRegularCache: ArrayBuffer | null = null;
-let fontBoldCache: ArrayBuffer | null = null;
+let fontRegularCache: ArrayBuffer | undefined;
+let fontBoldCache: ArrayBuffer | undefined;
+
+async function loadFont(path: string): Promise<ArrayBuffer> {
+  const buf = await readFile(join(process.cwd(), path));
+  return buf.buffer.slice(buf.byteOffset, buf.byteOffset + buf.byteLength);
+}
 
 async function loadFonts() {
   if (!fontRegularCache) {
-    fontRegularCache = await readFile(
-      join(process.cwd(), "public/fonts/NotoSansSC-Regular.otf")
-    ).then((b) => b.buffer.slice(b.byteOffset, b.byteOffset + b.byteLength));
+    fontRegularCache = await loadFont("public/fonts/NotoSansSC-Regular.otf");
   }
   if (!fontBoldCache) {
-    fontBoldCache = await readFile(
-      join(process.cwd(), "public/fonts/NotoSansSC-Bold.otf")
-    ).then((b) => b.buffer.slice(b.byteOffset, b.byteOffset + b.byteLength));
+    fontBoldCache = await loadFont("public/fonts/NotoSansSC-Bold.otf");
   }
   return { regular: fontRegularCache, bold: fontBoldCache };
 }
