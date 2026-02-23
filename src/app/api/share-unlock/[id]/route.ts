@@ -5,6 +5,8 @@ import {
 } from "@/lib/analyzer";
 import type { TasteReport, TasteInput, CulturalMBTI } from "@/lib/types";
 
+export const maxDuration = 60;
+
 /**
  * Share-unlock: generates cross-domain, personality, blindSpots, recommendations.
  * Uses existing sampled data, no re-scraping.

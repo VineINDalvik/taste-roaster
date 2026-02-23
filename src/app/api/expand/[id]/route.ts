@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { generatePremiumReport, generateTimeline } from "@/lib/analyzer";
 import type { TasteReport, TasteInput, CulturalMBTI } from "@/lib/types";
 
-export const maxDuration = 30;
+export const maxDuration = 60;
 
 /**
  * Expand: generates book/movie/music analysis + timeline.

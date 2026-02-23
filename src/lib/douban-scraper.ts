@@ -523,19 +523,13 @@ async function scrapeStatuses(
 // ─── Public API ─────────────────────────────────────────────────
 
 export async function scrapeDoubanQuick(userId: string): Promise<DoubanData> {
-  // Skip profile fetch — get name from collection page titles instead (saves ~2-5s)
   const emptyResult = { items: [] as WorkItem[], realCount: 0, nameHint: "" };
 
-  const bookResult = await scrapeCollectionSampled(userId, "book", 100)
-    .catch(() => emptyResult);
-  await sleep(INTER_TYPE_SLEEP_MS);
-
-  const movieResult = await scrapeCollectionSampled(userId, "movie", 100)
-    .catch(() => emptyResult);
-  await sleep(INTER_TYPE_SLEEP_MS);
-
-  const musicResult = await scrapeCollectionSampled(userId, "music", 100)
-    .catch(() => emptyResult);
+  const [bookResult, movieResult, musicResult] = await Promise.all([
+    scrapeCollectionSampled(userId, "book", 100).catch(() => emptyResult),
+    scrapeCollectionSampled(userId, "movie", 100).catch(() => emptyResult),
+    scrapeCollectionSampled(userId, "music", 100).catch(() => emptyResult),
+  ]);
 
   const name =
     bookResult.nameHint || movieResult.nameHint || musicResult.nameHint || userId;
