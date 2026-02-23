@@ -35,6 +35,9 @@ const DIM_LABELS: Record<string, [string, string]> = {
 const RADAR_KEYS = ['wenqing', 'emo', 'shekong', 'kaogu', 'shangtou', 'chouxiang']
 const RADAR_LABELS_CN = ['文青浓度', 'emo指数', '社恐值', '考古癖', '上头指数', '活人感']
 
+const CANVAS_W = 375
+const CANVAS_TEMP_H = 1000
+
 export default function ShareCard(props: Props) {
   const {
     mbtiType, mbtiTitle, dimensions, roast, radarData,
@@ -59,17 +62,22 @@ export default function ShareCard(props: Props) {
           const canvas = res[0].node
           const ctx = canvas.getContext('2d')
           const dpr = 2
-          const w = 375
-          const h = 560
+          const w = CANVAS_W
           canvas.width = w * dpr
-          canvas.height = h * dpr
+          canvas.height = CANVAS_TEMP_H * dpr
           ctx.scale(dpr, dpr)
 
-          drawShareCard(ctx, w, h, props)
+          const contentH = drawShareCard(ctx, w, CANVAS_TEMP_H, props)
 
           setTimeout(() => {
             Taro.canvasToTempFilePath({
               canvas,
+              x: 0,
+              y: 0,
+              width: w * dpr,
+              height: contentH * dpr,
+              destWidth: w * dpr,
+              destHeight: contentH * dpr,
               fileType: 'jpg',
               quality: 0.92,
               success: (result) => {
@@ -102,7 +110,7 @@ export default function ShareCard(props: Props) {
           id='shareCanvas'
           canvasId='shareCanvas'
           className='share-canvas-hidden'
-          style={{ width: '375px', height: '560px' }}
+          style={{ width: `${CANVAS_W}px`, height: `${CANVAS_TEMP_H}px` }}
         />
         {renderTrigger(handleSaveImage)}
       </>
@@ -172,13 +180,15 @@ export default function ShareCard(props: Props) {
         id='shareCanvas'
         canvasId='shareCanvas'
         className='share-canvas-hidden'
-        style={{ width: '375px', height: '560px' }}
+        style={{ width: `${CANVAS_W}px`, height: `${CANVAS_TEMP_H}px` }}
       />
     </View>
   )
 }
 
-function roundRect(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number) {
+// --- Canvas drawing helpers ---
+
+function rrect(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number) {
   ctx.beginPath()
   ctx.moveTo(x + r, y)
   ctx.lineTo(x + w - r, y)
@@ -192,7 +202,36 @@ function roundRect(ctx: CanvasRenderingContext2D, x: number, y: number, w: numbe
   ctx.closePath()
 }
 
-function drawShareCard(ctx: CanvasRenderingContext2D, w: number, h: number, p: Props) {
+function wrapText(ctx: CanvasRenderingContext2D, text: string, maxW: number, maxLines = 20): string[] {
+  const lines: string[] = []
+  let line = ''
+  for (const ch of text) {
+    if (ch === '\n') {
+      lines.push(line)
+      line = ''
+      continue
+    }
+    const test = line + ch
+    if (ctx.measureText(test).width > maxW && line) {
+      lines.push(line)
+      line = ch
+    } else {
+      line = test
+    }
+  }
+  if (line) lines.push(line)
+  return lines.slice(0, maxLines)
+}
+
+/**
+ * Draws the MBTI share card onto a canvas.
+ * Returns the actual content height (for cropping on export).
+ */
+function drawShareCard(ctx: CanvasRenderingContext2D, w: number, h: number, p: Props): number {
+  const PAD = 25
+  const CONTENT_W = w - PAD * 2
+
+  // Background
   const bg = ctx.createLinearGradient(0, 0, w, h)
   bg.addColorStop(0, '#0f0c29')
   bg.addColorStop(0.5, '#1a1a2e')
@@ -202,6 +241,7 @@ function drawShareCard(ctx: CanvasRenderingContext2D, w: number, h: number, p: P
 
   let y = 40
 
+  // Label
   ctx.fillStyle = '#6b7280'
   ctx.font = '11px sans-serif'
   ctx.textAlign = 'center'
@@ -209,6 +249,7 @@ function drawShareCard(ctx: CanvasRenderingContext2D, w: number, h: number, p: P
   ctx.fillText(label, w / 2, y)
   y += 40
 
+  // MBTI type (large)
   ctx.font = 'bold 48px sans-serif'
   const grad = ctx.createLinearGradient(w / 2 - 70, y, w / 2 + 70, y)
   grad.addColorStop(0, '#667eea')
@@ -216,36 +257,49 @@ function drawShareCard(ctx: CanvasRenderingContext2D, w: number, h: number, p: P
   grad.addColorStop(1, '#f5c518')
   ctx.fillStyle = grad
   ctx.fillText(p.mbtiType, w / 2, y)
-  y += 26
+  y += 28
 
+  // MBTI title — wrap if too long
   ctx.font = '14px sans-serif'
   ctx.fillStyle = '#e94560'
-  ctx.fillText(p.mbtiTitle, w / 2, y)
-  y += 30
+  const titleLines = wrapText(ctx, p.mbtiTitle, CONTENT_W, 2)
+  titleLines.forEach(line => {
+    ctx.fillText(line, w / 2, y)
+    y += 20
+  })
+  y += 14
 
-  ctx.fillStyle = 'rgba(255,255,255,0.03)'
-  const roastW = w - 50
-  ctx.fillRect(25, y - 12, roastW, 38)
-  ctx.fillStyle = '#d1d5db'
+  // Roast — properly wrapped
   ctx.font = 'italic 11px sans-serif'
-  ctx.fillText(`"${p.roast.slice(0, 45)}${p.roast.length > 45 ? '...' : ''}"`, w / 2, y + 10)
-  y += 50
+  const roastLines = wrapText(ctx, `"${p.roast}"`, CONTENT_W - 20, 5)
+  const roastBlockH = roastLines.length * 16 + 16
+  ctx.fillStyle = 'rgba(255,255,255,0.03)'
+  rrect(ctx, PAD, y - 8, CONTENT_W, roastBlockH, 8)
+  ctx.fill()
+  ctx.fillStyle = '#d1d5db'
+  ctx.textAlign = 'center'
+  const roastStartY = y + 6
+  roastLines.forEach((line, i) => {
+    ctx.fillText(line, w / 2, roastStartY + i * 16)
+  })
+  y += roastBlockH + 12
 
+  // MBTI dimension bars
+  const DIM_LABELS_DRAW: Record<string, [string, string]> = {
+    ie: ['I', 'E'], ns: ['N', 'S'], tf: ['T', 'F'], jp: ['J', 'P']
+  }
   const dims = [
     { key: 'ie', ...p.dimensions.ie },
     { key: 'ns', ...p.dimensions.ns },
     { key: 'tf', ...p.dimensions.tf },
     { key: 'jp', ...p.dimensions.jp },
   ]
-  const DIM_LABELS_DRAW: Record<string, [string, string]> = {
-    ie: ['I', 'E'], ns: ['N', 'S'], tf: ['T', 'F'], jp: ['J', 'P']
-  }
 
   dims.forEach(d => {
     const [left, right] = DIM_LABELS_DRAW[d.key] ?? ['?', '?']
     const isLeft = d.letter === left
-    const barX = 40
-    const barW = w - 80
+    const barX = PAD + 10
+    const barW = CONTENT_W - 20
 
     ctx.font = '10px sans-serif'
     ctx.textAlign = 'left'
@@ -260,7 +314,7 @@ function drawShareCard(ctx: CanvasRenderingContext2D, w: number, h: number, p: P
     y += 12
 
     ctx.fillStyle = 'rgba(255,255,255,0.1)'
-    roundRect(ctx, barX, y, barW, 5, 2.5)
+    rrect(ctx, barX, y, barW, 5, 2.5)
     ctx.fill()
 
     const fillW = barW * (d.score / 100)
@@ -269,13 +323,13 @@ function drawShareCard(ctx: CanvasRenderingContext2D, w: number, h: number, p: P
       fillGrad.addColorStop(0, '#667eea')
       fillGrad.addColorStop(1, '#764ba2')
       ctx.fillStyle = fillGrad
-      roundRect(ctx, barX, y, fillW, 5, 2.5)
+      rrect(ctx, barX, y, fillW, 5, 2.5)
       ctx.fill()
     } else {
       fillGrad.addColorStop(0, '#e94560')
       fillGrad.addColorStop(1, '#f5c518')
       ctx.fillStyle = fillGrad
-      roundRect(ctx, barX + barW - fillW, y, fillW, 5, 2.5)
+      rrect(ctx, barX + barW - fillW, y, fillW, 5, 2.5)
       ctx.fill()
     }
 
@@ -284,68 +338,62 @@ function drawShareCard(ctx: CanvasRenderingContext2D, w: number, h: number, p: P
 
   y += 8
 
+  // Stats row
   const stats = [
     { emoji: '📚', val: p.bookCount ?? 0, label: '本书' },
     { emoji: '🎬', val: p.movieCount ?? 0, label: '部电影' },
     { emoji: '🎵', val: p.musicCount ?? 0, label: '首音乐' },
-  ]
-  const statW = (w - 60) / 3
-  stats.forEach((s, i) => {
-    const sx = 30 + i * statW + statW / 2
-    ctx.fillStyle = 'rgba(255,255,255,0.05)'
-    roundRect(ctx, 30 + i * statW + 3, y, statW - 6, 48, 6)
-    ctx.fill()
+  ].filter(s => s.val > 0)
 
-    ctx.font = '12px sans-serif'
-    ctx.textAlign = 'center'
-    ctx.fillStyle = '#fff'
-    ctx.fillText(s.emoji, sx, y + 16)
-    ctx.font = 'bold 14px sans-serif'
-    ctx.fillText(String(s.val), sx, y + 33)
-    ctx.font = '9px sans-serif'
-    ctx.fillStyle = '#9ca3af'
-    ctx.fillText(s.label, sx, y + 45)
-  })
-  y += 65
+  if (stats.length > 0) {
+    const statW = CONTENT_W / stats.length
+    stats.forEach((s, i) => {
+      const sx = PAD + i * statW + statW / 2
+      ctx.fillStyle = 'rgba(255,255,255,0.05)'
+      rrect(ctx, PAD + i * statW + 3, y, statW - 6, 48, 6)
+      ctx.fill()
 
+      ctx.font = '12px sans-serif'
+      ctx.textAlign = 'center'
+      ctx.fillStyle = '#fff'
+      ctx.fillText(s.emoji, sx, y + 16)
+      ctx.font = 'bold 14px sans-serif'
+      ctx.fillText(String(s.val), sx, y + 33)
+      ctx.font = '9px sans-serif'
+      ctx.fillStyle = '#9ca3af'
+      ctx.fillText(s.label, sx, y + 45)
+    })
+    y += 62
+  }
+
+  // Summary — wrapped
   ctx.fillStyle = '#9ca3af'
   ctx.font = '11px sans-serif'
   ctx.textAlign = 'center'
-  const summaryLines = wrapText(ctx, p.summary, w - 60)
+  const summaryLines = wrapText(ctx, p.summary, CONTENT_W, 10)
   summaryLines.forEach(line => {
     ctx.fillText(line, w / 2, y)
     y += 16
   })
-  y += 12
+  y += 14
 
+  // Footer
   ctx.strokeStyle = 'rgba(255,255,255,0.05)'
   ctx.beginPath()
-  ctx.moveTo(25, y)
-  ctx.lineTo(w - 25, y)
+  ctx.moveTo(PAD, y)
+  ctx.lineTo(w - PAD, y)
   ctx.stroke()
   y += 16
 
   ctx.font = '9px sans-serif'
   ctx.textAlign = 'left'
   ctx.fillStyle = '#4b5563'
-  ctx.fillText('豆瓣书影音 MBTI', 25, y)
+  ctx.fillText('豆瓣书影音 MBTI', PAD, y)
   ctx.textAlign = 'right'
   ctx.fillStyle = '#667eea'
-  ctx.fillText('测测你的书影音 MBTI →', w - 25, y)
-}
+  ctx.fillText('测测你的书影音 MBTI →', w - PAD, y)
 
-function wrapText(ctx: CanvasRenderingContext2D, text: string, maxW: number): string[] {
-  const lines: string[] = []
-  let line = ''
-  for (const ch of text) {
-    const test = line + ch
-    if (ctx.measureText(test).width > maxW && line) {
-      lines.push(line)
-      line = ch
-    } else {
-      line = test
-    }
-  }
-  if (line) lines.push(line)
-  return lines.slice(0, 4)
+  y += 24
+
+  return y
 }

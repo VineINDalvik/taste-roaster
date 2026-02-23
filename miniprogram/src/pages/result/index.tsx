@@ -506,8 +506,8 @@ export default function ResultPage() {
       </View>
 
       {/* Hidden Canvas elements for image saving */}
-      <Canvas type='2d' id='analysisCanvas' canvasId='analysisCanvas' className='save-canvas-hidden' style={{ width: '375px', height: '800px' }} />
-      <Canvas type='2d' id='fullReportCanvas' canvasId='fullReportCanvas' className='save-canvas-hidden' style={{ width: '375px', height: '2000px' }} />
+      <Canvas type='2d' id='analysisCanvas' canvasId='analysisCanvas' className='save-canvas-hidden' style={{ width: '375px', height: '1200px' }} />
+      <Canvas type='2d' id='fullReportCanvas' canvasId='fullReportCanvas' className='save-canvas-hidden' style={{ width: '375px', height: '3000px' }} />
 
       {/* Bottom Share Action Bar */}
       <View className='share-bar'>

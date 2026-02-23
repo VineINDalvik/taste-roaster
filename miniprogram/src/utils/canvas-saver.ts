@@ -70,17 +70,22 @@ function drawFooter(ctx: CanvasRenderingContext2D, w: number, y: number): number
   ctx.fillStyle = '#667eea'
   ctx.fillText('品味即人格 →', w - PAD, y)
 
-  return y + 20
+  return y + 24
 }
 
-function saveCanvasToPreview(canvas: any): Promise<void> {
+/**
+ * Export canvas to temp file and preview.
+ * Supports cropping to actual content size via cropW/cropH (in canvas pixels, i.e. multiplied by DPR).
+ */
+function saveCanvasToPreview(canvas: any, cropW?: number, cropH?: number): Promise<void> {
   return new Promise((resolve, reject) => {
     setTimeout(() => {
-      Taro.canvasToTempFilePath({
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const opts: any = {
         canvas,
         fileType: 'jpg',
         quality: 0.92,
-        success: (result) => {
+        success: (result: any) => {
           Taro.hideLoading()
           Taro.previewImage({
             current: result.tempFilePath,
@@ -88,13 +93,24 @@ function saveCanvasToPreview(canvas: any): Promise<void> {
           })
           resolve()
         },
-        fail: (err) => {
+        fail: (err: any) => {
           console.error('canvasToTempFilePath fail:', err)
           Taro.hideLoading()
           Taro.showToast({ title: '生成失败', icon: 'error' })
           reject(new Error('canvas export failed'))
         }
-      })
+      }
+
+      if (cropW && cropH) {
+        opts.x = 0
+        opts.y = 0
+        opts.width = cropW
+        opts.height = cropH
+        opts.destWidth = cropW
+        opts.destHeight = cropH
+      }
+
+      Taro.canvasToTempFilePath(opts)
     }, 500)
   })
 }
@@ -127,7 +143,7 @@ export async function saveAnalysisCard(
         const canvas = res[0].node
         const ctx = canvas.getContext('2d') as CanvasRenderingContext2D
         const w = CARD_W
-        const tempH = 800
+        const tempH = 1200
         canvas.width = w * DPR
         canvas.height = tempH * DPR
         ctx.scale(DPR, DPR)
@@ -204,7 +220,7 @@ export async function saveFullReport(
         const canvas = res[0].node
         const ctx = canvas.getContext('2d') as CanvasRenderingContext2D
         const w = CARD_W
-        const maxH = 2000
+        const maxH = 3000
         canvas.width = w * DPR
         canvas.height = maxH * DPR
         ctx.scale(DPR, DPR)
@@ -225,55 +241,72 @@ export async function saveFullReport(
         ctx.fillStyle = typeGrad
         ctx.font = 'bold 42px sans-serif'
         ctx.fillText(opts.mbtiType, w / 2, y)
-        y += 24
+        y += 28
 
+        // Title — wrap
         ctx.font = '14px sans-serif'
         ctx.fillStyle = '#e94560'
-        ctx.fillText(opts.mbtiTitle, w / 2, y)
-        y += 30
+        const titleLines = wrapText(ctx, opts.mbtiTitle, CONTENT_W, 2)
+        titleLines.forEach(line => {
+          ctx.fillText(line, w / 2, y)
+          y += 20
+        })
+        y += 14
 
+        // Roast — wrap
+        ctx.font = 'italic 11px sans-serif'
+        const roastLines = wrapText(ctx, `"${opts.roast}"`, CONTENT_W - 16, 5)
+        const roastBlockH = roastLines.length * 16 + 16
         ctx.fillStyle = 'rgba(255,255,255,0.03)'
-        rrect(ctx, PAD, y - 10, CONTENT_W, 36, 8)
+        rrect(ctx, PAD, y - 8, CONTENT_W, roastBlockH, 8)
         ctx.fill()
         ctx.fillStyle = '#9ca3af'
-        ctx.font = 'italic 11px sans-serif'
-        const roastTrim = opts.roast.length > 50 ? opts.roast.slice(0, 50) + '...' : opts.roast
-        ctx.fillText(`"${roastTrim}"`, w / 2, y + 12)
-        y += 44
+        ctx.textAlign = 'center'
+        const roastStartY = y + 6
+        roastLines.forEach((line, i) => {
+          ctx.fillText(line, w / 2, roastStartY + i * 16)
+        })
+        y += roastBlockH + 12
 
+        // Stats
         const stats = [
           { emoji: '📚', val: opts.bookCount, label: '本书' },
           { emoji: '🎬', val: opts.movieCount, label: '部电影' },
           { emoji: '🎵', val: opts.musicCount, label: '首音乐' },
         ].filter(s => s.val > 0)
-        const statW = CONTENT_W / stats.length
-        stats.forEach((s, i) => {
-          const sx = PAD + i * statW + statW / 2
-          ctx.fillStyle = 'rgba(255,255,255,0.05)'
-          rrect(ctx, PAD + i * statW + 4, y, statW - 8, 44, 6)
-          ctx.fill()
-          ctx.textAlign = 'center'
-          ctx.font = '11px sans-serif'
-          ctx.fillStyle = '#fff'
-          ctx.fillText(s.emoji, sx, y + 15)
-          ctx.font = 'bold 13px sans-serif'
-          ctx.fillText(String(s.val), sx, y + 30)
-          ctx.font = '9px sans-serif'
-          ctx.fillStyle = '#9ca3af'
-          ctx.fillText(s.label, sx, y + 42)
-        })
-        y += 60
 
+        if (stats.length > 0) {
+          const statW = CONTENT_W / stats.length
+          stats.forEach((s, i) => {
+            const sx = PAD + i * statW + statW / 2
+            ctx.fillStyle = 'rgba(255,255,255,0.05)'
+            rrect(ctx, PAD + i * statW + 4, y, statW - 8, 44, 6)
+            ctx.fill()
+            ctx.textAlign = 'center'
+            ctx.font = '11px sans-serif'
+            ctx.fillStyle = '#fff'
+            ctx.fillText(s.emoji, sx, y + 15)
+            ctx.font = 'bold 13px sans-serif'
+            ctx.fillText(String(s.val), sx, y + 30)
+            ctx.font = '9px sans-serif'
+            ctx.fillStyle = '#9ca3af'
+            ctx.fillText(s.label, sx, y + 42)
+          })
+          y += 58
+        }
+
+        // Summary — wrap
         ctx.textAlign = 'left'
         ctx.font = '12px sans-serif'
         ctx.fillStyle = '#9ca3af'
-        const summaryLines = wrapText(ctx, opts.summary, CONTENT_W, 4)
+        const summaryLines = wrapText(ctx, opts.summary, CONTENT_W, 10)
         summaryLines.forEach(line => {
           ctx.fillText(line, PAD, y)
           y += 17
         })
         y += 20
 
+        // Analysis sections
         const sections = [
           { icon: '📚', title: '阅读画像', text: opts.bookAnalysis },
           { icon: '🎬', title: '观影画像', text: opts.movieAnalysis },
@@ -290,12 +323,13 @@ export async function saveFullReport(
 
           ctx.font = 'bold 14px sans-serif'
           ctx.fillStyle = '#e94560'
+          ctx.textAlign = 'left'
           ctx.fillText(`${sec.icon} ${sec.title}`, PAD, y)
           y += 22
 
           ctx.font = '12px sans-serif'
           ctx.fillStyle = '#d1d5db'
-          const lines = wrapText(ctx, sec.text!, CONTENT_W, 20)
+          const lines = wrapText(ctx, sec.text!, CONTENT_W, 30)
           for (const line of lines) {
             ctx.fillText(line, PAD, y)
             y += 17
