@@ -58,6 +58,7 @@ function resolveConfig() {
 export function getOpenAI(): OpenAI {
   if (!client) {
     const { baseURL, apiKey } = resolveConfig();
+    console.log(`[LLM Init] provider=${process.env.LLM_PROVIDER || "openai"} baseURL=${baseURL} model=${resolveConfig().model} keyPrefix=${apiKey?.slice(0, 8)}...`);
     client = new OpenAI({ apiKey, baseURL });
   }
   return client;

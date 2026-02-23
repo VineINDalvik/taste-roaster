@@ -19,10 +19,17 @@ function sleep(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+function proxyUrl(url: string): string {
+  const key = process.env.SCRAPER_API_KEY;
+  if (!key) return url;
+  return `https://api.scraperapi.com?api_key=${key}&url=${encodeURIComponent(url)}&country_code=cn`;
+}
+
 function fetchWithTimeout(url: string, opts: RequestInit, timeoutMs = FETCH_TIMEOUT_MS): Promise<Response> {
   const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), timeoutMs);
-  return fetch(url, { ...opts, signal: controller.signal }).finally(() => clearTimeout(timer));
+  const actualTimeout = process.env.SCRAPER_API_KEY ? timeoutMs * 3 : timeoutMs;
+  const timer = setTimeout(() => controller.abort(), actualTimeout);
+  return fetch(proxyUrl(url), { ...opts, signal: controller.signal }).finally(() => clearTimeout(timer));
 }
 
 // ─── PoW Challenge Solver ───────────────────────────────────────
