@@ -36,10 +36,10 @@ const RADAR_KEYS = [
 
 const FONT_CDN = "https://cdn.jsdelivr.net/gh/googlefonts/noto-cjk@main/Sans/SubsetOTF/SC";
 
-let fontRegular: ArrayBuffer | undefined;
-let fontBold: ArrayBuffer | undefined;
+let fontRegular: ArrayBuffer | null = null;
+let fontBold: ArrayBuffer | null = null;
 
-async function loadFonts() {
+async function loadFonts(): Promise<{ regular: ArrayBuffer; bold: ArrayBuffer }> {
   if (!fontRegular) {
     fontRegular = await fetch(`${FONT_CDN}/NotoSansSC-Regular.otf`).then((r) => r.arrayBuffer());
   }
