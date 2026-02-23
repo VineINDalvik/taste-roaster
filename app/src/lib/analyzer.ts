@@ -20,6 +20,54 @@ import type {
   RealCounts,
 } from "./types";
 
+function safeParseJSON(text: string): Record<string, unknown> {
+  const jsonMatch = text.match(/\{[\s\S]*\}/);
+  if (!jsonMatch) throw new Error("AI 返回内容中未找到 JSON");
+
+  let raw = jsonMatch[0];
+
+  try {
+    return JSON.parse(raw);
+  } catch {
+    // Fix common LLM JSON issues
+  }
+
+  // Remove trailing commas before } or ]
+  raw = raw.replace(/,\s*([}\]])/g, "$1");
+  // Fix unescaped newlines inside string values
+  raw = raw.replace(/(?<=:\s*"[^"]*)\n/g, "\\n");
+  // Remove control characters
+  raw = raw.replace(/[\x00-\x1f\x7f]/g, (c) =>
+    c === "\n" || c === "\r" || c === "\t" ? c : ""
+  );
+
+  try {
+    return JSON.parse(raw);
+  } catch {
+    // Last resort: try to extract individual fields
+  }
+
+  // Aggressive: strip everything after last valid closing brace
+  let depth = 0;
+  let lastValid = -1;
+  for (let i = 0; i < raw.length; i++) {
+    if (raw[i] === "{") depth++;
+    if (raw[i] === "}") {
+      depth--;
+      if (depth === 0) { lastValid = i; break; }
+    }
+  }
+  if (lastValid > 0) {
+    try {
+      return JSON.parse(raw.substring(0, lastValid + 1));
+    } catch {
+      // fall through
+    }
+  }
+
+  throw new Error("AI 返回的 JSON 格式无法解析，请重试");
+}
+
 function buildPromptData(
   input: TasteInput,
   realCounts?: RealCounts,
@@ -93,13 +141,11 @@ export async function generateBasicReport(
     messages: [{ role: "user", content: prompt }],
     max_tokens: 2000,
     temperature: 0.8,
+    response_format: { type: "json_object" },
   });
 
   const text = response.choices[0]?.message?.content ?? "{}";
-  const jsonMatch = text.match(/\{[\s\S]*\}/);
-  if (!jsonMatch) throw new Error("Failed to parse AI response");
-
-  const parsed = JSON.parse(jsonMatch[0]);
+  const parsed = safeParseJSON(text);
 
   const mbti: CulturalMBTI = {
     type: parsed.mbti?.type ?? "INFP",
@@ -168,12 +214,18 @@ export async function generatePremiumReport(
     messages: [{ role: "user", content: prompt }],
     max_tokens: 3000,
     temperature: 0.85,
+    response_format: { type: "json_object" },
   });
 
   const text = response.choices[0]?.message?.content ?? "{}";
-  const jsonMatch = text.match(/\{[\s\S]*\}/);
-  if (!jsonMatch) throw new Error("Failed to parse premium report");
-  return JSON.parse(jsonMatch[0]);
+  return safeParseJSON(text) as {
+    bookAnalysis: string;
+    movieAnalysis: string;
+    musicAnalysis: string;
+    crossDomain: string;
+    personality: string;
+    blindSpots: string;
+  };
 }
 
 export async function generateTimeline(
@@ -222,14 +274,12 @@ export async function generateTimeline(
     messages: [{ role: "user", content: prompt }],
     max_tokens: 2000,
     temperature: 0.85,
+    response_format: { type: "json_object" },
   });
 
   const text = response.choices[0]?.message?.content ?? "{}";
-  const jsonMatch = text.match(/\{[\s\S]*\}/);
-  if (!jsonMatch) throw new Error("Failed to parse timeline");
-
-  const parsed = JSON.parse(jsonMatch[0]);
-  const months: MonthSnapshot[] = (parsed.months ?? []).map(
+  const parsed = safeParseJSON(text);
+  const months: MonthSnapshot[] = (parsed.months as Array<{ month: string; mood?: string; tasteShift?: string; roast?: string }> ?? []).map(
     (m: { month: string; mood?: string; tasteShift?: string; roast?: string }) => {
       const bucket = monthlyBuckets.find((b) => b.month === m.month);
       return {
@@ -278,13 +328,16 @@ export async function generateRecommendations(
     messages: [{ role: "user", content: prompt }],
     max_tokens: 2000,
     temperature: 0.85,
+    response_format: { type: "json_object" },
   });
 
   const text = response.choices[0]?.message?.content ?? "{}";
-  const jsonMatch = text.match(/\{[\s\S]*\}/);
-  if (!jsonMatch) return [];
-
-  const parsed = JSON.parse(jsonMatch[0]);
+  let parsed: Record<string, unknown>;
+  try {
+    parsed = safeParseJSON(text);
+  } catch {
+    return [];
+  }
   const allTitles = new Set([
     ...report.input.books.map((b) => b.title),
     ...report.input.movies.map((m) => m.title),
@@ -366,13 +419,11 @@ export async function generateComparison(
     messages: [{ role: "user", content: prompt }],
     max_tokens: 3000,
     temperature: 0.85,
+    response_format: { type: "json_object" },
   });
 
   const text = response.choices[0]?.message?.content ?? "{}";
-  const jsonMatch = text.match(/\{[\s\S]*\}/);
-  if (!jsonMatch) throw new Error("Failed to parse comparison");
-
-  const parsed = JSON.parse(jsonMatch[0]);
+  const parsed = safeParseJSON(text);
   return {
     matchScore: parsed.matchScore ?? 50,
     matchTitle: parsed.matchTitle ?? "品味探索中",
