@@ -59,51 +59,43 @@ function DimensionBar({
 }) {
   const [leftLabel, rightLabel] = DIM_LABELS[dimKey] ?? ["?", "?"];
   const isLeft = dim.letter === leftLabel[0];
-  const pct = dim.score;
 
   return (
-    <div className="space-y-0.5">
-      <div className="flex justify-between text-[9px]">
-        <span className={isLeft ? "text-white font-bold" : "text-gray-500"}>
+    <div>
+      <div className="flex items-center justify-between mb-1">
+        <span
+          className={`text-[11px] ${isLeft ? "text-white font-bold" : "text-gray-600"}`}
+        >
           {leftLabel}
         </span>
-        <span className="text-gray-600 font-mono text-[8px]">{pct}%</span>
-        <span className={!isLeft ? "text-white font-bold" : "text-gray-500"}>
+        <span className="text-[10px] text-gray-600">{dim.score}%</span>
+        <span
+          className={`text-[11px] ${!isLeft ? "text-white font-bold" : "text-gray-600"}`}
+        >
           {rightLabel}
         </span>
       </div>
-      <div className="h-1.5 bg-white/10 rounded-full overflow-hidden relative">
-        {isLeft ? (
-          <div
-            className="absolute left-0 top-0 h-full rounded-full"
-            style={{
-              width: `${pct}%`,
-              background: "linear-gradient(90deg, #667eea, #764ba2)",
-            }}
-          />
-        ) : (
-          <div
-            className="absolute right-0 top-0 h-full rounded-full"
-            style={{
-              width: `${pct}%`,
-              background: "linear-gradient(90deg, #e94560, #f5c518)",
-            }}
-          />
-        )}
+      <div className="h-2 rounded-full bg-white/[0.08] relative overflow-hidden">
+        <div
+          className="absolute top-0 h-full rounded-full"
+          style={{
+            width: `${dim.score}%`,
+            [isLeft ? "left" : "right"]: 0,
+            background: isLeft
+              ? "linear-gradient(90deg, #667eea, #764ba2)"
+              : "linear-gradient(90deg, #e94560, #f5c518)",
+          }}
+        />
       </div>
     </div>
   );
 }
 
-function MiniRadar({
-  data,
-}: {
-  data: Record<string, number>;
-}) {
-  const size = 120;
+function MiniRadar({ data }: { data: Record<string, number> }) {
+  const size = 140;
   const cx = size / 2;
   const cy = size / 2;
-  const r = size / 2 - 15;
+  const r = size / 2 - 18;
   const count = RADAR_LABELS.length;
 
   const getPoint = (i: number, val: number) => {
@@ -142,9 +134,9 @@ function MiniRadar({
             x={p.x}
             y={p.y}
             textAnchor="middle"
-            dominantBaseline="middle"
+            dominantBaseline="central"
             fill="rgba(255,255,255,0.4)"
-            fontSize="7"
+            fontSize="8"
           >
             {label}
           </text>
@@ -152,12 +144,12 @@ function MiniRadar({
       })}
       <polygon
         points={polygon}
-        fill="rgba(102,126,234,0.15)"
+        fill="rgba(102, 126, 234, 0.15)"
         stroke="#667eea"
         strokeWidth="1.5"
       />
       {points.map((p, i) => (
-        <circle key={i} cx={p.x} cy={p.y} r="2" fill="#667eea" />
+        <circle key={i} cx={p.x} cy={p.y} r={2.5} fill="#667eea" />
       ))}
     </svg>
   );
@@ -170,7 +162,6 @@ export default function ShareCard({
   roast,
   radarData,
   summary,
-  itemCount,
   doubanName,
   bookCount,
   movieCount,
@@ -181,34 +172,51 @@ export default function ShareCard({
   const [generating, setGenerating] = useState(false);
 
   const handleSaveCard = useCallback(async () => {
-    const card = cardRef.current;
-    if (!card) return;
-
     setGenerating(true);
     try {
-      const { default: html2canvas } = await import("html2canvas");
-      const canvas = await html2canvas(card, {
-        scale: 3,
-        backgroundColor: null,
-        useCORS: true,
+      const res = await fetch("/api/share-card", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          mbtiType,
+          mbtiTitle,
+          roast,
+          dimensions: {
+            ie: { letter: dimensions.ie.letter, score: dimensions.ie.score },
+            ns: { letter: dimensions.ns.letter, score: dimensions.ns.score },
+            tf: { letter: dimensions.tf.letter, score: dimensions.tf.score },
+            jp: { letter: dimensions.jp.letter, score: dimensions.jp.score },
+          },
+          radarData,
+          summary,
+          doubanName,
+          bookCount,
+          movieCount,
+          musicCount,
+        }),
       });
 
-      const isMobile = /iPhone|iPad|Android|Mobile/i.test(navigator.userAgent);
+      if (!res.ok) throw new Error("API error");
 
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+
+      const isMobile = /iPhone|iPad|Android|Mobile/i.test(navigator.userAgent);
       if (isMobile) {
-        setPreviewSrc(canvas.toDataURL("image/png"));
+        setPreviewSrc(url);
       } else {
         const link = document.createElement("a");
         link.download = `书影音MBTI-${mbtiType}.png`;
-        link.href = canvas.toDataURL("image/png");
+        link.href = url;
         link.click();
+        setTimeout(() => URL.revokeObjectURL(url), 5000);
       }
     } catch {
       alert("生成失败，请直接截图保存");
     } finally {
       setGenerating(false);
     }
-  }, [mbtiType]);
+  }, [mbtiType, mbtiTitle, roast, dimensions, radarData, summary, doubanName, bookCount, movieCount, musicCount]);
 
   const handleCopyLink = useCallback(() => {
     const url = window.location.href;
@@ -231,11 +239,10 @@ export default function ShareCard({
 
   return (
     <div className="space-y-4">
-      {/* Image Preview Overlay — mobile long-press to save */}
       {previewSrc && (
         <div
           className="fixed inset-0 z-50 bg-black/90 flex flex-col items-center justify-center p-4"
-          onClick={() => setPreviewSrc(null)}
+          onClick={() => { setPreviewSrc(null); URL.revokeObjectURL(previewSrc); }}
         >
           <p className="text-white text-sm mb-3 animate-pulse">
             👆 长按图片保存到相册
@@ -249,7 +256,7 @@ export default function ShareCard({
           />
           <button
             className="mt-4 px-6 py-2 rounded-xl bg-white/10 text-white text-sm"
-            onClick={() => setPreviewSrc(null)}
+            onClick={() => { setPreviewSrc(null); URL.revokeObjectURL(previewSrc); }}
           >
             关闭
           </button>
@@ -265,7 +272,6 @@ export default function ShareCard({
           border: "1px solid rgba(255, 255, 255, 0.08)",
         }}
       >
-        {/* Decorative glow */}
         <div
           className="absolute -top-20 -right-20 w-40 h-40 rounded-full opacity-20 blur-3xl"
           style={{ background: "radial-gradient(circle, #667eea, transparent)" }}
@@ -275,14 +281,13 @@ export default function ShareCard({
           style={{ background: "radial-gradient(circle, #e94560, transparent)" }}
         />
 
-        <div className="relative z-10 p-6">
-          {/* Header */}
-          <div className="text-center mb-4">
-            <div className="text-[10px] tracking-[0.3em] text-gray-500 uppercase mb-3">
+        <div className="relative z-10 p-7 pb-5">
+          <div className="text-center mb-5">
+            <div className="text-[11px] tracking-[0.25em] text-gray-500 uppercase mb-3">
               {doubanName ? `${doubanName} 的` : ""}书影音 MBTI
             </div>
             <div
-              className="text-5xl font-black mb-1 tracking-[0.15em]"
+              className="text-[56px] font-black mb-2 tracking-[0.12em] leading-none"
               style={{
                 background:
                   "linear-gradient(135deg, #667eea 0%, #e94560 50%, #f5c518 100%)",
@@ -292,32 +297,31 @@ export default function ShareCard({
             >
               {mbtiType}
             </div>
-            <div className="text-sm text-[#e94560] font-medium mb-3">
+            <div className="text-base text-[#e94560] font-semibold">
               {mbtiTitle}
             </div>
           </div>
 
-          {/* Roast */}
-          <div className="bg-white/[0.03] rounded-lg px-4 py-2.5 mb-4 border border-white/5">
-            <p className="text-xs text-gray-300 text-center leading-relaxed italic">
+          <div className="bg-white/[0.03] rounded-xl px-5 py-3 mb-5 border border-white/5">
+            <p className="text-[13px] text-gray-300 text-center leading-[1.7] italic">
               &ldquo;{roast}&rdquo;
             </p>
           </div>
 
-          {/* MBTI Bars */}
-          <div className="space-y-2 mb-4">
+          <div className="space-y-3 mb-5">
             <DimensionBar dimKey="ie" dim={dimensions.ie} />
             <DimensionBar dimKey="ns" dim={dimensions.ns} />
             <DimensionBar dimKey="tf" dim={dimensions.tf} />
             <DimensionBar dimKey="jp" dim={dimensions.jp} />
           </div>
 
-          {/* Middle row: Radar + Stats */}
-          <div className="flex items-center gap-3 mb-4">
+          <div className="border-t border-white/5 my-4" />
+
+          <div className="flex items-center gap-4 mb-5">
             <div className="flex-shrink-0">
               <MiniRadar data={radarData} />
             </div>
-            <div className="flex-1 space-y-2">
+            <div className="flex-1 space-y-2.5">
               {bookCount != null && (
                 <MiniStat emoji="📚" value={bookCount} label="本书" />
               )}
@@ -330,20 +334,17 @@ export default function ShareCard({
             </div>
           </div>
 
-          {/* Summary */}
-          <p className="text-[11px] text-gray-400 text-center leading-relaxed mb-4">
+          <p className="text-[13px] text-gray-400 text-center leading-[1.8] mb-5">
             {summary}
           </p>
 
-          {/* Footer */}
-          <div className="flex items-center justify-between text-[10px] text-gray-600 border-t border-white/5 pt-3">
+          <div className="flex items-center justify-between text-[11px] text-gray-600 border-t border-white/5 pt-3">
             <span>豆瓣书影音 MBTI</span>
             <span className="text-[#667eea]">测测你的书影音 MBTI →</span>
           </div>
         </div>
       </div>
 
-      {/* Action buttons */}
       <div className="flex gap-3 max-w-sm mx-auto">
         <button
           onClick={handleSaveCard}
@@ -373,10 +374,10 @@ function MiniStat({
   label: string;
 }) {
   return (
-    <div className="flex items-center gap-2 bg-white/[0.03] rounded-lg px-3 py-1.5">
-      <span className="text-xs">{emoji}</span>
-      <span className="text-sm font-bold text-white">{value}</span>
-      <span className="text-[10px] text-gray-500">{label}</span>
+    <div className="flex items-center gap-2 bg-white/[0.03] rounded-lg px-3 py-2">
+      <span className="text-sm">{emoji}</span>
+      <span className="text-base font-bold text-white">{value}</span>
+      <span className="text-[11px] text-gray-500">{label}</span>
     </div>
   );
 }
