@@ -1004,19 +1004,22 @@
   margin-bottom: 16rpx;
 }
 
+/* 网易云 + 塔罗，一行两格 */
 .explore-grid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 12rpx;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 20rpx;
 }
 
 .explore-card {
   min-width: 0;
-  border-radius: 16rpx;
-  padding: 20rpx;
-  padding-right: 100rpx; /* 留出 badge 空间，避免与「可体验」「即将上线」重叠 */
+  min-height: 140rpx;
+  border-radius: 20rpx;
+  padding: 24rpx;
+  padding-right: 110rpx;
   display: flex;
   flex-direction: column;
+  justify-content: space-between;
   gap: 8rpx;
   position: relative;
   overflow: visible;

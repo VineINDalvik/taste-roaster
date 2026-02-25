@@ -520,7 +520,6 @@ export default function ResultPage() {
           <View className='explore-grid'>
             {[
               { icon: '🎧', name: '网易云音乐', desc: '听歌品味分析', color: '#e94560', badge: '即将上线' },
-              { icon: '📖', name: '微信读书', desc: '阅读品味画像', color: '#667eea', badge: '即将上线' },
               { icon: '🔮', name: '赛博神算子', desc: 'AI 塔罗占卜', color: '#a855f7', badge: '可体验' },
             ].map(item => (
               <View

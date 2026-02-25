@@ -691,16 +691,15 @@ export default function ResultPage({
           </div>
         </div>
 
-        {/* === Explore More === */}
+        {/* === Explore More：网易云 + 塔罗，一行两格 === */}
         <div className="animate-fade-in-up animate-delay-300">
           <div className="space-y-3">
             <h2 className="text-sm font-bold text-gray-400 flex items-center gap-2">
               <span className="text-[#667eea]">🌐</span> 探索更多
             </h2>
-            <div className="grid grid-cols-3 gap-2 w-full">
+            <div className="grid grid-cols-2 gap-3 w-full">
               {[
                 { icon: "🎧", name: "网易云音乐", desc: "听歌品味分析", color: "#e94560", badge: "即将上线" },
-                { icon: "📖", name: "微信读书", desc: "阅读品味画像", color: "#667eea", badge: "即将上线" },
                 { icon: "🔮", name: "赛博神算子", desc: "AI 塔罗占卜", color: "#a855f7", badge: "可体验", href: "https://cyber-oracle-nine.vercel.app" },
               ].map((item) => (
                 <a
@@ -708,16 +707,16 @@ export default function ResultPage({
                   href={(item as any).href || undefined}
                   target={(item as any).href ? "_blank" : undefined}
                   rel={(item as any).href ? "noopener noreferrer" : undefined}
-                  className={`card-glass rounded-xl p-3 pr-12 space-y-1.5 relative overflow-visible min-w-0 ${(item as any).href ? "cursor-pointer hover:bg-white/[0.06] transition-colors" : "cursor-default"}`}
+                  className={`card-glass rounded-xl p-4 pr-14 space-y-1.5 relative overflow-visible min-w-0 flex flex-col justify-between min-h-[72px] ${(item as any).href ? "cursor-pointer hover:bg-white/[0.06] transition-colors" : "cursor-default"}`}
                 >
                   <div className="flex items-center gap-2">
-                    <span className="text-base">{item.icon}</span>
-                    <span className="text-xs font-medium text-white">{item.name}</span>
+                    <span className="text-lg">{item.icon}</span>
+                    <span className="text-xs font-semibold text-white">{item.name}</span>
                   </div>
-                  <p className="text-[10px] text-gray-500">{item.desc}</p>
+                  <p className="text-[10px] text-gray-500 leading-tight">{item.desc}</p>
                   <span
-                    className="absolute top-2 right-2 text-[9px] px-1.5 py-0.5 rounded-full font-medium"
-                    style={{ color: item.color, background: `${item.color}15` }}
+                    className="absolute top-2.5 right-2.5 text-[9px] px-2 py-0.5 rounded-full font-medium"
+                    style={{ color: item.color, background: `${item.color}18` }}
                   >
                     {item.badge}
                   </span>
