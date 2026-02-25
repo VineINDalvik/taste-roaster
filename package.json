@@ -1,0 +1,10 @@
+{
+  "name": "毒舌品味官",
+  "private": true,
+  "scripts": {
+    "build:app": "cd app && npm run build",
+    "build:miniprogram": "cd miniprogram && npm run build:weapp",
+    "build": "npm run build:app && npm run build:miniprogram",
+    "deploy": "bash scripts/deploy.sh"
+  }
+}
