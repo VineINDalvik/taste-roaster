@@ -77,3 +77,17 @@ export async function saveFullReport(
 ) {
   await fetchImageAndPreview('/api/share-report', opts)
 }
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export interface CompareShareOpts {
+  personA: any
+  personB: any
+  comparison: any
+}
+
+export async function saveCompareShare(
+  _canvasId: string,
+  opts: CompareShareOpts
+) {
+  await fetchImageAndPreview('/api/share-compare', opts)
+}

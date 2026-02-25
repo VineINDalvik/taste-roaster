@@ -1,5 +1,6 @@
 {
   "miniprogramRoot": "dist/",
+  "cloudfunctionRoot": "cloud/functions/",
   "projectname": "douban-mbti",
   "description": "豆瓣书影音MBTI小程序",
   "appid": "wxf44e967507699c42",

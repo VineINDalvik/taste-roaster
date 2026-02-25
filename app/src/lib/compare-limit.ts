@@ -2,6 +2,14 @@ const STORAGE_KEY = "taste-compare-usage";
 const FREE_LIMIT = 1;
 const PRICE_CNY = 1.88;
 
+/** 内测账号：豆瓣 ID 在此列表者可无限次双人对比 */
+export const INTERNAL_TESTER_DOUBAN_IDS = ["98610936"];
+
+export function isInternalTester(doubanId?: string): boolean {
+  if (!doubanId) return false;
+  return INTERNAL_TESTER_DOUBAN_IDS.includes(String(doubanId).trim());
+}
+
 interface CompareUsage {
   count: number;
   paidCompareIds: string[];
@@ -27,15 +35,18 @@ export function getCompareCount(): number {
   return getUsage().count;
 }
 
-export function canCompareForFree(): boolean {
+export function canCompareForFree(doubanId?: string): boolean {
+  if (isInternalTester(doubanId)) return true;
   return getUsage().count < FREE_LIMIT;
 }
 
-export function getRemainingFree(): number {
+export function getRemainingFree(doubanId?: string): number | string {
+  if (isInternalTester(doubanId)) return "∞";
   return Math.max(0, FREE_LIMIT - getUsage().count);
 }
 
-export function recordCompare() {
+export function recordCompare(doubanId?: string) {
+  if (isInternalTester(doubanId)) return;
   const usage = getUsage();
   usage.count += 1;
   saveUsage(usage);

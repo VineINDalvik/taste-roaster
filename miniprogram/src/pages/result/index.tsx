@@ -9,6 +9,8 @@ import { saveAnalysisCard, saveFullReport } from '@/utils/canvas-saver'
 import type { ReportData, RecommendationItem, MonthSnapshot, MBTIDimension } from '@/utils/types'
 import './index.scss'
 
+const TIP_QRCODE = '/assets/tip-qrcode.jpg'
+
 const ENABLE_PAID_DEEP = false
 
 const UNLOCK_MESSAGES = [
@@ -33,14 +35,18 @@ function deriveMbtiType(dims: ReportData['mbti']['dimensions']): string {
   return (dims.ie.letter + dims.ns.letter + dims.tf.letter + dims.jp.letter).toUpperCase()
 }
 
+const MBTI_TYPES = ['INTJ', 'INTP', 'ENTJ', 'ENTP', 'INFJ', 'INFP', 'ENFJ', 'ENFP', 'ISTJ', 'ISTP', 'ESTJ', 'ESTP', 'ISFJ', 'ISFP', 'ESFJ', 'ESFP']
+
 function fixMbtiInText(
   text: string | undefined,
-  aiType: string | undefined,
+  _aiType: string | undefined,
   correctType: string
 ): string {
-  if (!text) return ''
-  if (!aiType || aiType === correctType) return text
-  return text.replaceAll(aiType, correctType).replaceAll(aiType.toLowerCase(), correctType)
+  if (!text || !correctType) return text || ''
+  return MBTI_TYPES.reduce(
+    (s, t) => (t !== correctType ? s.replace(new RegExp(t, 'gi'), correctType) : s),
+    text
+  )
 }
 
 export default function ResultPage() {
@@ -56,6 +62,8 @@ export default function ResultPage() {
   const [showShareModal, setShowShareModal] = useState(false)
   const [basicPaid, setBasicPaid] = useState(false)
   const [deepPaid, setDeepPaid] = useState(false)
+  const [expandFailed, setExpandFailed] = useState(false)
+  const [deepUnlockFailed, setDeepUnlockFailed] = useState(false)
   const stepRef = useRef<ReturnType<typeof setInterval>>()
 
   // musicEmotions handled by themed AnalysisSection with theme='music'
@@ -105,9 +113,25 @@ export default function ResultPage() {
     setLoading(false)
   }, [id])
 
+  useEffect(() => {
+    if (report?.input && report?.mbti?.type && basicPaid && !hasExpandContent && !expanding && !expandFailed) {
+      handleLoadExpand()
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [report?.id, hasExpandContent, basicPaid])
+
+  // 深度解读：已标记已支付但无内容时自动加载（如从分享/存储恢复）
+  useEffect(() => {
+    if (report?.input && deepPaid && !isDeepUnlocked && !unlocking && !deepUnlockFailed) {
+      startDeepAnalysis()
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [report?.id, deepPaid, isDeepUnlocked, deepUnlockFailed])
+
   const handleLoadExpand = useCallback(async () => {
     if (!report?.input || !report?.mbti?.type || expanding) return
     setExpanding(true)
+    setExpandFailed(false)
 
     try {
       const data = await callApi<Record<string, unknown>>(`/api/expand/${id}`, {
@@ -135,6 +159,7 @@ export default function ResultPage() {
         return updated
       })
     } catch {
+      setExpandFailed(true)
       Taro.showToast({ title: '加载失败，请重试', icon: 'none' })
     } finally {
       setExpanding(false)
@@ -146,6 +171,7 @@ export default function ResultPage() {
 
     setShowShareModal(false)
     setUnlocking(true)
+    setDeepUnlockFailed(false)
     setUnlockStep(0)
     setFunFact(FUN_FACTS[Math.floor(Math.random() * FUN_FACTS.length)])
 
@@ -171,13 +197,13 @@ export default function ResultPage() {
         crossDomain: data.crossDomain as string,
         personality: data.personality as string,
         blindSpots: data.blindSpots as string,
-        diaryInsight: data.diaryInsight as string,
         recommendations: data.recommendations as RecommendationItem[],
       }
       setReportState(updated)
       setReport(id, updated)
     } catch (err) {
-      Taro.showToast({ title: err instanceof Error ? err.message : '解锁失败', icon: 'none' })
+      setDeepUnlockFailed(true)
+      Taro.showToast({ title: err instanceof Error ? err.message : '加载失败，请重试', icon: 'none' })
     } finally {
       if (stepRef.current) clearInterval(stepRef.current)
       setUnlocking(false)
@@ -307,10 +333,10 @@ export default function ResultPage() {
                 </View>
               ) : (
                 <View className='load-btn-card card-glass' onClick={handleLoadExpand}>
-                  <Text className='load-btn-icon'>📊</Text>
+                  <Text className='load-btn-icon'>{expandFailed ? '🔄' : '📊'}</Text>
                   <View className='load-btn-text-wrap'>
-                    <Text className='load-btn-title'>加载完整品味分析</Text>
-                    <Text className='load-btn-desc'>书影音逐项分析 + 品味时间线 · 约需 10-15 秒</Text>
+                    <Text className='load-btn-title'>{expandFailed ? '加载失败，点击重试' : '加载完整品味分析'}</Text>
+                    <Text className='load-btn-desc'>{expandFailed ? '网络问题可能导致加载失败，请重试' : '书影音逐项分析 + 品味时间线 · 约需 10-15 秒'}</Text>
                   </View>
                   <Text className='load-btn-arrow'>→</Text>
                 </View>
@@ -352,7 +378,7 @@ export default function ResultPage() {
               <Text className='payment-price'>¥{PRICE_BASIC}</Text>
               <Text className='payment-price-unit'>/份</Text>
             </View>
-            <Image className='payment-qrcode' src='https://taste-mbti.vercel.app/images/tip-qrcode.jpg' mode='aspectFit' />
+            <Image className='payment-qrcode' src={TIP_QRCODE} mode='aspectFit' />
             <Text className='payment-qr-hint'>微信扫码支付</Text>
             <View className='btn-unlock' onClick={() => { markBasicPaid(report.id || id); setBasicPaid(true) }}>
               <Text className='btn-action-text'>已支付？点击解锁</Text>
@@ -371,22 +397,28 @@ export default function ResultPage() {
                   <Text className='unlock-item'><Text className='text-red'>✦</Text> 跨领域品味关联分析</Text>
                   <Text className='unlock-item'><Text className='text-red'>✦</Text> {mbtiType} 深度人格画像</Text>
                   <Text className='unlock-item'><Text className='text-red'>✦</Text> 品味盲区诊断</Text>
-                  <Text className='unlock-item'><Text className='text-red'>✦</Text> 日记与动态解读</Text>
                   <Text className='unlock-item'><Text className='text-red'>✦</Text> AI 专属推荐</Text>
                 </View>
                 <View className='payment-price-block'>
                   <Text className='payment-price payment-price-red'>¥{PRICE_DEEP}</Text>
                   <Text className='payment-price-unit'>/份</Text>
                 </View>
-                <Image className='payment-qrcode' src='https://taste-mbti.vercel.app/images/tip-qrcode.jpg' mode='aspectFit' />
-                <Text className='payment-qr-hint'>微信扫码支付</Text>
                 <View className='btn-unlock' onClick={() => { markDeepPaid(report.id || id); setDeepPaid(true); handleDeepUnlock() }}>
                   <Text className='btn-action-text'>已支付？点击解锁</Text>
                 </View>
-                <Text className='unlock-hint'>分析约需 15-20 秒</Text>
+                <Text className='unlock-hint'>分析约需 20-40 秒 · 国内建议开 VPN</Text>
               </View>
             ) : unlocking ? (
               <UnlockingOverlay step={unlockStep} funFact={funFact} />
+            ) : deepUnlockFailed ? (
+              <View className='section-card card-glass center-text animate-fade-in-up animate-delay-300'>
+                <Text className='loading-emoji'>🔮</Text>
+                <Text className='loading-sub'>加载失败，网络可能较慢</Text>
+                <Text className='unlock-hint'>建议开启 VPN 后重试</Text>
+                <View className='btn-unlock' style={{ marginTop: '24rpx' }} onClick={handleDeepUnlock}>
+                  <Text className='btn-action-text'>点击重试</Text>
+                </View>
+              </View>
             ) : (
               <View className='section-card card-glass center-text animate-fade-in-up animate-delay-300'>
                 <Text className='loading-emoji animate-pulse'>🔮</Text>
@@ -411,17 +443,6 @@ export default function ResultPage() {
                 icon='🎯' title='品味盲区' content={ft(report.blindSpots)}
                 onSave={() => saveAnalysisCard('analysisCanvas', { icon: '🎯', title: '品味盲区', content: ft(report.blindSpots) || '', mbtiType, doubanName: report.doubanName })}
               />
-              {report.diaryInsight ? (
-                <AnalysisSection
-                  icon='📝' title='日记与动态解读' content={ft(report.diaryInsight)}
-                  onSave={() => saveAnalysisCard('analysisCanvas', { icon: '📝', title: '日记与动态解读', content: ft(report.diaryInsight) || '', mbtiType, doubanName: report.doubanName })}
-                />
-              ) : (
-                <View className='section-card card-glass'>
-                  <Text className='section-title'>📝 日记与动态解读</Text>
-                  <Text className='section-empty-hint'>暂无日记/动态数据，或需重新生成深度解读以获取此板块</Text>
-                </View>
-              )}
             </View>
 
             {report.recommendations && report.recommendations.length > 0 && (
@@ -529,12 +550,13 @@ export default function ResultPage() {
           <Text className='tip-title'>☕ 请作者喝杯咖啡</Text>
           <Text className='tip-desc'>如果觉得有趣，可以赞赏支持一下</Text>
           <Image
-            className='tip-qrcode'
-            src='https://app-theta-puce.vercel.app/images/tip-qrcode.jpg'
+            className='tip-qrcode tip-qrcode-tappable'
+            src={TIP_QRCODE}
             mode='aspectFit'
             showMenuByLongpress
+            onClick={() => Taro.previewImage({ current: TIP_QRCODE, urls: [TIP_QRCODE] })}
           />
-          <Text className='tip-hint'>长按识别二维码赞赏</Text>
+          <Text className='tip-hint'>点击放大 / 长按保存 · 用微信扫一扫识别赞赏</Text>
         </View>
 
         {/* Privacy footer */}

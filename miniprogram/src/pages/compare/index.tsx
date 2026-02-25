@@ -1,11 +1,11 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
-import { View, Text, Input, Image } from '@tarojs/components'
+import { View, Text, Input } from '@tarojs/components'
 import Taro, { useRouter } from '@tarojs/taro'
 import { callApi } from '@/utils/api'
 import {
   getReport, setReport, setCompare,
   canCompareForFree, getCompareCount, getRemainingFreeCompares,
-  recordCompareUsage, COMPARE_PRICE_CNY,
+  recordCompareUsage,
 } from '@/utils/storage'
 import './index.scss'
 
@@ -45,11 +45,6 @@ export default function ComparePage() {
   const handleCompare = useCallback(async () => {
     if (!doubanIdB.trim() || !fromId) return
 
-    if (!canCompareForFree()) {
-      setShowPaywall(true)
-      return
-    }
-
     const stored = getReport(fromId)
     if (!stored) {
       setError('找不到你的报告数据，请先测试自己的书影音 MBTI')
@@ -57,6 +52,12 @@ export default function ComparePage() {
     }
 
     const myReport = typeof stored === 'string' ? JSON.parse(stored) : stored
+    const myDoubanId = myReport.input?.doubanId || myReport.doubanId
+
+    if (!canCompareForFree(myDoubanId)) {
+      setShowPaywall(true)
+      return
+    }
 
     const myBookCount = myReport.realCounts?.books || myReport.bookCount || myReport.input?.books?.length || 0
     const myMovieCount = myReport.realCounts?.movies || myReport.movieCount || myReport.input?.movies?.length || 0
@@ -88,6 +89,8 @@ export default function ComparePage() {
 
       // Step 2: Comparison
       const result = await callApi<Record<string, unknown>>('/api/compare', {
+        doubanIdA: myDoubanId || undefined,
+        doubanIdB: (reportB as any).doubanId || (reportB as any).input?.doubanId || doubanIdB.trim(),
         personA: {
           name: myReport.doubanName || myReport.input?.doubanId || '你',
           mbtiType: myReport.mbti.type,
@@ -121,10 +124,14 @@ export default function ComparePage() {
       })
 
       setCompare(result.compareId as string, result)
-      recordCompareUsage()
+      recordCompareUsage(myDoubanId)
       Taro.navigateTo({ url: `/pages/compare-result/index?id=${result.compareId}` })
     } catch (err) {
-      setError(err instanceof Error ? err.message : '对比失败，请重试')
+      const msg = err instanceof Error ? err.message : '对比失败'
+      const hint = /(超时|timeout|fail|网络|连接)/i.test(msg)
+        ? '（分析对方数据约 30-60 秒，国内网络建议开启 VPN 后重试）'
+        : ''
+      setError(msg + hint)
     } finally {
       if (timerRef.current) clearInterval(timerRef.current)
       setIsLoading(false)
@@ -182,18 +189,32 @@ export default function ComparePage() {
             {error && (
               <View className='error-box'>
                 <Text className='error-text'>{error}</Text>
+                <View
+                  className='btn-retry'
+                  onClick={() => { setError(null); handleCompare() }}
+                >
+                  <Text className='btn-retry-text'>点击重试</Text>
+                </View>
               </View>
             )}
 
             <View className='card-glass hint-card'>
               <Text className='hint-text'>
-                对方的豆瓣标记需为公开状态 · 分析约需 25-35 秒
+                对方的豆瓣标记需为公开 · 分析约需 40-90 秒
               </Text>
-              {canCompareForFree() ? (
-                <Text className='hint-sub'>免费对比剩余 {getRemainingFreeCompares()} 次</Text>
-              ) : (
-                <Text className='hint-sub hint-paid'>免费次数已用完 · ¥{COMPARE_PRICE_CNY}/次</Text>
-              )}
+              <Text className='hint-sub'>国内网络可能较慢，建议开启 VPN 后使用</Text>
+              {(() => {
+                try {
+                  const stored = getReport(fromId)
+                  const r = stored ? (typeof stored === 'string' ? JSON.parse(stored) : stored) : null
+                  const dId = r?.input?.doubanId || r?.doubanId
+                  if (canCompareForFree(dId)) {
+                    const rem = getRemainingFreeCompares(dId)
+                    return <Text className='hint-sub'>免费对比剩余 {rem} 次{rem === '∞' ? '' : '（每人 1 次）'}</Text>
+                  }
+                } catch {}
+                return <Text className='hint-sub hint-paid'>免费次数已用完</Text>
+              })()}
             </View>
           </View>
         )}
@@ -223,25 +244,15 @@ export default function ComparePage() {
 
       {showPaywall && (
         <View className='paywall-overlay' onClick={() => setShowPaywall(false)}>
-          <View className='paywall-card' onClick={e => e.stopPropagation()}>
+          <View className='paywall-card paywall-simple' onClick={e => e.stopPropagation()}>
             <Text className='paywall-icon'>🔒</Text>
             <Text className='paywall-title'>对比次数已用完</Text>
             <Text className='paywall-desc'>
-              你已经免费对比了 {getCompareCount()} 次（每人 1 次免费额度）
+              每人 1 次免费额度，你已使用
             </Text>
-            <View className='paywall-price-box'>
-              <Text className='paywall-price'>¥{COMPARE_PRICE_CNY}</Text>
-              <Text className='paywall-unit'>/次</Text>
-            </View>
-            <Text className='paywall-sub'>解锁更多双人品味对比</Text>
-            <Image
-              className='paywall-qr'
-              src='https://app-theta-puce.vercel.app/images/tip-qrcode.jpg'
-              mode='aspectFit'
-            />
-            <Text className='paywall-qr-hint'>微信扫码支付 · 支付后联系作者解锁</Text>
+            <Text className='paywall-tip-cta'>觉得有意思？在结果页底部可赞赏支持作者 ☕</Text>
             <View className='paywall-close' onClick={() => setShowPaywall(false)}>
-              <Text className='paywall-close-text'>下次再说</Text>
+              <Text className='paywall-close-text'>知道了</Text>
             </View>
           </View>
         </View>

@@ -1,8 +1,10 @@
-import { useEffect, useState, useCallback, useRef } from 'react'
-import { View, Text, Canvas } from '@tarojs/components'
-import Taro, { useRouter } from '@tarojs/taro'
+import { useEffect, useState, useCallback } from 'react'
+import { View, Text } from '@tarojs/components'
+import Taro, { useRouter, useShareAppMessage } from '@tarojs/taro'
 import DualRadar from '@/components/dual-radar'
-import { getCompare } from '@/utils/storage'
+import { getCompare, setCompare } from '@/utils/storage'
+import { callApi } from '@/utils/api'
+import { saveCompareShare } from '@/utils/canvas-saver'
 import type { CompareData, PersonData, ComparisonData, MBTIDimension } from '@/utils/types'
 import './index.scss'
 
@@ -36,16 +38,28 @@ export default function CompareResultPage() {
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
+    if (!id) {
+      setError('缺少对比 ID')
+      return
+    }
     const stored = getCompare(id)
     if (stored) {
       try {
-        setData(typeof stored === 'string' ? JSON.parse(stored) : stored)
+        const parsed = typeof stored === 'string' ? JSON.parse(stored) : stored
+        setData(parsed)
+        return
       } catch {
         setError('对比数据损坏')
+        return
       }
-    } else {
-      setError('对比报告不存在')
     }
+    // 本地无数据时从 API 拉取（如分享链接、跨设备打开）
+    callApi<CompareData>(`/api/compare/${id}`, undefined, 'GET', { timeout: 15000 })
+      .then(remote => {
+        setData(remote)
+        setCompare(id, remote)
+      })
+      .catch(() => setError('对比报告不存在或已过期'))
   }, [id])
 
   if (error || !data) {
@@ -63,6 +77,11 @@ export default function CompareResultPage() {
   const { personA, personB, comparison } = data
   const matchColor = getMatchColor(comparison.matchScore)
 
+  useShareAppMessage(() => ({
+    title: `${personA.name}(${personA.mbtiType}) vs ${personB.name}(${personB.mbtiType}) 匹配度 ${comparison.matchScore}%！来测测你们的书影音 MBTI`,
+    path: `/pages/compare-result/index?id=${id}`,
+  }))
+
   return (
     <View className='compare-result-page'>
       <View className='cr-container'>
@@ -75,7 +94,7 @@ export default function CompareResultPage() {
 
         {/* Match Score Hero Card */}
         <View className='animate-fade-in-up'>
-          <CompareCard personA={personA} personB={personB} comparison={comparison} />
+          <CompareCard compareId={id} personA={personA} personB={personB} comparison={comparison} />
         </View>
 
         {/* Dimension Comparison */}
@@ -138,6 +157,43 @@ export default function CompareResultPage() {
           <Text className='section-content'>{comparison.chemistry}</Text>
         </View>
 
+        {/* 趣味彩蛋 */}
+        {(comparison.roastOneLiner || comparison.dateScene || comparison.dangerZone || comparison.memeLine || comparison.battleVerdict) && (
+          <View className='section-card card-glass animate-fade-in-up animate-delay-200'>
+            <Text className='section-title text-purple'>🎯 趣味彩蛋</Text>
+            {comparison.roastOneLiner && (
+              <View className='fun-item'>
+                <Text className='fun-label'>毒舌吐槽</Text>
+                <Text className='fun-content italic'>"{comparison.roastOneLiner}"</Text>
+              </View>
+            )}
+            {comparison.dateScene && (
+              <View className='fun-item'>
+                <Text className='fun-label'>最配的约会</Text>
+                <Text className='fun-content green'>💕 {comparison.dateScene}</Text>
+              </View>
+            )}
+            {comparison.dangerZone && (
+              <View className='fun-item'>
+                <Text className='fun-label'>危险雷区</Text>
+                <Text className='fun-content red'>⚠️ {comparison.dangerZone}</Text>
+              </View>
+            )}
+            {comparison.battleVerdict && (
+              <View className='fun-item'>
+                <Text className='fun-label'>品味战报</Text>
+                <Text className='fun-content blue'>🏆 {comparison.battleVerdict}</Text>
+              </View>
+            )}
+            {comparison.memeLine && (
+              <View className='fun-item fun-meme'>
+                <Text className='fun-label'>分享梗句</Text>
+                <Text className='fun-content meme'>"{comparison.memeLine}"</Text>
+              </View>
+            )}
+          </View>
+        )}
+
         {/* Shared Works */}
         {comparison.sharedWorks.length > 0 && (
           <View className='section-card card-glass animate-fade-in-up animate-delay-200'>
@@ -152,11 +208,11 @@ export default function CompareResultPage() {
         )}
 
         {/* Recommend Together */}
-        {comparison.recommendTogether.length > 0 && (
+        {(comparison.recommendTogether?.length ?? 0) > 0 && (
           <View className='section-card card-glass animate-fade-in-up animate-delay-300'>
             <Text className='section-title text-red'>💡 推荐你们一起</Text>
             <View className='rec-list'>
-              {comparison.recommendTogether.map((rec, i) => (
+              {(comparison.recommendTogether ?? []).map((rec, i) => (
                 <View
                   key={i}
                   className='rec-item'
@@ -209,11 +265,15 @@ export default function CompareResultPage() {
   )
 }
 
+const VERCEL_BASE = 'https://app-theta-puce.vercel.app'
+
 function CompareCard({
+  compareId,
   personA,
   personB,
   comparison,
 }: {
+  compareId: string
   personA: PersonData
   personB: PersonData
   comparison: ComparisonData
@@ -221,54 +281,17 @@ function CompareCard({
   const matchColor = getMatchColor(comparison.matchScore)
 
   const handleSave = useCallback(async () => {
-    try {
-      Taro.showLoading({ title: '生成中...' })
-      const query = Taro.createSelectorQuery()
-      query.select('#compareCardCanvas')
-        .fields({ node: true, size: true })
-        .exec(async (res) => {
-          if (!res?.[0]?.node) {
-            Taro.hideLoading()
-            return
-          }
-          const canvas = res[0].node
-          const ctx = canvas.getContext('2d')
-          const w = 600
-          const h = 500
-          const dpr = 2
-          canvas.width = w * dpr
-          canvas.height = h * dpr
-          ctx.scale(dpr, dpr)
-
-          drawCompareCard(ctx, w, h, personA, personB, comparison, matchColor)
-
-          setTimeout(() => {
-            Taro.canvasToTempFilePath({
-              canvas, width: w * dpr, height: h * dpr,
-              destWidth: w * dpr, destHeight: h * dpr,
-              fileType: 'png',
-              success: (result) => {
-                Taro.hideLoading()
-                Taro.saveImageToPhotosAlbum({
-                  filePath: result.tempFilePath,
-                  success: () => Taro.showToast({ title: '已保存到相册', icon: 'success' }),
-                  fail: () => Taro.showToast({ title: '请授权相册权限', icon: 'none' }),
-                })
-              },
-              fail: () => { Taro.hideLoading(); Taro.showToast({ title: '生成失败', icon: 'error' }) },
-            })
-          }, 200)
-        })
-    } catch {
-      Taro.hideLoading()
-    }
-  }, [personA, personB, comparison, matchColor])
+    await saveCompareShare('compareCard', { personA, personB, comparison })
+  }, [personA, personB, comparison])
 
   const handleCopy = useCallback(() => {
+    const shareUrl = `${VERCEL_BASE}/compare/${compareId}`
     Taro.setClipboardData({
-      data: `${personA.name}(${personA.mbtiType}) vs ${personB.name}(${personB.mbtiType}) 匹配度 ${comparison.matchScore}%！来测测你们的书影音 MBTI`,
+      data: shareUrl,
+      success: () => Taro.showToast({ title: '链接已复制', icon: 'success' }),
+      fail: () => Taro.showToast({ title: '复制失败', icon: 'none' }),
     })
-  }, [personA, personB, comparison])
+  }, [compareId])
 
   return (
     <View className='compare-card-wrap'>
@@ -313,14 +336,6 @@ function CompareCard({
         </View>
       </View>
 
-      <Canvas
-        type='2d'
-        id='compareCardCanvas'
-        canvasId='compareCardCanvas'
-        className='canvas-hidden'
-        style={{ width: '600px', height: '500px' }}
-      />
-
       <View className='cc-actions'>
         <View className='btn-save' onClick={handleSave}>
           <Text className='btn-action-text'>保存卡片</Text>
@@ -361,72 +376,4 @@ function DualDimensionBar({
       </View>
     </View>
   )
-}
-
-function drawCompareCard(
-  ctx: CanvasRenderingContext2D, w: number, h: number,
-  pA: PersonData, pB: PersonData, comp: ComparisonData, matchColor: string
-) {
-  const bg = ctx.createLinearGradient(0, 0, w, h)
-  bg.addColorStop(0, '#0f0c29')
-  bg.addColorStop(0.3, '#1a1a2e')
-  bg.addColorStop(0.6, '#16213e')
-  bg.addColorStop(1, '#0f3460')
-  ctx.fillStyle = bg
-  ctx.fillRect(0, 0, w, h)
-
-  let y = 40
-  ctx.textAlign = 'center'
-  ctx.fillStyle = '#6b7280'
-  ctx.font = '12px sans-serif'
-  ctx.fillText('品味双人对比', w / 2, y)
-  y += 50
-
-  // Person A
-  ctx.font = 'bold 32px sans-serif'
-  ctx.fillStyle = '#667eea'
-  ctx.fillText(pA.mbtiType, w / 4, y)
-
-  // Score
-  ctx.font = 'bold 40px sans-serif'
-  ctx.fillStyle = matchColor
-  ctx.fillText(String(comp.matchScore), w / 2, y)
-
-  // Person B
-  ctx.font = 'bold 32px sans-serif'
-  ctx.fillStyle = '#e94560'
-  ctx.fillText(pB.mbtiType, (w * 3) / 4, y)
-
-  y += 25
-  ctx.font = '11px sans-serif'
-  ctx.fillStyle = '#9ca3af'
-  ctx.fillText(pA.name, w / 4, y)
-  ctx.fillText('match', w / 2, y)
-  ctx.fillText(pB.name, (w * 3) / 4, y)
-
-  y += 18
-  ctx.font = '10px sans-serif'
-  ctx.fillStyle = '#6b7280'
-  ctx.fillText(pA.mbtiTitle, w / 4, y)
-  ctx.fillText(pB.mbtiTitle, (w * 3) / 4, y)
-
-  y += 30
-  ctx.fillStyle = matchColor
-  ctx.font = '13px sans-serif'
-  ctx.fillText(comp.matchTitle, w / 2, y)
-
-  y += 30
-  ctx.fillStyle = '#9ca3af'
-  ctx.font = '12px sans-serif'
-  const overview = comp.overview.slice(0, 80) + (comp.overview.length > 80 ? '...' : '')
-  ctx.fillText(overview, w / 2, y)
-
-  y = h - 30
-  ctx.fillStyle = '#4b5563'
-  ctx.font = '10px sans-serif'
-  ctx.textAlign = 'left'
-  ctx.fillText(getMatchLabel(comp.matchScore), 20, y)
-  ctx.textAlign = 'right'
-  ctx.fillStyle = '#667eea'
-  ctx.fillText('测测你们的书影音 MBTI →', w - 20, y)
 }

@@ -5,14 +5,21 @@ const VERCEL_BASE = 'https://app-theta-puce.vercel.app'
 export async function callApi<T = unknown>(
   path: string,
   body?: Record<string, unknown>,
-  method: 'GET' | 'POST' = 'POST'
+  method: 'GET' | 'POST' = 'POST',
+  opts?: { timeout?: number }
 ): Promise<T> {
+  const timeout = opts?.timeout ?? (
+    path.includes('/api/analyze') ? 120000
+    : path.includes('/api/compare') ? 90000
+    : path.includes('/api/share-unlock') || path.includes('/api/expand') ? 90000
+    : 60000
+  )
   const res = await Taro.request({
     url: `${VERCEL_BASE}${path}`,
     method,
     data: body,
     header: { 'Content-Type': 'application/json' },
-    timeout: 90000,
+    timeout,
   })
 
   if (res.statusCode >= 400) {

@@ -9,7 +9,6 @@ import {
   getCompareCount,
   getRemainingFree,
   recordCompare,
-  PRICE_CNY,
 } from "@/lib/compare-limit";
 
 const PROGRESS_MESSAGES = [
@@ -61,11 +60,6 @@ function CompareContent() {
   const handleCompare = async () => {
     if (!doubanIdB.trim() || !fromId) return;
 
-    if (!canCompareForFree()) {
-      setShowPaywall(true);
-      return;
-    }
-
     const stored = localStorage.getItem(`taste-report-${fromId}`);
     if (!stored) {
       setError("找不到你的报告数据，请先测试自己的书影音 MBTI");
@@ -73,6 +67,12 @@ function CompareContent() {
     }
 
     const myReport = JSON.parse(stored);
+    const myDoubanId = myReport.input?.doubanId || myReport.doubanId;
+
+    if (!canCompareForFree(myDoubanId)) {
+      setShowPaywall(true);
+      return;
+    }
 
     // Use the best available count: prefer realCounts (from page title), fallback to bookCount field
     const myBookCount = myReport.realCounts?.books || myReport.bookCount || myReport.input?.books?.length || 0;
@@ -108,6 +108,8 @@ function CompareContent() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          doubanIdA: myDoubanId || undefined,
+          doubanIdB: reportB.doubanId || reportB.input?.doubanId || doubanIdB.trim(),
           personA: {
             name: myReport.doubanName || myReport.input?.doubanId || "你",
             mbtiType: myReport.mbti.type,
@@ -157,7 +159,7 @@ function CompareContent() {
         `taste-compare-${result.compareId}`,
         JSON.stringify(result)
       );
-      recordCompare();
+      recordCompare(myDoubanId);
       router.push(`/compare/${result.compareId}`);
     } catch (err) {
       setError(err instanceof Error ? err.message : "对比失败，请重试");
@@ -226,24 +228,38 @@ function CompareContent() {
             </button>
 
             {error && (
-              <div className="p-3 rounded-xl bg-red-500/10 border border-red-500/30 text-red-400 text-sm text-center">
-                {error}
+              <div className="p-3 rounded-xl bg-red-500/10 border border-red-500/30 text-center space-y-3">
+                <p className="text-red-400 text-sm">{error}</p>
+                <button
+                  type="button"
+                  onClick={() => { setError(null); handleCompare(); }}
+                  className="px-4 py-2 rounded-lg text-sm font-medium bg-red-500/20 text-red-400 border border-red-500/40 hover:bg-red-500/30 transition-colors"
+                >
+                  点击重试
+                </button>
               </div>
             )}
 
             <div className="card-glass rounded-xl p-4 text-center space-y-1">
               <p className="text-xs text-gray-500">
-                对方的豆瓣标记需为公开状态 · 分析约需 25-35 秒
+                对方的豆瓣标记需为公开状态 · 分析约需 40-90 秒 · 国内建议开 VPN
               </p>
-              {canCompareForFree() ? (
-                <p className="text-[10px] text-gray-600">
-                  免费对比剩余 {getRemainingFree()} 次
-                </p>
-              ) : (
-                <p className="text-[10px] text-[#e94560]">
-                  免费次数已用完 · ¥{PRICE_CNY}/次
-                </p>
-              )}
+              {(() => {
+                const s = localStorage.getItem(`taste-report-${fromId}`);
+                const r = s ? (() => { try { return JSON.parse(s); } catch { return null; } })() : null;
+                const dId = r?.input?.doubanId || r?.doubanId;
+                const rem = getRemainingFree(dId);
+                if (canCompareForFree(dId)) {
+                  return (
+                    <p className="text-[10px] text-gray-600">
+                      免费对比剩余 {rem} 次{rem === "∞" ? "" : "（每人 1 次）"}
+                    </p>
+                  );
+                }
+                return (
+                  <p className="text-[10px] text-[#e94560]">免费次数已用完</p>
+                );
+              })()}
             </div>
           </div>
         )}

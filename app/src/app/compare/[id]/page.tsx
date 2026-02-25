@@ -44,6 +44,11 @@ interface ComparisonData {
     forB: CrossRecItem[];
   };
   recommendTogether?: CrossRecItem[];
+  roastOneLiner?: string;
+  dateScene?: string;
+  dangerZone?: string;
+  memeLine?: string;
+  battleVerdict?: string;
 }
 
 interface CompareData {
@@ -243,6 +248,45 @@ export default function CompareResultPage({
           </p>
         </div>
 
+        {/* 趣味彩蛋 */}
+        {(comparison.roastOneLiner || comparison.dateScene || comparison.dangerZone || comparison.memeLine || comparison.battleVerdict) && (
+          <div className="card-glass rounded-xl p-5 space-y-4 animate-fade-in-up animate-delay-200">
+            <h3 className="text-sm font-bold text-[#a78bfa]">
+              🎯 趣味彩蛋
+            </h3>
+            {comparison.roastOneLiner && (
+              <div className="space-y-1">
+                <span className="text-[10px] text-gray-500 uppercase tracking-wider">毒舌吐槽</span>
+                <p className="text-sm text-gray-200 italic">&ldquo;{comparison.roastOneLiner}&rdquo;</p>
+              </div>
+            )}
+            {comparison.dateScene && (
+              <div className="space-y-1">
+                <span className="text-[10px] text-gray-500 uppercase tracking-wider">最配的约会</span>
+                <p className="text-sm text-green-400/90">💕 {comparison.dateScene}</p>
+              </div>
+            )}
+            {comparison.dangerZone && (
+              <div className="space-y-1">
+                <span className="text-[10px] text-gray-500 uppercase tracking-wider">危险雷区</span>
+                <p className="text-sm text-[#e94560]/90">⚠️ {comparison.dangerZone}</p>
+              </div>
+            )}
+            {comparison.battleVerdict && (
+              <div className="space-y-1">
+                <span className="text-[10px] text-gray-500 uppercase tracking-wider">品味战报</span>
+                <p className="text-sm text-[#667eea]/90">🏆 {comparison.battleVerdict}</p>
+              </div>
+            )}
+            {comparison.memeLine && (
+              <div className="pt-2 border-t border-white/5">
+                <span className="text-[10px] text-gray-500 uppercase tracking-wider">分享梗句</span>
+                <p className="text-sm text-amber-300/90 mt-1 font-medium">&ldquo;{comparison.memeLine}&rdquo;</p>
+              </div>
+            )}
+          </div>
+        )}
+
         {/* Shared Works - Venn-like */}
         {comparison.sharedWorks.length > 0 && (
           <div className="card-glass rounded-xl p-5 space-y-3 animate-fade-in-up animate-delay-200">
@@ -362,26 +406,32 @@ function CompareCard({
   comparison: ComparisonData;
 }) {
   const cardRef = useRef<HTMLDivElement>(null);
+  const [saving, setSaving] = useState(false);
   const matchColor = getMatchColor(comparison.matchScore);
 
   const handleDownload = useCallback(async () => {
-    const card = cardRef.current;
-    if (!card) return;
+    if (saving) return;
+    setSaving(true);
     try {
-      const { default: html2canvas } = await import("html2canvas");
-      const canvas = await html2canvas(card, {
-        scale: 3,
-        backgroundColor: null,
-        useCORS: true,
+      const res = await fetch("/api/share-compare", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ personA, personB, comparison }),
       });
+      if (!res.ok) throw new Error("生成失败");
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.download = `MBTI对比-${personA.mbtiType}vs${personB.mbtiType}.png`;
-      link.href = canvas.toDataURL("image/png");
+      link.href = url;
       link.click();
+      URL.revokeObjectURL(url);
     } catch {
-      alert("下载失败，请截图保存");
+      alert("下载失败，请重试或截图保存");
+    } finally {
+      setSaving(false);
     }
-  }, [personA.mbtiType, personB.mbtiType]);
+  }, [personA, personB, comparison, saving]);
 
   const handleCopy = useCallback(() => {
     const url = window.location.href;
@@ -506,9 +556,10 @@ function CompareCard({
       <div className="flex gap-3 max-w-sm mx-auto">
         <button
           onClick={handleDownload}
-          className="flex-1 py-3 rounded-xl accent-gradient text-white font-medium text-sm hover:opacity-90 transition-opacity"
+          disabled={saving}
+          className="flex-1 py-3 rounded-xl accent-gradient text-white font-medium text-sm hover:opacity-90 transition-opacity disabled:opacity-70"
         >
-          保存卡片
+          {saving ? "生成中..." : "保存卡片"}
         </button>
         <button
           onClick={handleCopy}

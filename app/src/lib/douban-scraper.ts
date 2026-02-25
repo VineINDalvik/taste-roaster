@@ -518,50 +518,6 @@ async function scrapeReviews(
   return reviews;
 }
 
-async function scrapeDiaries(
-  userId: string,
-  maxPages: number = 10
-): Promise<{ title: string; content: string; date?: string }[]> {
-  const diaries: { title: string; content: string; date?: string }[] = [];
-  for (let page = 0; page < maxPages; page++) {
-    try {
-      const html = await fetchPage(
-        `https://www.douban.com/people/${userId}/notes?start=${page * 10}`
-      );
-      const $ = cheerio.load(html);
-      const items = $(".note-container .note-header-container, .klist .list-item, .article-list .item");
-      if (items.length === 0 && page === 0) break;
-      items.each((_, el) => {
-        const title = $(el).find("a.title, h3 a, a").first().text().trim();
-        const date = $(el).find(".pub-date, .time, span.date").text().trim();
-        if (title) diaries.push({ title, content: "", date: date || undefined });
-      });
-      if ($(".paginator .next a").length === 0) break;
-      await sleep(800 + Math.random() * 400);
-    } catch { break; }
-  }
-  return diaries;
-}
-
-async function scrapeStatuses(
-  userId: string
-): Promise<{ content: string; date?: string }[]> {
-  const statuses: { content: string; date?: string }[] = [];
-  try {
-    const html = await fetchPage(`https://www.douban.com/people/${userId}/statuses`);
-    const $ = cheerio.load(html);
-    $(".status-item, .new-status, .saying").each((_, el) => {
-      const content =
-        $(el).find(".status-content, .saying-text, blockquote").text().trim() ||
-        $(el).find("p").text().trim();
-      const date = $(el).find(".created_at, .pubtime, span.date").text().trim();
-      if (content && content.length > 5)
-        statuses.push({ content: content.slice(0, 300), date: date || undefined });
-    });
-  } catch { /* statuses page might not be accessible */ }
-  return statuses;
-}
-
 // ─── Public API ─────────────────────────────────────────────────
 
 /**
@@ -662,11 +618,7 @@ export async function scrapeDoubanQuick(userId: string): Promise<DoubanData> {
     throw new Error("未获取到任何数据，该用户可能设置了隐私保护");
   }
 
-  const [reviews, diaries, statuses] = await Promise.all([
-    scrapeReviews(userId).catch(() => [] as { title: string; content: string; type: string; rating?: number }[]),
-    scrapeDiaries(userId).catch(() => [] as { title: string; content: string; date?: string }[]),
-    scrapeStatuses(userId).catch(() => [] as { content: string; date?: string }[]),
-  ]);
+  const reviews = await scrapeReviews(userId).catch(() => [] as { title: string; content: string; type: string; rating?: number }[]);
 
   return {
     profile,
@@ -676,7 +628,7 @@ export async function scrapeDoubanQuick(userId: string): Promise<DoubanData> {
     fullBooks,
     fullMovies,
     fullMusic,
-    reviews, diaries, statuses,
+    reviews, diaries: [], statuses: [],
   };
 }
 
@@ -698,15 +650,11 @@ export async function scrapeDoubanFull(userId: string): Promise<DoubanData> {
   profile.realCounts.music = musicResult.realCount;
   await sleep(1000);
 
-  const [reviews, diaries, statuses] = await Promise.all([
-    scrapeReviews(userId).catch(() => [] as { title: string; content: string; type: string; rating?: number }[]),
-    scrapeDiaries(userId).catch(() => [] as { title: string; content: string; date?: string }[]),
-    scrapeStatuses(userId).catch(() => [] as { content: string; date?: string }[]),
-  ]);
+  const reviews = await scrapeReviews(userId).catch(() => [] as { title: string; content: string; type: string; rating?: number }[]);
 
   const totalItems =
     bookResult.items.length + movieResult.items.length + musicResult.items.length +
-    reviews.length + diaries.length + statuses.length;
+    reviews.length;
   if (totalItems === 0) {
     throw new Error("未获取到任何数据，该用户可能设置了隐私保护");
   }
@@ -719,6 +667,6 @@ export async function scrapeDoubanFull(userId: string): Promise<DoubanData> {
     fullBooks: bookResult.items,
     fullMovies: movieResult.items,
     fullMusic: musicResult.items,
-    reviews, diaries, statuses,
+    reviews, diaries: [], statuses: [],
   };
 }

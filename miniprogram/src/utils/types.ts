@@ -92,7 +92,6 @@ export interface ReportData {
   crossDomain?: string
   personality?: string
   blindSpots?: string
-  diaryInsight?: string
   recommendations?: RecommendationItem[]
 }
 
@@ -134,7 +133,12 @@ export interface ComparisonData {
   differences: { point: string; detail: string }[]
   chemistry: string
   sharedWorks: string[]
-  recommendTogether: { title: string; type: string; reason: string }[]
+  recommendTogether?: { title: string; type: string; reason: string }[]
+  roastOneLiner?: string
+  dateScene?: string
+  dangerZone?: string
+  memeLine?: string
+  battleVerdict?: string
 }
 
 export interface CompareData {

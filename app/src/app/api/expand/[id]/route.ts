@@ -70,7 +70,6 @@ export async function POST(req: NextRequest) {
         crossDomain: "",
         personality: "",
         blindSpots: "",
-        diaryInsight: "",
       })),
       generateTimeline(report).catch(() => ({
         months: [],

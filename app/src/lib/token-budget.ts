@@ -132,18 +132,7 @@ export function truncateForTokenBudget(input: TasteInput): TruncatedInput {
     return { input: result, wasTruncated: true, originalCounts };
   }
 
-  // Phase 3: Drop diary content (keep titles), drop statuses to 20
-  result = {
-    ...result,
-    diaries: (result.diaries ?? []).map((d) => ({ ...d, content: "" })),
-    statuses: (result.statuses ?? []).slice(0, 20),
-  };
-  current = estimateDataTokens(result);
-  if (current <= budget) {
-    return { input: result, wasTruncated: true, originalCounts };
-  }
-
-  // Phase 4: Keep highest-priority items. Progressively reduce.
+  // Phase 3: Keep highest-priority items. Progressively reduce.
   const caps = [500, 300, 200, 100];
   for (const cap of caps) {
     result = {
@@ -197,13 +186,11 @@ export function groupByMonth(input: TasteInput, months: number = 6) {
     books: string[];
     movies: string[];
     music: string[];
-    diaryTitles: string[];
     reviewSnippets: string[];
   }
 
   const buckets = new Map<string, MonthBucket>();
 
-  // Initialize buckets for last N months
   for (let i = 0; i < months; i++) {
     const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
     const key = monthKey(d);
@@ -211,7 +198,6 @@ export function groupByMonth(input: TasteInput, months: number = 6) {
       books: [],
       movies: [],
       music: [],
-      diaryTitles: [],
       reviewSnippets: [],
     });
   }
@@ -233,19 +219,6 @@ export function groupByMonth(input: TasteInput, months: number = 6) {
   addItem(input.movies, "movies");
   addItem(input.music, "music");
 
-  for (const diary of input.diaries ?? []) {
-    const d = parseDate(diary.date);
-    if (!d || d < cutoff) continue;
-    const key = monthKey(d);
-    const bucket = buckets.get(key);
-    if (bucket) bucket.diaryTitles.push(diary.title);
-  }
-
-  for (const review of input.reviews ?? []) {
-    // Reviews don't always have dates, skip them in timeline grouping
-  }
-
-  // Convert to sorted array (newest first)
   const sortedKeys = [...buckets.keys()].sort().reverse();
   return sortedKeys
     .map((key) => ({
@@ -254,6 +227,6 @@ export function groupByMonth(input: TasteInput, months: number = 6) {
     }))
     .filter(
       (m) =>
-        m.books.length + m.movies.length + m.music.length + m.diaryTitles.length > 0
+        m.books.length + m.movies.length + m.music.length > 0
     );
 }

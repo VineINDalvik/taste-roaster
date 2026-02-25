@@ -6,7 +6,7 @@ import { resetUsage, getAccumulatedUsage } from "@/lib/openai";
 import { getCachedAnalyze, cacheAnalyze } from "@/lib/kv";
 import type { TasteInput } from "@/lib/types";
 
-export const maxDuration = 60;
+export const maxDuration = 120;
 
 export async function POST(req: NextRequest) {
   if (process.env.NEXT_PUBLIC_DEV_MOCK === "true") {

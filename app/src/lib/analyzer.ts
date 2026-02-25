@@ -11,10 +11,9 @@ import {
   RECOMMENDATION_PROMPT,
   formatItems,
   formatReviews,
-  formatDiaries,
-  formatStatuses,
 } from "./prompts";
 import { truncateForTokenBudget, groupByMonth } from "./token-budget";
+import { deriveMbtiType, fixMbtiInText } from "./mbti-utils";
 import type {
   TasteInput,
   TasteReport,
@@ -120,14 +119,10 @@ function buildPromptData(
     movieCount: String(input.movies.length),
     musicCount: String(input.music.length),
     reviewCount: String(input.reviews?.length ?? 0),
-    diaryCount: String(input.diaries?.length ?? 0),
-    statusCount: String(input.statuses?.length ?? 0),
     books: formatItems(input.books),
     movies: formatItems(input.movies),
     music: formatItems(input.music),
     reviews: formatReviews(input.reviews ?? []),
-    diaries: formatDiaries(input.diaries ?? []),
-    statuses: formatStatuses(input.statuses ?? []),
   };
 }
 
@@ -166,7 +161,7 @@ export async function generateBasicReport(
   const parsed = safeParseJSON(text);
 
   const mbti: CulturalMBTI = {
-    type: parsed.mbti?.type ?? "INFP",
+    type: "", // set below from dimensions (canonical)
     title: parsed.mbti?.title ?? "文化探索者",
     dimensions: {
       ie: {
@@ -190,12 +185,14 @@ export async function generateBasicReport(
         evidence: parsed.mbti?.dimensions?.jp?.evidence ?? "",
       },
     },
-    summary: parsed.mbti?.summary ?? "",
+    summary: "", // set below after we have mbti.type
   };
+  mbti.type = deriveMbtiType(mbti.dimensions);
+  mbti.summary = fixMbtiInText(parsed.mbti?.summary ?? "", mbti.type);
 
   return {
     mbti,
-    roast: parsed.roast ?? "数据太少，品味成谜。",
+    roast: fixMbtiInText(parsed.roast ?? "数据太少，品味成谜。", mbti.type),
     radar: {
       wenqing: parsed.radar?.wenqing ?? 50,
       emo: parsed.radar?.emo ?? 50,
@@ -204,7 +201,7 @@ export async function generateBasicReport(
       shangtou: parsed.radar?.shangtou ?? 50,
       chouxiang: parsed.radar?.chouxiang ?? 50,
     },
-    summary: parsed.summary ?? "",
+    summary: fixMbtiInText(parsed.summary ?? "", mbti.type),
   };
 }
 
@@ -217,7 +214,6 @@ export async function generatePremiumReport(
   crossDomain: string;
   personality: string;
   blindSpots: string;
-  diaryInsight: string;
 }> {
   const { input: truncated, wasTruncated, originalCounts } = truncateForTokenBudget(report.input);
   const openai = getOpenAI();
@@ -231,13 +227,11 @@ export async function generatePremiumReport(
   const hasBooks = (truncated.books?.length ?? 0) > 0;
   const hasMovies = (truncated.movies?.length ?? 0) > 0;
   const hasMusic = (truncated.music?.length ?? 0) > 0;
-  const hasDiaryOrStatus = ((truncated.diaries?.length ?? 0) + (truncated.statuses?.length ?? 0)) > 0;
 
   const skipHints: string[] = [];
   if (!hasBooks) skipHints.push('bookAnalysis返回""');
   if (!hasMovies) skipHints.push('movieAnalysis返回""');
   if (!hasMusic) skipHints.push('musicAnalysis返回""');
-  if (!hasDiaryOrStatus) skipHints.push('diaryInsight返回""');
 
   let prompt = fillTemplate(PREMIUM_ANALYSIS_PROMPT, data);
   if (skipHints.length > 0) {
@@ -256,14 +250,22 @@ export async function generatePremiumReport(
     temperature: 0,
     response_format: { type: "json_object" },
   });
-  return safeParseJSON(text) as {
+  const out = safeParseJSON(text) as {
     bookAnalysis: string;
     movieAnalysis: string;
     musicAnalysis: string;
     crossDomain: string;
     personality: string;
     blindSpots: string;
-    diaryInsight: string;
+  };
+  const correct = report.mbti.type;
+  return {
+    bookAnalysis: fixMbtiInText(out.bookAnalysis, correct),
+    movieAnalysis: fixMbtiInText(out.movieAnalysis, correct),
+    musicAnalysis: fixMbtiInText(out.musicAnalysis, correct),
+    crossDomain: fixMbtiInText(out.crossDomain, correct),
+    personality: fixMbtiInText(out.personality, correct),
+    blindSpots: fixMbtiInText(out.blindSpots, correct),
   };
 }
 
@@ -290,10 +292,8 @@ export async function generateTimeline(
     if (m.books.length > 0) monthlyData += `- 读了：${m.books.join("、")}\n`;
     if (m.movies.length > 0) monthlyData += `- 看了：${m.movies.join("、")}\n`;
     if (m.music.length > 0) monthlyData += `- 听了：${m.music.join("、")}\n`;
-    if (m.diaryTitles.length > 0)
-      monthlyData += `- 日记：${m.diaryTitles.join("、")}\n`;
     if (
-      m.books.length + m.movies.length + m.music.length + m.diaryTitles.length === 0
+      m.books.length + m.movies.length + m.music.length === 0
     )
       monthlyData += `- (本月无记录)\n`;
   }
@@ -335,10 +335,11 @@ export async function generateTimeline(
     }
   );
 
+  const correct = report.mbti.type;
   return {
     months,
-    trend: parsed.trend ?? "",
-    prediction: parsed.prediction ?? "",
+    trend: fixMbtiInText(parsed.trend ?? "", correct),
+    prediction: fixMbtiInText(parsed.prediction ?? "", correct),
   };
 }
 
@@ -387,11 +388,12 @@ export async function generateRecommendations(
     ...report.input.music.map((m) => m.title),
   ]);
 
+  const correct = report.mbti.type;
   return (parsed.recommendations ?? []).map(
     (r: { title: string; type: string; reason: string; matchScore: number }) => ({
       title: r.title,
       type: r.type as "book" | "movie" | "music",
-      reason: r.reason,
+      reason: fixMbtiInText(r.reason, correct),
       matchScore: r.matchScore ?? 70,
       alreadyConsumed: allTitles.has(r.title),
     })
@@ -413,6 +415,11 @@ export async function generateComparison(
     forA: { title: string; type: string; reason: string }[];
     forB: { title: string; type: string; reason: string }[];
   };
+  roastOneLiner?: string;
+  dateScene?: string;
+  dangerZone?: string;
+  memeLine?: string;
+  battleVerdict?: string;
 }> {
   const { COMPARE_SYSTEM_PROMPT, COMPARE_PROMPT } = await import("./prompts");
   const openai = getOpenAI();
@@ -480,5 +487,10 @@ export async function generateComparison(
     chemistry: parsed.chemistry ?? "",
     sharedWorks: parsed.sharedWorks ?? [],
     crossRecommend: parsed.crossRecommend ?? { forA: [], forB: [] },
+    roastOneLiner: parsed.roastOneLiner ?? undefined,
+    dateScene: parsed.dateScene ?? undefined,
+    dangerZone: parsed.dangerZone ?? undefined,
+    memeLine: parsed.memeLine ?? undefined,
+    battleVerdict: parsed.battleVerdict ?? undefined,
   };
 }

@@ -34,8 +34,6 @@ export async function GET(
     movieCount: report.input.movies.length,
     musicCount: report.input.music.length,
     reviewCount: report.input.reviews?.length ?? 0,
-    diaryCount: report.input.diaries?.length ?? 0,
-    statusCount: report.input.statuses?.length ?? 0,
   };
 
   if (report.isPremium) {

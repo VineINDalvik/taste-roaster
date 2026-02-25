@@ -90,7 +90,6 @@ interface ReportData {
   crossDomain?: string;
   personality?: string;
   blindSpots?: string;
-  diaryInsight?: string;
   recommendations?: RecommendationItem[];
 }
 
@@ -129,14 +128,18 @@ function deriveMbtiType(dims: {
   ).toUpperCase();
 }
 
+const MBTI_TYPES = ["INTJ", "INTP", "ENTJ", "ENTP", "INFJ", "INFP", "ENFJ", "ENFP", "ISTJ", "ISTP", "ESTJ", "ESTP", "ISFJ", "ISFP", "ESFJ", "ESFP"];
+
 function fixMbtiInText(
   text: string | undefined,
-  aiType: string | undefined,
+  _aiType: string | undefined,
   correctType: string
 ): string {
-  if (!text) return "";
-  if (!aiType || aiType === correctType) return text;
-  return text.replaceAll(aiType, correctType).replaceAll(aiType.toLowerCase(), correctType);
+  if (!text || !correctType) return text ?? "";
+  return MBTI_TYPES.reduce(
+    (s, t) => (t !== correctType ? s.replaceAll(new RegExp(t, "gi"), correctType) : s),
+    text
+  );
 }
 
 export default function ResultPage({
@@ -157,6 +160,7 @@ export default function ResultPage({
   const [showInviteModal, setShowInviteModal] = useState(false);
   const [basicPaid, setBasicPaid] = useState(false);
   const [deepPaid, setDeepPaid] = useState(false);
+  const [showTipModal, setShowTipModal] = useState(false);
 
   const mbtiType = useMemo(() => {
     if (!report?.mbti?.dimensions) return report?.mbti?.type || "????";
@@ -181,6 +185,7 @@ export default function ResultPage({
   );
   const hasTimeline = !!(report?.timelineMonths?.length);
   const [expandFailed, setExpandFailed] = useState(false);
+  const [deepUnlockFailed, setDeepUnlockFailed] = useState(false);
 
   useEffect(() => {
     const stored = localStorage.getItem(`taste-report-${id}`);
@@ -220,7 +225,8 @@ export default function ResultPage({
       report?.input &&
       deepPaid &&
       !isDeepUnlocked &&
-      !unlocking
+      !unlocking &&
+      !deepUnlockFailed
     ) {
       handleDeepUnlock();
     }
@@ -296,6 +302,7 @@ export default function ResultPage({
     }
 
     setUnlocking(true);
+    setDeepUnlockFailed(false);
     setUnlockStep(0);
     setFunFact(FUN_FACTS[Math.floor(Math.random() * FUN_FACTS.length)]);
 
@@ -334,13 +341,13 @@ export default function ResultPage({
         crossDomain: data.crossDomain,
         personality: data.personality,
         blindSpots: data.blindSpots,
-        diaryInsight: data.diaryInsight,
         recommendations: data.recommendations,
       };
       setReport(updated);
       localStorage.setItem(`taste-report-${id}`, JSON.stringify(updated));
     } catch (err) {
-      alert(err instanceof Error ? err.message : "解锁失败");
+      setDeepUnlockFailed(true);
+      alert(err instanceof Error ? err.message : "加载失败，请重试");
     } finally {
       clearInterval(stepInterval.current);
       setUnlocking(false);
@@ -559,27 +566,35 @@ export default function ResultPage({
                     <li className="flex items-start gap-2"><span className="text-[#e94560]">✦</span> 跨领域品味关联分析</li>
                     <li className="flex items-start gap-2"><span className="text-[#e94560]">✦</span> {mbtiType} 深度人格画像</li>
                     <li className="flex items-start gap-2"><span className="text-[#e94560]">✦</span> 品味盲区诊断</li>
-                    <li className="flex items-start gap-2"><span className="text-[#e94560]">✦</span> 日记与动态解读</li>
                     <li className="flex items-start gap-2"><span className="text-[#e94560]">✦</span> AI 专属推荐</li>
                   </ul>
                   <div className="rounded-xl p-3" style={{ background: "rgba(233,69,96,0.08)", border: "1px solid rgba(233,69,96,0.2)" }}>
                     <span className="text-2xl font-black text-[#e94560]">¥{PRICE_DEEP}</span>
                     <span className="text-xs text-gray-400 ml-1">/份</span>
                   </div>
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src="/images/tip-qrcode.jpg" alt="支付二维码" className="w-36 h-36 mx-auto rounded-xl" />
-                  <p className="text-[10px] text-gray-500">微信扫码支付</p>
                   <button
                     onClick={() => { handleDeepUnlockPaid(); handleDeepUnlock(); }}
                     className="w-full py-3 rounded-xl bg-gradient-to-r from-[#e94560] to-[#764ba2] text-white font-medium hover:opacity-90 transition-opacity"
                   >
                     已支付？点击解锁
                   </button>
-                  <p className="text-xs text-gray-500">分析约需 15-20 秒</p>
+                  <p className="text-xs text-gray-500">分析约需 20-40 秒 · 国内建议开 VPN</p>
                 </div>
               </div>
             ) : unlocking ? (
               <UnlockingOverlay step={unlockStep} funFact={funFact} />
+            ) : deepUnlockFailed ? (
+              <div className="card-glass rounded-xl p-5 text-center space-y-3 animate-fade-in-up animate-delay-300">
+                <div className="text-xl">🔮</div>
+                <p className="text-sm text-gray-400">加载失败，网络可能较慢</p>
+                <p className="text-xs text-gray-500">建议开启 VPN 后重试</p>
+                <button
+                  onClick={handleDeepUnlock}
+                  className="mt-3 px-6 py-2 rounded-xl bg-gradient-to-r from-[#e94560] to-[#764ba2] text-white text-sm font-medium"
+                >
+                  点击重试
+                </button>
+              </div>
             ) : (
               <div className="card-glass rounded-xl p-5 text-center space-y-3 animate-fade-in-up animate-delay-300">
                 <div className="text-xl animate-pulse">🔮</div>
@@ -607,21 +622,6 @@ export default function ResultPage({
               title="品味盲区"
               content={ft(report.blindSpots)}
             />
-            {report.diaryInsight ? (
-              <AnalysisSection
-                icon="📝"
-                title="日记与动态解读"
-                content={ft(report.diaryInsight)}
-              />
-            ) : (
-              <div className="card-glass rounded-xl p-5 space-y-2">
-                <h3 className="text-sm font-bold text-white flex items-center gap-2">
-                  <span>📝</span> 日记与动态解读
-                </h3>
-                <p className="text-xs text-gray-500">暂无日记/动态数据，或需重新生成深度解读以获取此板块</p>
-              </div>
-            )}
-
             {/* Recommendations with Douban links */}
             {report.recommendations && report.recommendations.length > 0 && (
               <div className="card-glass rounded-xl p-5 space-y-3">
@@ -697,7 +697,7 @@ export default function ResultPage({
             <h2 className="text-sm font-bold text-gray-400 flex items-center gap-2">
               <span className="text-[#667eea]">🌐</span> 探索更多
             </h2>
-            <div className="grid grid-cols-3 gap-2">
+            <div className="grid grid-cols-3 gap-2 w-full">
               {[
                 { icon: "🎧", name: "网易云音乐", desc: "听歌品味分析", color: "#e94560", badge: "即将上线" },
                 { icon: "📖", name: "微信读书", desc: "阅读品味画像", color: "#667eea", badge: "即将上线" },
@@ -708,7 +708,7 @@ export default function ResultPage({
                   href={(item as any).href || undefined}
                   target={(item as any).href ? "_blank" : undefined}
                   rel={(item as any).href ? "noopener noreferrer" : undefined}
-                  className={`card-glass rounded-xl p-3 space-y-1.5 relative overflow-hidden ${(item as any).href ? "cursor-pointer hover:bg-white/[0.06] transition-colors" : "cursor-default"}`}
+                  className={`card-glass rounded-xl p-3 pr-12 space-y-1.5 relative overflow-visible min-w-0 ${(item as any).href ? "cursor-pointer hover:bg-white/[0.06] transition-colors" : "cursor-default"}`}
                 >
                   <div className="flex items-center gap-2">
                     <span className="text-base">{item.icon}</span>
@@ -741,10 +741,11 @@ export default function ResultPage({
             <img
               src="/images/tip-qrcode.jpg"
               alt="赞赏二维码"
-              className="w-40 h-40 mx-auto rounded-xl"
+              className="w-40 h-40 mx-auto rounded-xl cursor-pointer hover:opacity-90 transition-opacity"
+              onClick={() => setShowTipModal(true)}
             />
             <p className="text-[10px] text-gray-500">
-              长按识别 / 扫码赞赏
+              点击放大 · 用微信扫一扫识别赞赏
             </p>
           </div>
         </div>
@@ -769,6 +770,24 @@ export default function ResultPage({
           report={report}
           onClose={() => setShowInviteModal(false)}
         />
+      )}
+
+      {showTipModal && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-6"
+          onClick={() => setShowTipModal(false)}
+        >
+          <div className="max-w-sm w-full text-center" onClick={(e) => e.stopPropagation()}>
+            <p className="text-white text-sm mb-4">用微信扫一扫识别赞赏</p>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src="/images/tip-qrcode.jpg"
+              alt="赞赏二维码"
+              className="w-72 h-72 mx-auto rounded-2xl"
+            />
+            <p className="text-gray-400 text-xs mt-4">点击空白处关闭</p>
+          </div>
+        </div>
       )}
     </main>
   );

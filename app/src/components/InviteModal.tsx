@@ -44,6 +44,7 @@ export default function InviteModal({ reportId, report, onClose }: Props) {
         body: JSON.stringify({
           name:
             report.doubanName || report.input?.doubanId || "神秘用户",
+          doubanId: report.input?.doubanId,
           mbtiType: report.mbti.type,
           mbtiTitle: report.mbti.title,
           dimensions: report.mbti.dimensions,

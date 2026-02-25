@@ -4,9 +4,10 @@ import {
   generateRecommendations,
 } from "@/lib/analyzer";
 import { resetUsage, getAccumulatedUsage } from "@/lib/openai";
+import { getCachedShareUnlock, cacheShareUnlock } from "@/lib/kv";
 import type { TasteReport, TasteInput, CulturalMBTI } from "@/lib/types";
 
-export const maxDuration = 60;
+export const maxDuration = 90;
 
 /**
  * Share-unlock: generates cross-domain, personality, blindSpots, recommendations.
@@ -32,6 +33,16 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    const doubanId = report.input.doubanId;
+    if (doubanId) {
+      const cached = await getCachedShareUnlock(doubanId);
+      if (cached) {
+        console.log(`[Cache HIT] share-unlock:${doubanId}`);
+        return NextResponse.json({ ...cached, _cached: true });
+      }
+      console.log(`[Cache MISS] share-unlock:${doubanId}`);
+    }
+
     const fullReport: TasteReport = {
       id: body.id ?? "temp",
       createdAt: body.createdAt ?? new Date().toISOString(),
@@ -52,14 +63,19 @@ export async function POST(req: NextRequest) {
       generateRecommendations(fullReport),
     ]);
 
-    return NextResponse.json({
+    const result = {
       crossDomain: premium.crossDomain,
       personality: premium.personality,
       blindSpots: premium.blindSpots,
-      diaryInsight: premium.diaryInsight,
       recommendations: recommendations.filter((r) => !r.alreadyConsumed),
       _usage: getAccumulatedUsage(),
-    });
+    };
+
+    if (doubanId) {
+      cacheShareUnlock(doubanId, result);
+    }
+
+    return NextResponse.json(result);
   } catch (error) {
     console.error("Share unlock error:", error);
     const message =

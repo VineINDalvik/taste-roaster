@@ -1,5 +1,6 @@
 import { ImageResponse } from "next/og";
 import { NextRequest } from "next/server";
+import { fixMbtiInText } from "@/lib/mbti-utils";
 
 export const runtime = "nodejs";
 export const maxDuration = 30;
@@ -69,11 +70,12 @@ export async function POST(req: NextRequest) {
   try {
     const data: ReportData = await req.json();
     const fonts = await loadFonts();
+    const correctType = data.mbtiType || "";
 
     const sections = [
-      { text: data.bookAnalysis, theme: SECTION_THEMES[0] },
-      { text: data.movieAnalysis, theme: SECTION_THEMES[1] },
-      { text: data.musicAnalysis, theme: SECTION_THEMES[2] },
+      { text: fixMbtiInText(data.bookAnalysis, correctType), theme: SECTION_THEMES[0] },
+      { text: fixMbtiInText(data.movieAnalysis, correctType), theme: SECTION_THEMES[1] },
+      { text: fixMbtiInText(data.musicAnalysis, correctType), theme: SECTION_THEMES[2] },
     ].filter((s): s is { text: string; theme: typeof SECTION_THEMES[0] } => !!s.text);
 
     // Height at 2x: content width ~688px at 26px font ≈ 26 chars/line
@@ -90,8 +92,9 @@ export async function POST(req: NextRequest) {
     const summaryH = Math.max(1, Math.ceil((data.summary?.length || 0) / CW)) * 40;
     const sectionH = sections.reduce((sum, s) => sum + countSentH(s.text) + 124, 0);
     const statsH = 130;
+    const footerH = 40 + 28 + 44 + 64;
     const fixedH = 72 + 40 + 110 + 12 + 40 + 36 + 68 + 80 + 120;
-    const height = Math.min(Math.max(1000, fixedH + roastH + statsH + summaryH + sectionH + 40), 12000);
+    const height = Math.min(Math.max(1000, fixedH + roastH + statsH + summaryH + sectionH + footerH), 12000);
 
     const stats = [
       { val: data.bookCount, label: "本书", icon: "📚", color: "#fbbf24" },
@@ -118,7 +121,7 @@ export async function POST(req: NextRequest) {
             </div>
           ))}
 
-          <div style={{ display: "flex", flexDirection: "column", padding: "72px 56px 48px", position: "relative", zIndex: 1 }}>
+          <div style={{ display: "flex", flexDirection: "column", padding: "72px 56px 80px", position: "relative", zIndex: 1 }}>
             <div style={{ display: "flex", position: "absolute", top: 0, left: 56, right: 56, height: 4, background: "linear-gradient(90deg, transparent, rgba(102,126,234,0.4), rgba(233,69,96,0.4), transparent)" }} />
 
             <div style={{ display: "flex", justifyContent: "center", fontSize: 24, color: "#6b7280", marginBottom: 40 }}>
@@ -135,7 +138,7 @@ export async function POST(req: NextRequest) {
 
             <div style={{ display: "flex", justifyContent: "center", background: "rgba(255,255,255,0.03)", border: "2px solid rgba(255,255,255,0.06)", borderRadius: 20, padding: "24px 32px", marginBottom: 40 }}>
               <div style={{ display: "flex", fontSize: 26, color: "#d1d5db", textAlign: "center", lineHeight: 1.6, fontStyle: "italic" }}>
-                &ldquo;{data.roast}&rdquo;
+                &ldquo;{fixMbtiInText(data.roast, correctType)}&rdquo;
               </div>
             </div>
 
@@ -150,7 +153,7 @@ export async function POST(req: NextRequest) {
             </div>
 
             <div style={{ display: "flex", fontSize: 24, color: "#9ca3af", lineHeight: 1.7, marginBottom: 44 }}>
-              {data.summary}
+              {fixMbtiInText(data.summary, correctType)}
             </div>
 
             <div style={{ display: "flex", alignItems: "center", gap: 20, marginBottom: 36 }}>

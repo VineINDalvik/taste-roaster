@@ -91,6 +91,23 @@
 .error-text {
   color: #f87171;
   font-size: 26rpx;
+  word-break: break-all;
+  margin-bottom: 16rpx;
+}
+
+.btn-retry {
+  padding: 16rpx 32rpx;
+  border-radius: 16rpx;
+  background: rgba(233, 69, 96, 0.15);
+  border: 1px solid rgba(233, 69, 96, 0.4);
+  text-align: center;
+  margin-top: 12rpx;
+}
+
+.btn-retry-text {
+  font-size: 26rpx;
+  color: #e94560;
+  font-weight: 500;
 }
 
 .hint-card {
@@ -252,6 +269,13 @@
 .paywall-sub {
   font-size: 24rpx;
   color: #d1d5db;
+}
+
+.paywall-simple .paywall-tip-cta {
+  font-size: 24rpx;
+  color: #9ca3af;
+  text-align: center;
+  margin: 8rpx 0;
 }
 
 .paywall-qr {

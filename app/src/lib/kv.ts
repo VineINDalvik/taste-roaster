@@ -30,9 +30,11 @@ const INVITE_TTL = 7 * 24 * 60 * 60; // 7 days
 const COMPARE_TTL = 30 * 24 * 60 * 60; // 30 days
 const ANALYZE_TTL = 7 * 24 * 60 * 60; // 7 days
 const EXPAND_TTL = 7 * 24 * 60 * 60; // 7 days
+const SHARE_UNLOCK_TTL = 7 * 24 * 60 * 60; // 7 days
 
 export interface InviteData {
   name: string;
+  doubanId?: string; // 用于内测账号无限次判定
   mbtiType: string;
   mbtiTitle: string;
   dimensions: Record<string, { letter: string; score: number; evidence: string }>;
@@ -124,5 +126,65 @@ export async function getCachedExpand(doubanId: string): Promise<any | null> {
   } catch (e) {
     console.error("Cache expand read failed:", e);
     return null;
+  }
+}
+
+// --- Share-unlock cache (by douban ID) ---
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export async function cacheShareUnlock(doubanId: string, data: any): Promise<void> {
+  if (!isKvConfigured()) return;
+  try {
+    const r = await getRedis();
+    await r.set(`share-unlock:${doubanId}`, JSON.stringify(data), { EX: SHARE_UNLOCK_TTL });
+  } catch (e) {
+    console.error("Cache share-unlock write failed:", e);
+  }
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export async function getCachedShareUnlock(doubanId: string): Promise<any | null> {
+  if (!isKvConfigured()) return null;
+  try {
+    const r = await getRedis();
+    const raw = await r.get(`share-unlock:${doubanId}`);
+    if (!raw) return null;
+    return JSON.parse(raw);
+  } catch (e) {
+    console.error("Cache share-unlock read failed:", e);
+    return null;
+  }
+}
+
+// --- Compare cache (by doubanId pair) ---
+
+/** Cache key: normalized pair so A:B and B:A hit same cache */
+export function compareCacheKey(doubanIdA: string, doubanIdB: string): string {
+  const [a, b] = [doubanIdA.trim(), doubanIdB.trim()];
+  return a <= b ? `compare-gen:${a}:${b}` : `compare-gen:${b}:${a}`;
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export async function getCachedCompareResult(cacheKey: string): Promise<any | null> {
+  if (!isKvConfigured()) return null;
+  try {
+    const r = await getRedis();
+    const raw = await r.get(cacheKey);
+    if (!raw) return null;
+    return JSON.parse(raw);
+  } catch (e) {
+    console.error("Cache compare read failed:", e);
+    return null;
+  }
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export async function cacheCompareResult(cacheKey: string, data: any): Promise<void> {
+  if (!isKvConfigured()) return;
+  try {
+    const r = await getRedis();
+    await r.set(cacheKey, JSON.stringify(data), { EX: COMPARE_TTL });
+  } catch (e) {
+    console.error("Cache compare write failed:", e);
   }
 }

@@ -73,7 +73,8 @@ export default function InvitePage({
   const handleAccept = async () => {
     if (!doubanId.trim() || !inviter?.full) return;
 
-    if (!canCompareForFree()) {
+    const inviterDoubanId = (inviter.full as { doubanId?: string })?.doubanId;
+    if (!canCompareForFree(inviterDoubanId)) {
       setShowPaywall(true);
       return;
     }
@@ -118,6 +119,8 @@ export default function InvitePage({
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          doubanIdA: inviterDoubanId,
+          doubanIdB: reportB.doubanId || reportB.input?.doubanId || doubanId.trim(),
           personA: {
             name: personA.name,
             mbtiType: personA.mbtiType,
@@ -161,7 +164,7 @@ export default function InvitePage({
         `taste-compare-${result.compareId}`,
         JSON.stringify(result)
       );
-      recordCompare();
+      recordCompare(inviterDoubanId);
       router.push(`/compare/${result.compareId}`);
     } catch (err) {
       setError(err instanceof Error ? err.message : "对比失败，请重试");

@@ -2,10 +2,16 @@ import { NextRequest, NextResponse } from "next/server";
 import { v4 as uuidv4 } from "uuid";
 import { generateComparison } from "@/lib/analyzer";
 import { resetUsage, getAccumulatedUsage } from "@/lib/openai";
-import { saveCompare, isKvConfigured } from "@/lib/kv";
+import {
+  saveCompare,
+  isKvConfigured,
+  compareCacheKey,
+  getCachedCompareResult,
+  cacheCompareResult,
+} from "@/lib/kv";
 import type { TasteReport, CulturalMBTI, RadarData } from "@/lib/types";
 
-export const maxDuration = 30;
+export const maxDuration = 60;
 
 interface PersonSummary {
   name: string;
@@ -35,9 +41,11 @@ export async function POST(req: NextRequest) {
 
   try {
     const body = await req.json();
-    const { personA, personB } = body as {
+    const { personA, personB, doubanIdA, doubanIdB } = body as {
       personA: PersonSummary;
       personB: PersonSummary;
+      doubanIdA?: string;
+      doubanIdB?: string;
     };
 
     if (!personA?.mbtiType || !personB?.mbtiType) {
@@ -45,6 +53,25 @@ export async function POST(req: NextRequest) {
         { error: "缺少双方的 MBTI 数据" },
         { status: 400 }
       );
+    }
+
+    // Check compare cache when both doubanIds available
+    if (doubanIdA && doubanIdB && isKvConfigured()) {
+      const cacheKey = compareCacheKey(doubanIdA, doubanIdB);
+      const cached = await getCachedCompareResult(cacheKey);
+      if (cached) {
+        console.log(`[Cache HIT] compare:${doubanIdA}:${doubanIdB}`);
+        const compareId = uuidv4();
+        const result = {
+          compareId,
+          personA: cached.personA,
+          personB: cached.personB,
+          comparison: cached.comparison,
+        };
+        await saveCompare(compareId, result);
+        return NextResponse.json({ ...result, _cached: true });
+      }
+      console.log(`[Cache MISS] compare:${doubanIdA}:${doubanIdB}`);
     }
 
     // Build minimal TasteReport for comparison
@@ -132,6 +159,14 @@ export async function POST(req: NextRequest) {
     if (isKvConfigured()) {
       try {
         await saveCompare(compareId, result);
+        if (doubanIdA && doubanIdB) {
+          const cacheKey = compareCacheKey(doubanIdA, doubanIdB);
+          await cacheCompareResult(cacheKey, {
+            personA: result.personA,
+            personB: result.personB,
+            comparison: result.comparison,
+          });
+        }
       } catch (e) {
         console.warn("Failed to save compare to KV:", e);
       }
