@@ -1,4 +1,4 @@
-const UPSTREAM = "https://app-theta-puce.vercel.app";
+const UPSTREAM = "https://vinex.top";
 
 export default {
   async fetch(request) {

@@ -30,4 +30,6 @@ bash scripts/deploy.sh "feat: 添加xxx功能"
 
 ## 小程序发布
 
-小程序的 `dist/` 不纳入 Git。发布时在微信开发者工具中打开 `miniprogram/dist/` 目录，上传为体验版/正式版。
+1. 运行 `npm run build:weapp` 编译
+2. 在微信开发者工具中打开 **`miniprogram/`** 目录（项目根，勿打开 dist/）
+3. 点击上传，发布体验版/正式版

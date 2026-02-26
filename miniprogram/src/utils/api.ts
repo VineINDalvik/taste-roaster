@@ -1,6 +1,6 @@
 import Taro from '@tarojs/taro'
 
-const VERCEL_BASE = 'https://app-theta-puce.vercel.app'
+const VERCEL_BASE = 'https://vinex.top'
 
 export async function callApi<T = unknown>(
   path: string,

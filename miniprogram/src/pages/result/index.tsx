@@ -60,6 +60,11 @@ export default function ResultPage() {
   const [funFact, setFunFact] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [showShareModal, setShowShareModal] = useState(false)
+  const [showInviteModal, setShowInviteModal] = useState(false)
+  const [inviteLink, setInviteLink] = useState<string | null>(null)
+  const [inviteGenerating, setInviteGenerating] = useState(false)
+  const [inviteError, setInviteError] = useState<string | null>(null)
+  const [inviteCopied, setInviteCopied] = useState(false)
   const [basicPaid, setBasicPaid] = useState(false)
   const [deepPaid, setDeepPaid] = useState(false)
   const [expandFailed, setExpandFailed] = useState(false)
@@ -223,6 +228,50 @@ export default function ResultPage() {
     startDeepAnalysis()
   }, [id, startDeepAnalysis])
 
+  const handleGenerateInviteLink = useCallback(async () => {
+    if (!report || inviteGenerating) return
+    setInviteGenerating(true)
+    setInviteError(null)
+    try {
+      const myBookCount = report.realCounts?.books ?? report.bookCount ?? report.input?.books?.length ?? 0
+      const myMovieCount = report.realCounts?.movies ?? report.movieCount ?? report.input?.movies?.length ?? 0
+      const myMusicCount = report.realCounts?.music ?? report.musicCount ?? report.input?.music?.length ?? 0
+      const res = await callApi<{ code: string }>('/api/invite', {
+        name: report.doubanName || report.input?.doubanId || '神秘用户',
+        doubanId: report.input?.doubanId,
+        mbtiType: report.mbti?.type,
+        mbtiTitle: report.mbti?.title,
+        dimensions: report.mbti?.dimensions,
+        radarData: report.radarData,
+        summary: report.summary,
+        roast: report.roast,
+        bookTitles: (report.input?.books ?? []).slice(0, 30).map((b: { title: string }) => b.title),
+        movieTitles: (report.input?.movies ?? []).slice(0, 30).map((m: { title: string }) => m.title),
+        musicTitles: (report.input?.music ?? []).slice(0, 30).map((m: { title: string }) => m.title),
+        bookCount: myBookCount,
+        movieCount: myMovieCount,
+        musicCount: myMusicCount,
+      })
+      setInviteLink(`https://vinex.top/invite/${res.code}`)
+    } catch (err) {
+      setInviteError(err instanceof Error ? err.message : '生成失败')
+    } finally {
+      setInviteGenerating(false)
+    }
+  }, [report, inviteGenerating])
+
+  const handleCopyInviteLink = useCallback(() => {
+    if (!inviteLink) return
+    Taro.setClipboardData({
+      data: inviteLink,
+      success: () => {
+        setInviteCopied(true)
+        Taro.showToast({ title: '已复制', icon: 'success' })
+        setTimeout(() => setInviteCopied(false), 2000)
+      },
+    })
+  }, [inviteLink])
+
   if (loading) {
     return (
       <View className='result-page center-page'>
@@ -254,7 +303,7 @@ export default function ResultPage() {
           </Text>
           <Text
             className='nav-invite'
-            onClick={() => Taro.navigateTo({ url: `/pages/compare/index?from=${id}` })}
+            onClick={() => setShowInviteModal(true)}
           >
             👥 邀请TA来测
           </Text>
@@ -506,7 +555,7 @@ export default function ResultPage() {
           <Text className='cta-desc'>邀请另一个人来测，看看你们的书影音 MBTI 有多配</Text>
           <View
             className='btn-primary'
-            onClick={() => Taro.navigateTo({ url: `/pages/compare/index?from=${id}` })}
+            onClick={() => setShowInviteModal(true)}
           >
             <Text className='btn-text'>邀请 TA 来对比</Text>
           </View>
@@ -646,6 +695,71 @@ export default function ResultPage() {
               </View>
             </View>
             <Text className='share-modal-hint'>分享后自动开始深度分析 · 约需 15-20 秒</Text>
+          </View>
+        </View>
+      )}
+
+      {/* Invite Modal — 当面对比 / 生成邀请链接 */}
+      {showInviteModal && (
+        <View className='share-modal-mask' onClick={() => { setShowInviteModal(false); setInviteLink(null); setInviteError(null) }}>
+          <View className='share-modal invite-modal' onClick={(e) => e.stopPropagation?.()}>
+            <Text className='share-modal-title'>👥 邀请 TA 来对比</Text>
+            <Text className='share-modal-desc'>选择一种方式发起品味对比</Text>
+
+            <View className='invite-options'>
+              <View
+                className='invite-option'
+                onClick={() => { setShowInviteModal(false); Taro.navigateTo({ url: `/pages/compare/index?from=${id}` }) }}
+              >
+                <View className='invite-option-icon'>📱</View>
+                <View className='invite-option-content'>
+                  <Text className='invite-option-title'>当面对比</Text>
+                  <Text className='invite-option-desc'>直接输入对方的豆瓣 ID，当场揭晓结果</Text>
+                </View>
+                <Text className='invite-option-arrow'>→</Text>
+              </View>
+
+              {!inviteLink ? (
+                <View
+                  className='invite-option invite-option-link'
+                  onClick={handleGenerateInviteLink}
+                >
+                  <View className='invite-option-icon invite-option-icon-link'>🔗</View>
+                  <View className='invite-option-content'>
+                    <Text className='invite-option-title'>{inviteGenerating ? '生成中...' : '生成邀请链接'}</Text>
+                    <Text className='invite-option-desc'>发给 TA，TA 打开就能直接对比（7天有效）</Text>
+                  </View>
+                  <Text className='invite-option-arrow'>{inviteGenerating ? '⏳' : '→'}</Text>
+                </View>
+              ) : (
+                <View className='invite-link-result'>
+                  <Text className='invite-link-label'>邀请链接已生成</Text>
+                  <View className='invite-link-row'>
+                    <Text className='invite-link-text' numberOfLines={1}>{inviteLink}</Text>
+                    <View
+                      className={`invite-copy-btn ${inviteCopied ? 'invite-copy-done' : ''}`}
+                      onClick={handleCopyInviteLink}
+                    >
+                      <Text>{inviteCopied ? '已复制 ✓' : '复制'}</Text>
+                    </View>
+                  </View>
+                  <Text className='invite-link-hint'>链接 7 天内有效 · 对方打开后输入豆瓣 ID 即可对比</Text>
+                </View>
+              )}
+            </View>
+
+            {inviteError && (
+              <View className='invite-error'>
+                <Text>{inviteError}</Text>
+              </View>
+            )}
+
+            <Text
+              className='invite-modal-cancel'
+              onClick={() => { setShowInviteModal(false); setInviteLink(null); setInviteError(null) }}
+            >
+              取消
+            </Text>
           </View>
         </View>
       )}

@@ -2,7 +2,13 @@
 
 ## 当前状态
 
-- **生产地址**: https://app-theta-puce.vercel.app
+- **生产地址**: https://vinex.top
+
+## 自定义域名 vinex.top
+
+1. **Vercel 添加域名**：Dashboard → 项目 → Settings → Domains → 添加 `vinex.top`（及 `www.vinex.top` 如需）
+2. **DNS**：将域名 CNAME 到 `cname.vercel-dns.com`，或按 Vercel 提示配置
+3. **小程序配置**：微信公众平台 → 开发管理 → 开发设置 → 服务器域名 → request合法域名 中添加 `https://vinex.top`
 - **Git 仓库**: https://github.com/VineINDalvik/taste-roaster
 - 最新代码已推送至 `main` 分支
 - 已通过 `vercel --prod` 手动部署完成

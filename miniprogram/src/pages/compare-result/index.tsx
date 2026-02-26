@@ -265,7 +265,7 @@ export default function CompareResultPage() {
   )
 }
 
-const VERCEL_BASE = 'https://app-theta-puce.vercel.app'
+const VERCEL_BASE = 'https://vinex.top'
 
 function CompareCard({
   compareId,

@@ -954,6 +954,135 @@
   color: #6b7280;
 }
 
+// Invite Modal
+.invite-modal {
+  .invite-options {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 20rpx;
+  }
+
+  .invite-option {
+    display: flex;
+    align-items: center;
+    gap: 24rpx;
+    padding: 28rpx 24rpx;
+    border-radius: 20rpx;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+  }
+
+  .invite-option-link {
+    border-color: rgba(233, 69, 96, 0.3);
+  }
+
+  .invite-option-icon {
+    width: 72rpx;
+    height: 72rpx;
+    border-radius: 50%;
+    background: rgba(102, 126, 234, 0.15);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 36rpx;
+    flex-shrink: 0;
+  }
+
+  .invite-option-icon-link {
+    background: rgba(233, 69, 96, 0.15);
+  }
+
+  .invite-option-content {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .invite-option-title {
+    font-size: 28rpx;
+    font-weight: 500;
+    color: #fff;
+  }
+
+  .invite-option-desc {
+    font-size: 24rpx;
+    color: #9ca3af;
+    margin-top: 4rpx;
+  }
+
+  .invite-option-arrow {
+    font-size: 28rpx;
+    color: #6b7280;
+    flex-shrink: 0;
+  }
+
+  .invite-link-result {
+    width: 100%;
+    padding: 24rpx;
+    border-radius: 20rpx;
+    background: rgba(233, 69, 96, 0.08);
+    border: 1px solid rgba(233, 69, 96, 0.2);
+  }
+
+  .invite-link-label {
+    font-size: 24rpx;
+    color: #9ca3af;
+    margin-bottom: 12rpx;
+  }
+
+  .invite-link-row {
+    display: flex;
+    align-items: center;
+    gap: 16rpx;
+    margin-bottom: 12rpx;
+  }
+
+  .invite-link-text {
+    flex: 1;
+    font-size: 24rpx;
+    color: #fff;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .invite-copy-btn {
+    padding: 12rpx 24rpx;
+    border-radius: 12rpx;
+    background: rgba(233, 69, 96, 0.15);
+    color: #e94560;
+    font-size: 24rpx;
+    flex-shrink: 0;
+  }
+
+  .invite-copy-done {
+    background: rgba(34, 197, 94, 0.2);
+    color: #22c55e;
+  }
+
+  .invite-link-hint {
+    font-size: 22rpx;
+    color: #6b7280;
+  }
+
+  .invite-error {
+    width: 100%;
+    padding: 20rpx;
+    border-radius: 16rpx;
+    background: rgba(239, 68, 68, 0.1);
+    border: 1px solid rgba(239, 68, 68, 0.3);
+    text-align: center;
+    font-size: 24rpx;
+    color: #f87171;
+  }
+
+  .invite-modal-cancel {
+    font-size: 28rpx;
+    color: #9ca3af;
+    padding: 16rpx 0;
+  }
+}
+
 // Save canvas (hidden offscreen)
 .save-canvas-hidden {
   position: fixed;

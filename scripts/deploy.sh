@@ -31,4 +31,4 @@ git push
 echo "==> 5/5 显式部署到 Vercel（因 Root Directory=app，Git webhook 可能不触发）..."
 (cd "$PROJECT_DIR" && vercel --prod)
 
-echo "✓ 完成：已提交、推送并部署至 https://app-theta-puce.vercel.app"
+echo "✓ 完成：已提交、推送并部署至 https://vinex.top"
