@@ -407,6 +407,7 @@ function CompareCard({
 }) {
   const cardRef = useRef<HTMLDivElement>(null);
   const [saving, setSaving] = useState(false);
+  const [previewSrc, setPreviewSrc] = useState<string | null>(null);
   const matchColor = getMatchColor(comparison.matchScore);
 
   const handleDownload = useCallback(async () => {
@@ -421,13 +422,19 @@ function CompareCard({
       if (!res.ok) throw new Error("生成失败");
       const blob = await res.blob();
       const url = URL.createObjectURL(blob);
-      const link = document.createElement("a");
-      link.download = `MBTI对比-${personA.mbtiType}vs${personB.mbtiType}.png`;
-      link.href = url;
-      link.click();
-      URL.revokeObjectURL(url);
+
+      const isMobile = /iPhone|iPad|Android|Mobile/i.test(navigator.userAgent);
+      if (isMobile) {
+        setPreviewSrc(url);
+      } else {
+        const link = document.createElement("a");
+        link.download = `MBTI对比-${personA.mbtiType}vs${personB.mbtiType}.png`;
+        link.href = url;
+        link.click();
+        setTimeout(() => URL.revokeObjectURL(url), 5000);
+      }
     } catch {
-      alert("下载失败，请重试或截图保存");
+      alert("生成失败，请直接截图保存");
     } finally {
       setSaving(false);
     }
@@ -454,6 +461,36 @@ function CompareCard({
 
   return (
     <div className="space-y-4">
+      {previewSrc && (
+        <div
+          className="fixed inset-0 z-50 bg-black/90 flex flex-col items-center justify-center p-4"
+          onClick={() => {
+            setPreviewSrc(null);
+            URL.revokeObjectURL(previewSrc);
+          }}
+        >
+          <p className="text-white text-sm mb-3 animate-pulse">
+            👆 长按图片保存到相册
+          </p>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={previewSrc}
+            alt="双人对比卡片"
+            className="max-w-full max-h-[80vh] rounded-xl shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          />
+          <button
+            className="mt-4 px-6 py-2 rounded-xl bg-white/10 text-white text-sm"
+            onClick={() => {
+              setPreviewSrc(null);
+              URL.revokeObjectURL(previewSrc);
+            }}
+          >
+            关闭
+          </button>
+        </div>
+      )}
+
       <div
         ref={cardRef}
         className="relative overflow-hidden rounded-2xl mx-auto max-w-sm"
