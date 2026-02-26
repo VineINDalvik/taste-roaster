@@ -6,7 +6,7 @@ import DimensionBar from '@/components/dimension-bar'
 import RadarChart from '@/components/radar-chart'
 import './index.scss'
 
-const VERCEL_BASE = 'https://vinex.top'
+const VERCEL_BASE = 'https://db-mbti.vinex.top'
 
 interface Props {
   mbtiType: string

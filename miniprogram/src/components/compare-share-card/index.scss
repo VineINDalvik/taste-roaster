@@ -1,0 +1,47 @@
+/* Preview overlay - 与 share-card 保持一致 */
+.share-preview-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 999;
+  background: rgba(0, 0, 0, 0.92);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40rpx;
+}
+
+.share-preview-hint {
+  color: #fff;
+  font-size: 26rpx;
+  margin-bottom: 24rpx;
+  opacity: 0.8;
+}
+
+.share-preview-image {
+  width: 560rpx;
+  border-radius: 24rpx;
+  box-shadow: 0 20rpx 60rpx rgba(0, 0, 0, 0.5);
+}
+
+.share-preview-actions {
+  display: flex;
+  gap: 24rpx;
+  margin-top: 32rpx;
+}
+
+.share-preview-btn {
+  padding: 16rpx 40rpx;
+  border-radius: 20rpx;
+  background: rgba(102, 126, 234, 0.8);
+  color: #fff;
+  font-size: 26rpx;
+  text-align: center;
+}
+
+.share-preview-close {
+  background: rgba(255, 255, 255, 0.1);
+}

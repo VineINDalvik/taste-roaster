@@ -1,4 +1,4 @@
-const UPSTREAM = "https://vinex.top";
+const UPSTREAM = "https://db-mbti.vinex.top";
 
 export default {
   async fetch(request) {

@@ -1,6 +1,6 @@
 import Taro from '@tarojs/taro'
 
-const VERCEL_BASE = 'https://vinex.top'
+const VERCEL_BASE = 'https://db-mbti.vinex.top'
 
 export async function callApi<T = unknown>(
   path: string,

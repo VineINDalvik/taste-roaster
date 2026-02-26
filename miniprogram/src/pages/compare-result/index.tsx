@@ -1,12 +1,31 @@
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useMemo } from 'react'
 import { View, Text } from '@tarojs/components'
-import Taro, { useRouter, useShareAppMessage } from '@tarojs/taro'
+import Taro, { useRouter, useShareAppMessage, getCurrentInstance } from '@tarojs/taro'
 import DualRadar from '@/components/dual-radar'
 import { getCompare, setCompare } from '@/utils/storage'
 import { callApi } from '@/utils/api'
-import { saveCompareShare } from '@/utils/canvas-saver'
+import CompareShareCard from '@/components/compare-share-card'
 import type { CompareData, PersonData, ComparisonData, MBTIDimension } from '@/utils/types'
 import './index.scss'
+
+/** 兼容 Taro 在小程序首次渲染时 useRouter 返回空 params 的时序问题 */
+function useCompareResultId(): string {
+  const router = useRouter()
+  const instance = getCurrentInstance()
+  return useMemo(() => {
+    const fromRouter = router?.params?.id
+    if (fromRouter) return fromRouter
+    const fromInstance = (instance?.router?.params as Record<string, string> | undefined)?.id
+    if (fromInstance) return fromInstance
+    try {
+      const pages = Taro.getCurrentPages()
+      const page = pages?.[pages.length - 1] as { options?: Record<string, string> } | undefined
+      return page?.options?.id ?? ''
+    } catch {
+      return ''
+    }
+  }, [router?.params?.id, instance?.router?.params])
+}
 
 const DIM_KEYS = ['ie', 'ns', 'tf', 'jp'] as const
 const DIM_LABELS: Record<string, [string, string]> = {
@@ -32,50 +51,78 @@ function getMatchLabel(score: number) {
 }
 
 export default function CompareResultPage() {
-  const router = useRouter()
-  const id = router.params.id || ''
+  const id = useCompareResultId()
   const [data, setData] = useState<CompareData | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [loading, setLoading] = useState(true)
 
-  useEffect(() => {
+  const loadData = useCallback(() => {
     if (!id) {
       setError('缺少对比 ID')
+      setLoading(false)
       return
     }
+    setError(null)
+    setLoading(true)
+
     const stored = getCompare(id)
     if (stored) {
       try {
         const parsed = typeof stored === 'string' ? JSON.parse(stored) : stored
-        setData(parsed)
-        return
+        if (parsed?.personA && parsed?.personB && parsed?.comparison) {
+          setData(parsed)
+          setLoading(false)
+          return
+        }
       } catch {
         setError('对比数据损坏')
+        setLoading(false)
         return
       }
     }
-    // 本地无数据时从 API 拉取（如分享链接、跨设备打开）
+
     callApi<CompareData>(`/api/compare/${id}`, undefined, 'GET', { timeout: 15000 })
       .then(remote => {
-        setData(remote)
-        setCompare(id, remote)
+        if (remote?.personA && remote?.personB && remote?.comparison) {
+          setData(remote)
+          setCompare(id, remote)
+        } else {
+          setError('对比报告数据不完整')
+        }
       })
-      .catch(() => setError('对比报告不存在或已过期'))
+      .catch((err: unknown) => {
+        const msg = err instanceof Error ? err.message : ''
+        const isNetwork = /(超时|timeout|fail|网络|连接|域名)/i.test(msg)
+        setError(isNetwork ? '网络请求失败，请检查网络后重试' : '对比报告不存在或已过期')
+      })
+      .finally(() => setLoading(false))
   }, [id])
 
+  useEffect(() => {
+    loadData()
+  }, [loadData])
+
   if (error || !data) {
+    const showLoading = loading && !error
     return (
       <View className='compare-result-page center-page'>
         <Text className='error-emoji'>😵</Text>
-        <Text className='error-msg'>{error || '加载中...'}</Text>
-        <View className='btn-small accent-gradient' onClick={() => Taro.navigateTo({ url: '/pages/upload/index' })}>
-          <Text className='btn-action-text'>重新测试</Text>
+        <Text className='error-msg'>{error || (showLoading ? '加载中...' : '加载失败')}</Text>
+        <View className='error-actions'>
+          {error ? (
+            <View className='btn-small accent-gradient' onClick={loadData}>
+              <Text className='btn-action-text'>重试加载</Text>
+            </View>
+          ) : null}
+          <View className='btn-small accent-gradient' onClick={() => Taro.navigateTo({ url: '/pages/upload/index' })}>
+            <Text className='btn-action-text'>重新测试</Text>
+          </View>
         </View>
       </View>
     )
   }
 
   const { personA, personB, comparison } = data
-  const matchColor = getMatchColor(comparison.matchScore)
 
   useShareAppMessage(() => ({
     title: `${personA.name}(${personA.mbtiType}) vs ${personB.name}(${personB.mbtiType}) 匹配度 ${comparison.matchScore}%！来测测你们的书影音 MBTI`,
@@ -265,7 +312,7 @@ export default function CompareResultPage() {
   )
 }
 
-const VERCEL_BASE = 'https://vinex.top'
+const VERCEL_BASE = 'https://db-mbti.vinex.top'
 
 function CompareCard({
   compareId,
@@ -279,10 +326,6 @@ function CompareCard({
   comparison: ComparisonData
 }) {
   const matchColor = getMatchColor(comparison.matchScore)
-
-  const handleSave = useCallback(async () => {
-    await saveCompareShare('compareCard', { personA, personB, comparison })
-  }, [personA, personB, comparison])
 
   const handleCopy = useCallback(() => {
     const shareUrl = `${VERCEL_BASE}/compare/${compareId}`
@@ -337,9 +380,16 @@ function CompareCard({
       </View>
 
       <View className='cc-actions'>
-        <View className='btn-save' onClick={handleSave}>
-          <Text className='btn-action-text'>保存卡片</Text>
-        </View>
+        <CompareShareCard
+          personA={personA}
+          personB={personB}
+          comparison={comparison}
+          renderTrigger={(onSave) => (
+            <View className='btn-save' onClick={onSave}>
+              <Text className='btn-action-text'>保存卡片</Text>
+            </View>
+          )}
+        />
         <View className='btn-copy' onClick={handleCopy}>
           <Text className='btn-action-text'>复制链接</Text>
         </View>

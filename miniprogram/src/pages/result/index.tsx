@@ -254,7 +254,7 @@ export default function ResultPage() {
         movieCount: myMovieCount,
         musicCount: myMusicCount,
       })
-      setInviteLink(`https://vinex.top/invite/${res.code}`)
+      setInviteLink(`https://db-mbti.vinex.top/invite/${res.code}`)
     } catch (err) {
       setInviteError(err instanceof Error ? err.message : '生成失败')
     } finally {

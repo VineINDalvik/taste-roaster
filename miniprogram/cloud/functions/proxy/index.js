@@ -3,7 +3,7 @@ const axios = require('axios')
 
 cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV })
 
-const VERCEL_BASE = 'https://vinex.top'
+const VERCEL_BASE = 'https://db-mbti.vinex.top'
 
 exports.main = async (event) => {
   const { path, method = 'POST', body, binary = false } = event

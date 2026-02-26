@@ -1,6 +1,6 @@
 import Taro from '@tarojs/taro'
 
-const VERCEL_BASE = 'https://vinex.top'
+const VERCEL_BASE = 'https://db-mbti.vinex.top'
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 async function fetchImageAndPreview(apiPath: string, body: Record<string, any>) {
