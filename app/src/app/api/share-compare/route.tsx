@@ -179,7 +179,7 @@ export async function POST(req: NextRequest) {
 
             {/* Similarities */}
             {sims.length > 0 && (
-              <div style={{ marginBottom: 28 }}>
+              <div style={{ display: "flex", flexDirection: "column", marginBottom: 28 }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 16 }}>
                   <span style={{ fontSize: 24 }}>✅</span>
                   <span style={{ fontSize: 26, fontWeight: 700, color: "#22c55e" }}>相同点</span>
@@ -197,7 +197,7 @@ export async function POST(req: NextRequest) {
 
             {/* Differences */}
             {diffs.length > 0 && (
-              <div style={{ marginBottom: 28 }}>
+              <div style={{ display: "flex", flexDirection: "column", marginBottom: 28 }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 16 }}>
                   <span style={{ fontSize: 24 }}>⚡</span>
                   <span style={{ fontSize: 26, fontWeight: 700, color: "#e94560" }}>不同点</span>
@@ -214,7 +214,7 @@ export async function POST(req: NextRequest) {
             )}
 
             {/* Chemistry */}
-            <div style={{ marginBottom: 28 }}>
+            <div style={{ display: "flex", flexDirection: "column", marginBottom: 28 }}>
               <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 16 }}>
                 <span style={{ fontSize: 24 }}>⚗️</span>
                 <span style={{ fontSize: 26, fontWeight: 700, color: "#f5c518" }}>化学反应</span>
@@ -226,7 +226,7 @@ export async function POST(req: NextRequest) {
 
             {/* 趣味彩蛋 */}
             {funItems.length > 0 && (
-              <div style={{ marginBottom: 28, padding: "16px 20px", background: "rgba(167,139,250,0.08)", borderRadius: 16, border: "1px solid rgba(167,139,250,0.2)" }}>
+              <div style={{ display: "flex", flexDirection: "column", marginBottom: 28, padding: "16px 20px", background: "rgba(167,139,250,0.08)", borderRadius: 16, border: "1px solid rgba(167,139,250,0.2)" }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 16 }}>
                   <span style={{ fontSize: 24 }}>🎯</span>
                   <span style={{ fontSize: 26, fontWeight: 700, color: "#a78bfa" }}>趣味彩蛋</span>
@@ -253,7 +253,7 @@ export async function POST(req: NextRequest) {
 
             {/* Shared works */}
             {data.comparison.sharedWorks && data.comparison.sharedWorks.length > 0 && (
-              <div style={{ marginBottom: 28 }}>
+              <div style={{ display: "flex", flexDirection: "column", marginBottom: 28 }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 12 }}>
                   <span style={{ fontSize: 24 }}>🔗</span>
                   <span style={{ fontSize: 26, fontWeight: 700, color: "#667eea" }}>品味交集</span>
