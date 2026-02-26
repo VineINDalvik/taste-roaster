@@ -4,7 +4,7 @@ import Taro, { useRouter, useShareAppMessage, useShareTimeline } from '@tarojs/t
 import ShareCard from '@/components/share-card'
 import EvolutionCurve from '@/components/evolution-curve'
 import { callApi } from '@/utils/api'
-import { getReport, setReport, isBasicPaid, markBasicPaid, isDeepPaid, markDeepPaid, PRICE_BASIC, PRICE_DEEP } from '@/utils/storage'
+import { getReport, setReport, markBasicPaid, markDeepPaid } from '@/utils/storage'
 import { saveAnalysisCard, saveFullReport } from '@/utils/canvas-saver'
 import type { ReportData, RecommendationItem, MonthSnapshot, MBTIDimension } from '@/utils/types'
 import './index.scss'
@@ -107,8 +107,10 @@ export default function ResultPage() {
       try {
         const parsed = typeof stored === 'string' ? JSON.parse(stored) : stored
         setReportState(parsed)
-        setBasicPaid(isBasicPaid(parsed.id || id))
-        setDeepPaid(isDeepPaid(parsed.id || id))
+        markBasicPaid(parsed.id || id)
+        markDeepPaid(parsed.id || id)
+        setBasicPaid(true)
+        setDeepPaid(true)
       } catch {
         setError('报告数据损坏')
       }
@@ -349,8 +351,8 @@ export default function ResultPage() {
 
         {/* sample count hidden — avoid showing small numbers */}
 
-        {/* Taste Analysis Section — payment gated (¥0.66) */}
-        {basicPaid ? (
+        {/* Taste Analysis Section */}
+        {(
           <>
             <View className='animate-fade-in-up animate-delay-200'>
               <Text className='report-title'>
@@ -413,49 +415,12 @@ export default function ResultPage() {
               </View>
             )}
           </>
-        ) : (
-          <View className='unlock-card card-glass animate-fade-in-up animate-delay-200'>
-            <Text className='unlock-emoji'>📊</Text>
-            <Text className='unlock-title'>解锁完整品味报告</Text>
-            <View className='unlock-list'>
-              <Text className='unlock-item'><Text className='text-blue'>✦</Text> 阅读情绪画像 · 书架密码</Text>
-              <Text className='unlock-item'><Text className='text-blue'>✦</Text> 观影品味画像 · 光影密码</Text>
-              <Text className='unlock-item'><Text className='text-blue'>✦</Text> 音乐情绪画像 · 声波密码</Text>
-              <Text className='unlock-item'><Text className='text-blue'>✦</Text> 品味进化曲线 · 时间线</Text>
-            </View>
-            <View className='payment-price-block'>
-              <Text className='payment-price'>¥{PRICE_BASIC}</Text>
-              <Text className='payment-price-unit'>/份</Text>
-            </View>
-            <View className='btn-unlock' onClick={() => { markBasicPaid(report.id || id); setBasicPaid(true) }}>
-              <Text className='btn-action-text'>已支付？点击解锁</Text>
-            </View>
-          </View>
         )}
 
-        {/* Deep Analysis Section — payment gated (¥0.99) */}
-        {basicPaid && (
+        {/* Deep Analysis Section */}
+        {(
           !isDeepUnlocked ? (
-            !deepPaid ? (
-              <View className='unlock-card card-glass animate-fade-in-up animate-delay-300'>
-                <Text className='unlock-emoji'>🔮</Text>
-                <Text className='unlock-title'>解锁深度解读</Text>
-                <View className='unlock-list'>
-                  <Text className='unlock-item'><Text className='text-red'>✦</Text> 跨领域品味关联分析</Text>
-                  <Text className='unlock-item'><Text className='text-red'>✦</Text> {mbtiType} 深度人格画像</Text>
-                  <Text className='unlock-item'><Text className='text-red'>✦</Text> 品味盲区诊断</Text>
-                  <Text className='unlock-item'><Text className='text-red'>✦</Text> AI 专属推荐</Text>
-                </View>
-                <View className='payment-price-block'>
-                  <Text className='payment-price payment-price-red'>¥{PRICE_DEEP}</Text>
-                  <Text className='payment-price-unit'>/份</Text>
-                </View>
-                <View className='btn-unlock' onClick={() => { markDeepPaid(report.id || id); setDeepPaid(true); handleDeepUnlock() }}>
-                  <Text className='btn-action-text'>已支付？点击解锁</Text>
-                </View>
-                <Text className='unlock-hint'>分析约需 20-40 秒 · 国内建议开 VPN</Text>
-              </View>
-            ) : unlocking ? (
+            unlocking ? (
               <UnlockingOverlay step={unlockStep} funFact={funFact} />
             ) : deepUnlockFailed ? (
               <View className='section-card card-glass center-text animate-fade-in-up animate-delay-300'>

@@ -9,14 +9,7 @@ import BookPortrait from "@/components/BookPortrait";
 import MoviePortrait from "@/components/MoviePortrait";
 import ShareableCard from "@/components/ShareableCard";
 import InviteModal from "@/components/InviteModal";
-import {
-  PRICE_BASIC,
-  PRICE_DEEP,
-  isBasicPaid,
-  markBasicPaid,
-  isDeepPaid,
-  markDeepPaid,
-} from "@/lib/payment";
+import { markBasicPaid, markDeepPaid } from "@/lib/payment";
 
 interface MBTIDimension {
   letter: string;
@@ -192,8 +185,10 @@ export default function ResultPage({
       try {
         const parsed = JSON.parse(stored);
         setReport(parsed);
-        setBasicPaid(isBasicPaid(parsed.id || id));
-        setDeepPaid(isDeepPaid(parsed.id || id));
+        markBasicPaid(parsed.id || id);
+        markDeepPaid(parsed.id || id);
+        setBasicPaid(true);
+        setDeepPaid(true);
       } catch {
         setError("报告数据损坏");
       }
@@ -281,18 +276,6 @@ export default function ResultPage({
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [report?.id, expanding]);
-
-  const handleBasicUnlock = () => {
-    if (!report) return;
-    markBasicPaid(report.id || id);
-    setBasicPaid(true);
-  };
-
-  const handleDeepUnlockPaid = () => {
-    if (!report) return;
-    markDeepPaid(report.id || id);
-    setDeepPaid(true);
-  };
 
   const handleDeepUnlock = async () => {
     if (!report?.input) {
@@ -451,8 +434,8 @@ export default function ResultPage({
 
         {/* sample count hidden — avoid showing small numbers */}
 
-        {/* === PAID BASIC: Book/Movie/Music Analysis + Timeline (¥0.66) === */}
-        {basicPaid ? (
+        {/* === Taste Analysis: Book/Movie/Music + Timeline === */}
+        {(
           <>
             <div className="space-y-4 animate-fade-in-up animate-delay-200">
               <h2 className="text-lg font-bold text-white flex items-center gap-2">
@@ -525,59 +508,12 @@ export default function ResultPage({
               <ExpandSkeleton icon="📅" label="品味进化时间线" />
             )}
           </>
-        ) : (
-          <div className="animate-fade-in-up animate-delay-200">
-            <div className="card-glass rounded-2xl p-6 text-center space-y-4">
-              <div className="text-2xl">📊</div>
-              <h3 className="text-lg font-bold text-white">解锁完整品味报告</h3>
-              <ul className="text-sm text-gray-400 space-y-1.5 text-left max-w-xs mx-auto">
-                <li className="flex items-start gap-2"><span className="text-[#667eea]">✦</span> 阅读情绪画像 · 书架密码</li>
-                <li className="flex items-start gap-2"><span className="text-[#667eea]">✦</span> 观影品味画像 · 光影密码</li>
-                <li className="flex items-start gap-2"><span className="text-[#667eea]">✦</span> 音乐情绪画像 · 声波密码</li>
-                <li className="flex items-start gap-2"><span className="text-[#667eea]">✦</span> 品味进化曲线 · 时间线</li>
-              </ul>
-              <div className="rounded-xl p-3" style={{ background: "rgba(102,126,234,0.08)", border: "1px solid rgba(102,126,234,0.2)" }}>
-                <span className="text-2xl font-black text-[#667eea]">¥{PRICE_BASIC}</span>
-                <span className="text-xs text-gray-400 ml-1">/份</span>
-              </div>
-              <button
-                onClick={handleBasicUnlock}
-                className="w-full py-3 rounded-xl bg-gradient-to-r from-[#667eea] to-[#764ba2] text-white font-medium hover:opacity-90 transition-opacity"
-              >
-                已支付？点击解锁
-              </button>
-            </div>
-          </div>
         )}
 
-        {/* === PAID DEEP: Deep Analysis + Diary Insight (¥0.99) === */}
-        {basicPaid && (
+        {/* === Deep Analysis === */}
+        {(
           !isDeepUnlocked ? (
-            !deepPaid ? (
-              <div className="animate-fade-in-up animate-delay-300">
-                <div className="card-glass rounded-2xl p-6 text-center space-y-4">
-                  <div className="text-2xl">🔮</div>
-                  <h3 className="text-lg font-bold text-white">解锁深度解读</h3>
-                  <ul className="text-sm text-gray-400 space-y-1.5 text-left max-w-xs mx-auto">
-                    <li className="flex items-start gap-2"><span className="text-[#e94560]">✦</span> 跨领域品味关联分析</li>
-                    <li className="flex items-start gap-2"><span className="text-[#e94560]">✦</span> {mbtiType} 深度人格画像</li>
-                    <li className="flex items-start gap-2"><span className="text-[#e94560]">✦</span> 品味盲区诊断</li>
-                    <li className="flex items-start gap-2"><span className="text-[#e94560]">✦</span> AI 专属推荐</li>
-                  </ul>
-                  <div className="rounded-xl p-3" style={{ background: "rgba(233,69,96,0.08)", border: "1px solid rgba(233,69,96,0.2)" }}>
-                    <span className="text-2xl font-black text-[#e94560]">¥{PRICE_DEEP}</span>
-                    <span className="text-xs text-gray-400 ml-1">/份</span>
-                  </div>
-                  <button
-                    onClick={() => { handleDeepUnlockPaid(); handleDeepUnlock(); }}
-                    className="w-full py-3 rounded-xl bg-gradient-to-r from-[#e94560] to-[#764ba2] text-white font-medium hover:opacity-90 transition-opacity"
-                  >
-                    已支付？点击解锁
-                  </button>
-                  <p className="text-xs text-gray-500">分析约需 20-40 秒 · 国内建议开 VPN</p>
-                </div>
-              </div>
-            ) : unlocking ? (
+            unlocking ? (
               <UnlockingOverlay step={unlockStep} funFact={funFact} />
             ) : deepUnlockFailed ? (
               <div className="card-glass rounded-xl p-5 text-center space-y-3 animate-fade-in-up animate-delay-300">
