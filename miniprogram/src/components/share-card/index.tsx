@@ -4,9 +4,8 @@ import Taro from '@tarojs/taro'
 import type { MBTIDimension, RadarData } from '@/utils/types'
 import DimensionBar from '@/components/dimension-bar'
 import RadarChart from '@/components/radar-chart'
+import { requestSharePng, saveToAlbumWithPermission } from '@/utils/share-image'
 import './index.scss'
-
-const VERCEL_BASE = 'https://db-mbti.vinex.top'
 
 interface Props {
   mbtiType: string
@@ -59,23 +58,7 @@ export default function ShareCard(props: Props) {
         musicCount,
       }
 
-      const res = await Taro.request({
-        url: `${VERCEL_BASE}/api/share-card`,
-        method: 'POST',
-        data: body,
-        header: { 'Content-Type': 'application/json' },
-        responseType: 'arraybuffer',
-        timeout: 30000,
-      })
-
-      if (res.statusCode !== 200) {
-        throw new Error(`Server error ${res.statusCode}`)
-      }
-
-      const fs = Taro.getFileSystemManager()
-      const tempPath = `${Taro.env.USER_DATA_PATH}/share-card-${Date.now()}.png`
-      fs.writeFileSync(tempPath, res.data, 'binary')
-
+      const tempPath = await requestSharePng('/api/share-card', body, { timeout: 30000, filenamePrefix: 'share-card' })
       Taro.hideLoading()
       setPreviewUrl(tempPath)
     } catch (e) {
@@ -88,10 +71,11 @@ export default function ShareCard(props: Props) {
   const handleSaveToAlbum = useCallback(async () => {
     if (!previewUrl) return
     try {
-      await Taro.saveImageToPhotosAlbum({ filePath: previewUrl })
+      await saveToAlbumWithPermission(previewUrl)
       Taro.showToast({ title: '已保存到相册', icon: 'success' })
-    } catch {
-      Taro.showToast({ title: '保存失败', icon: 'error' })
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : '保存失败'
+      Taro.showToast({ title: msg, icon: 'none' })
     }
   }, [previewUrl])
 

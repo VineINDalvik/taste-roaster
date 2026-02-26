@@ -2,9 +2,8 @@ import { useCallback, useState } from 'react'
 import { View, Text, Image } from '@tarojs/components'
 import Taro from '@tarojs/taro'
 import type { PersonData, ComparisonData } from '@/utils/types'
+import { requestSharePng, saveToAlbumWithPermission } from '@/utils/share-image'
 import './index.scss'
-
-const VERCEL_BASE = 'https://db-mbti.vinex.top'
 
 interface CompareShareCardProps {
   personA: PersonData
@@ -26,24 +25,7 @@ export default function CompareShareCard({
 
     try {
       const body = { personA, personB, comparison }
-
-      const res = await Taro.request({
-        url: `${VERCEL_BASE}/api/share-compare`,
-        method: 'POST',
-        data: body,
-        header: { 'Content-Type': 'application/json' },
-        responseType: 'arraybuffer',
-        timeout: 30000,
-      })
-
-      if (res.statusCode !== 200) {
-        throw new Error(`Server error ${res.statusCode}`)
-      }
-
-      const fs = Taro.getFileSystemManager()
-      const tempPath = `${Taro.env.USER_DATA_PATH}/share-compare-${Date.now()}.png`
-      fs.writeFileSync(tempPath, res.data, 'binary')
-
+      const tempPath = await requestSharePng('/api/share-compare', body, { timeout: 60000, filenamePrefix: 'share-compare' })
       Taro.hideLoading()
       setPreviewUrl(tempPath)
     } catch (e) {
@@ -56,10 +38,11 @@ export default function CompareShareCard({
   const handleSaveToAlbum = useCallback(async () => {
     if (!previewUrl) return
     try {
-      await Taro.saveImageToPhotosAlbum({ filePath: previewUrl })
+      await saveToAlbumWithPermission(previewUrl)
       Taro.showToast({ title: '已保存到相册', icon: 'success' })
-    } catch {
-      Taro.showToast({ title: '保存失败', icon: 'error' })
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : '保存失败'
+      Taro.showToast({ title: msg, icon: 'none' })
     }
   }, [previewUrl])
 
