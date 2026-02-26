@@ -186,7 +186,7 @@ export async function POST(req: NextRequest) {
                 </div>
                 <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
                   {sims.map((s, i) => (
-                    <div key={i} style={{ padding: "12px 16px", background: "rgba(34,197,94,0.08)", borderRadius: 12, borderLeft: "4px solid rgba(34,197,94,0.5)" }}>
+                    <div key={i} style={{ display: "flex", flexDirection: "column", padding: "12px 16px", background: "rgba(34,197,94,0.08)", borderRadius: 12, borderLeft: "4px solid rgba(34,197,94,0.5)" }}>
                       <div style={{ fontSize: 22, fontWeight: 600, color: "#86efac", marginBottom: 4 }}>{truncateText(s.point, 40)}</div>
                       <div style={{ fontSize: 20, color: "rgba(209,213,219,0.85)", lineHeight: 1.5 }}>{truncateText(s.detail, 80)}</div>
                     </div>
@@ -204,7 +204,7 @@ export async function POST(req: NextRequest) {
                 </div>
                 <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
                   {diffs.map((d, i) => (
-                    <div key={i} style={{ padding: "12px 16px", background: "rgba(233,69,96,0.08)", borderRadius: 12, borderLeft: "4px solid rgba(233,69,96,0.5)" }}>
+                    <div key={i} style={{ display: "flex", flexDirection: "column", padding: "12px 16px", background: "rgba(233,69,96,0.08)", borderRadius: 12, borderLeft: "4px solid rgba(233,69,96,0.5)" }}>
                       <div style={{ fontSize: 22, fontWeight: 600, color: "#f9a8d4", marginBottom: 4 }}>{truncateText(d.point, 40)}</div>
                       <div style={{ fontSize: 20, color: "rgba(209,213,219,0.85)", lineHeight: 1.5 }}>{truncateText(d.detail, 80)}</div>
                     </div>
