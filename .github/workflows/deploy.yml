@@ -1,0 +1,16 @@
+# 推送 main 时触发 Vercel 部署（解决 Git webhook 不触发问题）
+# 配置：GitHub repo → Settings → Secrets → VERCEL_DEPLOY_HOOK = Vercel 项目 Deploy Hook URL
+name: Deploy to Vercel
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger Vercel Deploy Hook
+        if: ${{ secrets.VERCEL_DEPLOY_HOOK != '' }}
+        run: curl -fsS -X POST "${{ secrets.VERCEL_DEPLOY_HOOK }}"

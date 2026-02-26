@@ -28,7 +28,7 @@ git commit -m "$COMMIT_MSG"
 echo "==> 4/5 推送到 GitHub..."
 git push
 
-echo "==> 5/5 显式部署到 Vercel（因 Root Directory=app，Git webhook 可能不触发）..."
-(cd "$PROJECT_DIR" && vercel --prod)
+echo "==> 5/5 强制部署到 Vercel 生产环境 (db-mbti.vinex.top)..."
+(cd "$PROJECT_DIR" && vercel --prod --force)
 
 echo "✓ 完成：已提交、推送并部署至 https://db-mbti.vinex.top"
