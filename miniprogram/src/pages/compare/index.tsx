@@ -1,6 +1,6 @@
-import { useState, useEffect, useRef, useCallback } from 'react'
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { View, Text, Input } from '@tarojs/components'
-import Taro, { useRouter } from '@tarojs/taro'
+import Taro, { useRouter, getCurrentInstance } from '@tarojs/taro'
 import { callApi } from '@/utils/api'
 import {
   getReport, setReport, setCompare,
@@ -19,9 +19,27 @@ const PROGRESS_MESSAGES = [
   '生成双人对比报告...',
 ]
 
-export default function ComparePage() {
+/** 兼容 Taro 在小程序首次渲染时 useRouter 返回空 params 的时序问题 */
+function useCompareFromId(): string {
   const router = useRouter()
-  const fromId = router.params.from || ''
+  const instance = getCurrentInstance()
+  return useMemo(() => {
+    const fromRouter = router?.params?.from
+    if (fromRouter) return fromRouter
+    const fromInstance = (instance?.router?.params as Record<string, string> | undefined)?.from
+    if (fromInstance) return fromInstance
+    try {
+      const pages = Taro.getCurrentPages()
+      const page = pages?.[pages.length - 1] as { options?: Record<string, string> } | undefined
+      return page?.options?.from ?? ''
+    } catch {
+      return ''
+    }
+  }, [router?.params?.from, instance?.router?.params])
+}
+
+export default function ComparePage() {
+  const fromId = useCompareFromId()
   const [doubanIdB, setDoubanIdB] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
