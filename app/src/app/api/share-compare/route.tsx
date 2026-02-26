@@ -233,19 +233,29 @@ export async function POST(req: NextRequest) {
                 </div>
                 <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
                   {data.comparison.roastOneLiner && (
-                    <div style={{ fontSize: 20, color: "rgba(209,213,219,0.9)", fontStyle: "italic" }}>&ldquo;{truncateText(data.comparison.roastOneLiner, 50)}&rdquo;</div>
+                    <div style={{ fontSize: 20, color: "rgba(209,213,219,0.9)", fontStyle: "italic" }}>
+                      {`\u201C${truncateText(data.comparison.roastOneLiner, 50)}\u201D`}
+                    </div>
                   )}
                   {data.comparison.dateScene && (
-                    <div style={{ fontSize: 20, color: "rgba(74,222,128,0.9)" }}>💕 {truncateText(data.comparison.dateScene, 40)}</div>
+                    <div style={{ fontSize: 20, color: "rgba(74,222,128,0.9)" }}>
+                      {`💕 ${truncateText(data.comparison.dateScene, 40)}`}
+                    </div>
                   )}
                   {data.comparison.dangerZone && (
-                    <div style={{ fontSize: 20, color: "rgba(233,69,96,0.9)" }}>⚠️ {truncateText(data.comparison.dangerZone, 40)}</div>
+                    <div style={{ fontSize: 20, color: "rgba(233,69,96,0.9)" }}>
+                      {`⚠️ ${truncateText(data.comparison.dangerZone, 40)}`}
+                    </div>
                   )}
                   {data.comparison.battleVerdict && (
-                    <div style={{ fontSize: 20, color: "rgba(102,126,234,0.9)" }}>🏆 {truncateText(data.comparison.battleVerdict, 40)}</div>
+                    <div style={{ fontSize: 20, color: "rgba(102,126,234,0.9)" }}>
+                      {`🏆 ${truncateText(data.comparison.battleVerdict, 40)}`}
+                    </div>
                   )}
                   {data.comparison.memeLine && (
-                    <div style={{ fontSize: 22, fontWeight: 600, color: "rgba(251,191,36,0.95)", marginTop: 4 }}>&ldquo;{truncateText(data.comparison.memeLine, 35)}&rdquo;</div>
+                    <div style={{ fontSize: 22, fontWeight: 600, color: "rgba(251,191,36,0.95)", marginTop: 4 }}>
+                      {`\u201C${truncateText(data.comparison.memeLine, 35)}\u201D`}
+                    </div>
                   )}
                 </div>
               </div>
