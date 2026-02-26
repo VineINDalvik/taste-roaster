@@ -413,14 +413,23 @@ function CompareCard({
   const handleDownload = useCallback(async () => {
     if (saving) return;
     setSaving(true);
+    const ctrl = new AbortController();
+    const timeout = setTimeout(() => ctrl.abort(), 60000);
     try {
       const res = await fetch("/api/share-compare", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ personA, personB, comparison }),
+        signal: ctrl.signal,
       });
-      if (!res.ok) throw new Error("生成失败");
+      clearTimeout(timeout);
+      if (!res.ok) {
+        const text = await res.text();
+        const hint = text?.includes("字体") ? "（字体加载慢，请稍后重试）" : "";
+        throw new Error(`生成失败${hint}`);
+      }
       const blob = await res.blob();
+      if (blob.size < 1000) throw new Error("返回数据异常");
       const url = URL.createObjectURL(blob);
 
       const isMobile = /iPhone|iPad|Android|Mobile/i.test(navigator.userAgent);
@@ -433,8 +442,10 @@ function CompareCard({
         link.click();
         setTimeout(() => URL.revokeObjectURL(url), 5000);
       }
-    } catch {
-      alert("生成失败，请直接截图保存");
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "生成失败";
+      const isAbort = /abort/i.test(msg);
+      alert(isAbort ? "请求超时，请稍后重试或直接截图保存" : `${msg}，可尝试截图保存`);
     } finally {
       setSaving(false);
     }

@@ -4,13 +4,38 @@ import { NextRequest } from "next/server";
 export const runtime = "nodejs";
 export const maxDuration = 30;
 
-const FONT_CDN = "https://cdn.jsdelivr.net/gh/googlefonts/noto-cjk@main/Sans/SubsetOTF/SC";
+const FONT_CDNS = [
+  "https://cdn.jsdelivr.net/gh/googlefonts/noto-cjk@main/Sans/SubsetOTF/SC",
+  "https://raw.githubusercontent.com/googlefonts/noto-cjk/main/Sans/SubsetOTF/SC",
+];
 let fontRegular: ArrayBuffer | null = null;
 let fontBold: ArrayBuffer | null = null;
 
+async function fetchWithTimeout(url: string, ms = 15000): Promise<ArrayBuffer> {
+  const ctrl = new AbortController();
+  const t = setTimeout(() => ctrl.abort(), ms);
+  try {
+    const r = await fetch(url, { signal: ctrl.signal });
+    if (!r.ok) throw new Error(`font ${r.status}`);
+    return r.arrayBuffer();
+  } finally {
+    clearTimeout(t);
+  }
+}
+
 async function loadFonts(): Promise<{ regular: ArrayBuffer; bold: ArrayBuffer }> {
-  if (!fontRegular) fontRegular = await fetch(`${FONT_CDN}/NotoSansSC-Regular.otf`).then((r) => r.arrayBuffer());
-  if (!fontBold) fontBold = await fetch(`${FONT_CDN}/NotoSansSC-Bold.otf`).then((r) => r.arrayBuffer());
+  const load = async (name: string): Promise<ArrayBuffer> => {
+    for (const base of FONT_CDNS) {
+      try {
+        return await fetchWithTimeout(`${base}/${name}`);
+      } catch {
+        continue;
+      }
+    }
+    throw new Error(`字体加载失败: ${name}`);
+  };
+  if (!fontRegular) fontRegular = await load("NotoSansSC-Regular.otf");
+  if (!fontBold) fontBold = await load("NotoSansSC-Bold.otf");
   return { regular: fontRegular!, bold: fontBold! };
 }
 
@@ -61,6 +86,9 @@ function truncateText(text: string, maxLen: number) {
 export async function POST(req: NextRequest) {
   try {
     const data: ShareCompareData = await req.json();
+    if (!data?.personA || !data?.personB || !data?.comparison) {
+      return new Response("缺少对比数据", { status: 400 });
+    }
     const fonts = await loadFonts();
     const matchColor = getMatchColor(data.comparison.matchScore);
 
@@ -73,7 +101,8 @@ export async function POST(req: NextRequest) {
     const sims = data.comparison.similarities?.slice(0, 3) ?? [];
     const diffs = data.comparison.differences?.slice(0, 3) ?? [];
     [...sims, ...diffs].forEach((p) => {
-      pointsH += 24 + Math.max(1, Math.ceil((p.point.length + p.detail.length) / CW)) * lineH;
+      const a = (p?.point ?? "").length + (p?.detail ?? "").length;
+      pointsH += 24 + Math.max(1, Math.ceil(a / CW)) * lineH;
     });
 
     const sharedH = (data.comparison.sharedWorks?.length ?? 0) > 0 ? 80 : 0;
@@ -81,7 +110,7 @@ export async function POST(req: NextRequest) {
     const funItems = [comp.roastOneLiner, comp.dateScene, comp.dangerZone, comp.battleVerdict, comp.memeLine].filter(Boolean);
     const funH = funItems.length * 56;
     const fixedH = 72 + 120 + 80 + 60 + 100;
-    const height = Math.min(Math.max(900, fixedH + overviewH + chemistryH + pointsH + sharedH + funH), 12000);
+    const height = Math.min(Math.max(900, fixedH + overviewH + chemistryH + pointsH + sharedH + funH), 2400);
 
     return new ImageResponse(
       (

@@ -2,13 +2,25 @@
 
 ## 当前状态
 
-- **生产地址**: https://db-mbti.vinex.top
+- **生产地址**：https://db-mbti.vinex.top
+- **备用地址**：https://vinex.top（若 Vercel 中同时配置了两个域名，会指向同一部署）
+
+## 为什么 db-mbti 看起来没更新？
+
+**vinex.top 和 db-mbti.vinex.top 只有在都添加到 Vercel 项目时才会指向同一部署。**
+
+若 db-mbti 未在 Vercel 中添加：
+- 可能指向旧服务器 / 其他服务 / 404
+- 每次 deploy 只会更新 vinex.top，db-mbti 不会变
+
+**处理方式**：在 Vercel 中把 db-mbti.vinex.top 加为域名（见下方）
 
 ## 自定义域名 db-mbti.vinex.top
 
-1. **Vercel 添加域名**：Dashboard → 项目 → Settings → Domains → 添加 `db-mbti.vinex.top`
-2. **DNS**：将 `db-mbti` CNAME 到 `cname.vercel-dns.com`（或按 Vercel 提示）
-3. **小程序**：微信公众平台 → 开发设置 → request合法域名 → `https://db-mbti.vinex.top`
+1. **Vercel 添加域名**：Dashboard → 项目 → Settings → **Domains** → **Add** → 输入 `db-mbti.vinex.top`
+2. **DNS**：按 Vercel 提示，将 `db-mbti` 子域 CNAME 到 `cname.vercel-dns.com`
+3. **等待生效**：DNS 生效后，db-mbti 与 vinex.top 会指向同一最新部署
+4. **小程序**：微信公众平台 → 开发设置 → request合法域名 → `https://db-mbti.vinex.top`
 
 ## 修复 Git 不自动部署：Deploy Hook + GitHub Actions
 
