@@ -427,8 +427,6 @@ export default function ResultPage() {
               <Text className='payment-price'>¥{PRICE_BASIC}</Text>
               <Text className='payment-price-unit'>/份</Text>
             </View>
-            <Image className='payment-qrcode' src={TIP_QRCODE} mode='aspectFit' />
-            <Text className='payment-qr-hint'>微信扫码支付</Text>
             <View className='btn-unlock' onClick={() => { markBasicPaid(report.id || id); setBasicPaid(true) }}>
               <Text className='btn-action-text'>已支付？点击解锁</Text>
             </View>

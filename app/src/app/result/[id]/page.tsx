@@ -158,6 +158,7 @@ export default function ResultPage({
 
   const [expanding, setExpanding] = useState(false);
   const [showInviteModal, setShowInviteModal] = useState(false);
+  const [showTipModal, setShowTipModal] = useState(false);
   const [basicPaid, setBasicPaid] = useState(false);
   const [deepPaid, setDeepPaid] = useState(false);
   const mbtiType = useMemo(() => {
@@ -721,6 +722,27 @@ export default function ResultPage({
           </div>
         </div>
 
+        {/* Tip / 请作者喝杯咖啡 */}
+        <div className="animate-fade-in-up animate-delay-400">
+          <div className="card-glass rounded-2xl p-6 text-center space-y-4">
+            <div className="text-2xl">☕</div>
+            <h3 className="text-sm font-bold text-white">请作者喝杯咖啡</h3>
+            <p className="text-xs text-gray-400 leading-relaxed">
+              如果这个工具给你带来了快乐，可以赞赏支持一下
+            </p>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src="/images/tip-qrcode.jpg"
+              alt="赞赏二维码"
+              className="w-40 h-40 mx-auto rounded-xl cursor-pointer hover:opacity-90 transition-opacity"
+              onClick={() => setShowTipModal(true)}
+            />
+            <p className="text-[10px] text-gray-500">
+              点击放大 · 用微信扫一扫识别赞赏
+            </p>
+          </div>
+        </div>
+
         {/* Footer */}
         <div className="text-center space-y-3 pb-8 animate-fade-in-up animate-delay-400">
           <Link
@@ -741,6 +763,24 @@ export default function ResultPage({
           report={report}
           onClose={() => setShowInviteModal(false)}
         />
+      )}
+
+      {showTipModal && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-6"
+          onClick={() => setShowTipModal(false)}
+        >
+          <div className="max-w-sm w-full text-center" onClick={(e) => e.stopPropagation()}>
+            <p className="text-white text-sm mb-4">用微信扫一扫识别赞赏</p>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src="/images/tip-qrcode.jpg"
+              alt="赞赏二维码"
+              className="w-72 h-72 mx-auto rounded-2xl"
+            />
+            <p className="text-gray-400 text-xs mt-4">点击空白处关闭</p>
+          </div>
+        </div>
       )}
 
     </main>

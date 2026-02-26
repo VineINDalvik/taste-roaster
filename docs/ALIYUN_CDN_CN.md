@@ -16,7 +16,7 @@
 
 1. 登录 [Vercel](https://vercel.com) → 进入项目 `app`
 2. **Settings** → **Domains**：列表中除了 `vinex.top`，会有一个 `*.vercel.app` 的域名，即项目默认 URL
-3. 或 **Deployments** → 点击最新 Production 部署 → 查看 **Visit** 链接中的域名（形如 `app-xxxxx-whuvinexio-3019s-projects.vercel.app`）
+3. 或 **Deployments** → 点击最新 Production 部署 → **Visit** 链接中的域名（形如 `app-xxxxx-whuvinexio-3019s-projects.vercel.app`，每次部署会变，但都可用作源站）
 4. 将该域名**去掉 `https://`** 后，作为 CDN 源站地址填入，例如：`app-theta-puce.vercel.app`
 
 > 源站必须是 `xxx.vercel.app` 格式，不能使用 `vinex.top`（否则会形成循环）。
