@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, use, useRef, useCallback } from "react";
+import { useEffect, useState, useRef, useCallback } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 
@@ -14,12 +14,12 @@ interface PersonData {
   name: string;
   mbtiType: string;
   mbtiTitle: string;
-  dimensions: {
+  dimensions?: Partial<{
     ie: MBTIDimension;
     ns: MBTIDimension;
     tf: MBTIDimension;
     jp: MBTIDimension;
-  };
+  }>;
   radarData: Record<string, number>;
   bookCount: number;
   movieCount: number;
@@ -36,10 +36,10 @@ interface ComparisonData {
   matchScore: number;
   matchTitle: string;
   overview: string;
-  similarities: { point: string; detail: string }[];
-  differences: { point: string; detail: string }[];
+  similarities?: { point: string; detail: string }[];
+  differences?: { point: string; detail: string }[];
   chemistry: string;
-  sharedWorks: string[];
+  sharedWorks?: string[];
   crossRecommend?: {
     forA: CrossRecItem[];
     forB: CrossRecItem[];
@@ -93,12 +93,55 @@ function getMatchLabel(score: number) {
   return "文化反义词";
 }
 
+function normalizeCompareData(raw: any): CompareData | null {
+  if (!raw?.personA || !raw?.personB || !raw?.comparison) return null;
+  const comparison = raw.comparison ?? {};
+  const cross = comparison.crossRecommend ?? null;
+  const crossRecommend =
+    cross && typeof cross === "object"
+      ? {
+          forA: Array.isArray(cross.forA) ? cross.forA : [],
+          forB: Array.isArray(cross.forB) ? cross.forB : [],
+        }
+      : undefined;
+  return {
+    ...raw,
+    personA: {
+      ...raw.personA,
+      dimensions: raw.personA?.dimensions ?? {},
+      radarData: raw.personA?.radarData ?? {},
+      bookCount: raw.personA?.bookCount ?? 0,
+      movieCount: raw.personA?.movieCount ?? 0,
+      musicCount: raw.personA?.musicCount ?? 0,
+    },
+    personB: {
+      ...raw.personB,
+      dimensions: raw.personB?.dimensions ?? {},
+      radarData: raw.personB?.radarData ?? {},
+      bookCount: raw.personB?.bookCount ?? 0,
+      movieCount: raw.personB?.movieCount ?? 0,
+      musicCount: raw.personB?.musicCount ?? 0,
+    },
+    comparison: {
+      ...comparison,
+      similarities: Array.isArray(comparison.similarities) ? comparison.similarities : [],
+      differences: Array.isArray(comparison.differences) ? comparison.differences : [],
+      sharedWorks: Array.isArray(comparison.sharedWorks) ? comparison.sharedWorks : [],
+      crossRecommend,
+      matchScore: typeof comparison.matchScore === "number" ? comparison.matchScore : 0,
+      matchTitle: typeof comparison.matchTitle === "string" ? comparison.matchTitle : "匹配度",
+      overview: typeof comparison.overview === "string" ? comparison.overview : "",
+      chemistry: typeof comparison.chemistry === "string" ? comparison.chemistry : "",
+    },
+  };
+}
+
 export default function CompareResultPage({
   params,
 }: {
-  params: Promise<{ id: string }>;
+  params: { id: string };
 }) {
-  const { id } = use(params);
+  const { id } = params;
   const router = useRouter();
   const [data, setData] = useState<CompareData | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -106,22 +149,36 @@ export default function CompareResultPage({
   const [queryReportIdA, setQueryReportIdA] = useState<string>("");
 
   useEffect(() => {
-    const stored = localStorage.getItem(`taste-compare-${id}`);
-    if (stored) {
-      try {
-        setData(JSON.parse(stored));
-        return;
-      } catch {
-        // fall through to remote
+    try {
+      const stored = localStorage.getItem(`taste-compare-${id}`);
+      if (stored) {
+        try {
+          const parsed = JSON.parse(stored);
+          const normalized = normalizeCompareData(parsed);
+          if (normalized) {
+            setData(normalized);
+            return;
+          }
+        } catch {
+          // fall through to remote
+        }
       }
+    } catch {
+      // ignore localStorage errors
     }
 
     fetch(`/api/compare/${id}`)
       .then(async (res) => {
         if (!res.ok) throw new Error("not found");
         const remote = await res.json();
-        setData(remote);
-        localStorage.setItem(`taste-compare-${id}`, JSON.stringify(remote));
+        const normalized = normalizeCompareData(remote);
+        if (!normalized) throw new Error("bad data");
+        setData(normalized);
+        try {
+          localStorage.setItem(`taste-compare-${id}`, JSON.stringify(normalized));
+        } catch {
+          // ignore
+        }
       })
       .catch(() => setError("对比报告不存在或已过期"));
   }, [id]);
@@ -146,6 +203,14 @@ export default function CompareResultPage({
   const { personA, personB, comparison } = data;
   const matchColor = getMatchColor(comparison.matchScore);
   const reportIdA = queryReportIdA || data.reportIdA || "";
+  const sims = comparison.similarities ?? [];
+  const diffs = comparison.differences ?? [];
+  const sharedWorks = comparison.sharedWorks ?? [];
+  const crossA = comparison.crossRecommend?.forA ?? [];
+  const crossB = comparison.crossRecommend?.forB ?? [];
+  const dimKeysAvailable = DIM_KEYS.filter(
+    (k) => !!personA.dimensions?.[k] && !!personB.dimensions?.[k]
+  );
 
   useEffect(() => {
     // Avoid Next.js runtime issues with useSearchParams in page.tsx
@@ -227,21 +292,23 @@ export default function CompareResultPage({
         </div>
 
         {/* Dimension Comparison */}
-        <div className="card-glass rounded-xl p-5 space-y-4 animate-fade-in-up animate-delay-100">
-          <h3 className="text-sm font-bold text-[#667eea]">
-            🧬 四维度对比
-          </h3>
-          {DIM_KEYS.map((key) => (
-            <DualDimensionBar
-              key={key}
-              dimKey={key}
-              dimA={personA.dimensions[key]}
-              dimB={personB.dimensions[key]}
-              nameA={personA.name}
-              nameB={personB.name}
-            />
-          ))}
-        </div>
+        {dimKeysAvailable.length > 0 && (
+          <div className="card-glass rounded-xl p-5 space-y-4 animate-fade-in-up animate-delay-100">
+            <h3 className="text-sm font-bold text-[#667eea]">
+              🧬 四维度对比
+            </h3>
+            {dimKeysAvailable.map((key) => (
+              <DualDimensionBar
+                key={key}
+                dimKey={key}
+                dimA={personA.dimensions?.[key]!}
+                dimB={personB.dimensions?.[key]!}
+                nameA={personA.name}
+                nameB={personB.name}
+              />
+            ))}
+          </div>
+        )}
 
         {/* Dual Radar */}
         <div className="card-glass rounded-xl p-5 animate-fade-in-up animate-delay-100">
@@ -273,7 +340,7 @@ export default function CompareResultPage({
               ✅ 相同点
             </h3>
             <div className="space-y-3">
-              {comparison.similarities.map((s, i) => (
+              {sims.map((s, i) => (
                 <div key={i} className="space-y-1">
                   <div className="text-xs font-medium text-white">
                     {s.point}
@@ -291,7 +358,7 @@ export default function CompareResultPage({
               ⚡ 不同点
             </h3>
             <div className="space-y-3">
-              {comparison.differences.map((d, i) => (
+              {diffs.map((d, i) => (
                 <div key={i} className="space-y-1">
                   <div className="text-xs font-medium text-white">
                     {d.point}
@@ -355,7 +422,7 @@ export default function CompareResultPage({
         )}
 
         {/* Shared Works - Venn-like */}
-        {comparison.sharedWorks.length > 0 && (
+        {sharedWorks.length > 0 && (
           <div className="card-glass rounded-xl p-5 space-y-3 animate-fade-in-up animate-delay-200">
             <h3 className="text-sm font-bold text-[#667eea]">
               🔗 品味交集
@@ -364,7 +431,7 @@ export default function CompareResultPage({
               你们都看过/读过/听过的作品
             </p>
             <div className="flex flex-wrap gap-2">
-              {comparison.sharedWorks.map((w, i) => (
+              {sharedWorks.map((w, i) => (
                 <span
                   key={i}
                   className="px-3 py-1.5 rounded-full text-xs font-medium"
@@ -382,9 +449,7 @@ export default function CompareResultPage({
         )}
 
         {/* Cross Recommendations */}
-        {comparison.crossRecommend &&
-          (comparison.crossRecommend.forA.length > 0 ||
-            comparison.crossRecommend.forB.length > 0) && (
+        {(crossA.length > 0 || crossB.length > 0) && (
             <div className="card-glass rounded-xl p-5 space-y-4 animate-fade-in-up animate-delay-300">
               <h3 className="text-sm font-bold text-[#e94560]">
                 💡 交叉推荐
@@ -393,23 +458,23 @@ export default function CompareResultPage({
                 从对方的书影音中，挑出你可能会喜欢的
               </p>
 
-              {comparison.crossRecommend.forA.length > 0 && (
+              {crossA.length > 0 && (
                 <div className="space-y-2">
                   <div className="text-xs font-medium text-[#667eea]">
                     推荐给 {personA.name}
                   </div>
-                  {comparison.crossRecommend.forA.map((rec, i) => (
+                  {crossA.map((rec, i) => (
                     <RecItem key={i} rec={rec} />
                   ))}
                 </div>
               )}
 
-              {comparison.crossRecommend.forB.length > 0 && (
+              {crossB.length > 0 && (
                 <div className="space-y-2">
                   <div className="text-xs font-medium text-[#e94560]">
                     推荐给 {personB.name}
                   </div>
-                  {comparison.crossRecommend.forB.map((rec, i) => (
+                  {crossB.map((rec, i) => (
                     <RecItem key={i} rec={rec} />
                   ))}
                 </div>
