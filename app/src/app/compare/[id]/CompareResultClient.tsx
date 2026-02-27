@@ -56,6 +56,8 @@ interface CompareData {
   personA: PersonData;
   personB: PersonData;
   comparison: ComparisonData;
+  reportIdA?: string;
+  reportIdB?: string;
 }
 
 const DIM_KEYS = ["ie", "ns", "tf", "jp"] as const;
@@ -155,6 +157,8 @@ function normalizeCompareData(raw: any): CompareData | null {
 export default function CompareResultClient({ id }: { id: string }) {
   const [data, setData] = useState<CompareData | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [backLoading, setBackLoading] = useState(false);
+  const [queryReportIdA, setQueryReportIdA] = useState<string>("");
 
   useEffect(() => {
     if (!id) {
@@ -192,6 +196,15 @@ export default function CompareResultClient({ id }: { id: string }) {
       .catch(() => setError("对比报告不存在或已过期"));
   }, [id]);
 
+  useEffect(() => {
+    try {
+      const qs = new URLSearchParams(window.location.search);
+      setQueryReportIdA(qs.get("a") || "");
+    } catch {
+      setQueryReportIdA("");
+    }
+  }, []);
+
   if (error || !data) {
     return (
       <main className="min-h-screen flex items-center justify-center px-4">
@@ -210,6 +223,7 @@ export default function CompareResultClient({ id }: { id: string }) {
   }
 
   const { personA, personB, comparison } = data;
+  const myReportId = queryReportIdA || data.reportIdA || "";
 
   return (
     <main className="min-h-screen px-4 py-8">
@@ -220,6 +234,62 @@ export default function CompareResultClient({ id }: { id: string }) {
         >
           ← 返回
         </Link>
+
+        {/* Back to my single report (safe, never crash the page) */}
+        <div className="card-glass rounded-xl p-4 animate-fade-in-up">
+          <div className="flex items-center justify-between mb-3">
+            <div className="text-sm font-bold text-white">↩️ 回到我的单人分析</div>
+            <div className="text-[11px] text-gray-500">（未测过会回到填写页）</div>
+          </div>
+          <button
+            type="button"
+            disabled={backLoading}
+            onClick={async () => {
+              if (backLoading) return;
+              setBackLoading(true);
+              try {
+                if (!myReportId) {
+                  window.location.href = "/upload";
+                  return;
+                }
+
+                try {
+                  const local = localStorage.getItem(`taste-report-${myReportId}`);
+                  if (local) {
+                    window.location.href = `/result/${myReportId}`;
+                    return;
+                  }
+                } catch {
+                  // ignore
+                }
+
+                const ctrl = new AbortController();
+                const t = setTimeout(() => ctrl.abort(), 10000);
+                try {
+                  const res = await fetch(`/api/report/${myReportId}`, {
+                    method: "GET",
+                    signal: ctrl.signal,
+                  });
+                  if (res.ok) {
+                    window.location.href = `/result/${myReportId}`;
+                    return;
+                  }
+                } finally {
+                  clearTimeout(t);
+                }
+
+                window.location.href = "/upload";
+              } catch {
+                window.location.href = "/upload";
+              } finally {
+                setBackLoading(false);
+              }
+            }}
+            className="w-full py-3 rounded-xl bg-white/[0.03] hover:bg-white/[0.08] border border-white/10 text-center text-sm text-white transition-colors disabled:opacity-60"
+          >
+            {backLoading ? "检查中..." : "回到我的单人结果"}
+          </button>
+        </div>
 
         {/* Match Score Hero */}
         <div className="animate-fade-in-up">
