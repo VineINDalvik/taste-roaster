@@ -6,17 +6,26 @@ let cachedTransparentQrDataUrl: string | null = null;
 export async function getSiteQrTransparentDataUrl(): Promise<string> {
   if (cachedTransparentQrDataUrl) return cachedTransparentQrDataUrl;
 
-  const generated = await QRCode.toDataURL(SITE_URL, {
-    errorCorrectionLevel: "M",
-    margin: 0,
-    width: 240,
-    color: {
-      // White-ish modules for dark backgrounds
-      dark: "rgba(255,255,255,0.92)",
-      // Fully transparent background (no white square)
-      light: "#0000",
-    },
-  });
+  const make = async (light: string) =>
+    QRCode.toDataURL(SITE_URL, {
+      errorCorrectionLevel: "M",
+      margin: 0,
+      width: 240,
+      color: {
+        // QRCode expects hex colors (no rgba()).
+        dark: "#ffffff",
+        // Fully transparent background (no white square)
+        light,
+      },
+    });
+
+  let generated: string;
+  try {
+    generated = await make("#00000000");
+  } catch {
+    // Some builds only accept 4-digit hex (#RGBA).
+    generated = await make("#0000");
+  }
 
   cachedTransparentQrDataUrl = generated;
   return generated;
