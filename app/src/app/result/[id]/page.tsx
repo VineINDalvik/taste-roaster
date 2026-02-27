@@ -670,11 +670,11 @@ export default function ResultPage({
             <img
               src="/images/tip-qrcode.jpg"
               alt="赞赏二维码"
-              className="w-40 h-40 mx-auto rounded-xl cursor-pointer hover:opacity-90 transition-opacity"
+              className="w-52 h-52 mx-auto rounded-xl cursor-pointer hover:opacity-90 transition-opacity object-cover object-center"
               onClick={() => setShowTipModal(true)}
             />
             <p className="text-[10px] text-gray-500">
-              点击放大 · 用微信扫一扫识别赞赏
+              微信里长按识别二维码 · 电脑端用微信扫码
             </p>
           </div>
         </div>
@@ -707,14 +707,14 @@ export default function ResultPage({
           onClick={() => setShowTipModal(false)}
         >
           <div className="max-w-sm w-full text-center" onClick={(e) => e.stopPropagation()}>
-            <p className="text-white text-sm mb-4">用微信扫一扫识别赞赏</p>
+            <p className="text-white text-sm mb-4">微信内长按识别二维码</p>
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src="/images/tip-qrcode.jpg"
               alt="赞赏二维码"
-              className="w-72 h-72 mx-auto rounded-2xl"
+              className="w-[340px] max-w-full aspect-square mx-auto rounded-2xl object-cover object-center"
             />
-            <p className="text-gray-400 text-xs mt-4">点击空白处关闭</p>
+            <p className="text-gray-400 text-xs mt-4">点击空白处关闭（可双指放大）</p>
           </div>
         </div>
       )}

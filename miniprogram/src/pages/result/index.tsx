@@ -563,11 +563,11 @@ export default function ResultPage() {
           <Image
             className='tip-qrcode tip-qrcode-tappable'
             src={TIP_QRCODE}
-            mode='aspectFit'
+            mode='aspectFill'
             showMenuByLongpress
             onClick={() => Taro.previewImage({ current: TIP_QRCODE, urls: [TIP_QRCODE] })}
           />
-          <Text className='tip-hint'>点击放大 / 长按保存 · 用微信扫一扫识别赞赏</Text>
+          <Text className='tip-hint'>点击放大 / 长按识别二维码（手机无法自己“扫一扫”屏幕）</Text>
         </View>
 
         {/* Privacy footer */}
