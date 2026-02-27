@@ -300,27 +300,27 @@ export async function POST(req: NextRequest) {
                 <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
                   {funItems.includes(comp.roastOneLiner || "") && comp.roastOneLiner && (
                     <div style={{ fontSize: 20, color: "rgba(209,213,219,0.9)", fontStyle: "italic" }}>
-                      {`\u201C${truncateText(data.comparison.roastOneLiner, 50)}\u201D`}
+                      {`\u201C${truncateText(comp.roastOneLiner ?? "", 50)}\u201D`}
                     </div>
                   )}
                   {funItems.includes(comp.dateScene || "") && comp.dateScene && (
                     <div style={{ fontSize: 20, color: "rgba(74,222,128,0.9)" }}>
-                      {`💕 ${truncateText(data.comparison.dateScene, 40)}`}
+                      {`💕 ${truncateText(comp.dateScene ?? "", 40)}`}
                     </div>
                   )}
                   {funItems.includes(comp.dangerZone || "") && comp.dangerZone && (
                     <div style={{ fontSize: 20, color: "rgba(233,69,96,0.9)" }}>
-                      {`⚠️ ${truncateText(data.comparison.dangerZone, 40)}`}
+                      {`⚠️ ${truncateText(comp.dangerZone ?? "", 40)}`}
                     </div>
                   )}
                   {funItems.includes(comp.battleVerdict || "") && comp.battleVerdict && (
                     <div style={{ fontSize: 20, color: "rgba(102,126,234,0.9)" }}>
-                      {`🏆 ${truncateText(data.comparison.battleVerdict, 40)}`}
+                      {`🏆 ${truncateText(comp.battleVerdict ?? "", 40)}`}
                     </div>
                   )}
                   {funItems.includes(comp.memeLine || "") && comp.memeLine && (
                     <div style={{ fontSize: 22, fontWeight: 600, color: "rgba(251,191,36,0.95)", marginTop: 4 }}>
-                      {`\u201C${truncateText(data.comparison.memeLine, 35)}\u201D`}
+                      {`\u201C${truncateText(comp.memeLine ?? "", 35)}\u201D`}
                     </div>
                   )}
                 </div>
