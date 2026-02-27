@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useRef, useCallback } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 
 interface MBTIDimension {
   letter: string;
@@ -136,12 +136,9 @@ function normalizeCompareData(raw: any): CompareData | null {
   };
 }
 
-export default function CompareResultPage({
-  params,
-}: {
-  params: { id: string };
-}) {
-  const { id } = params;
+export default function CompareResultPage() {
+  const params = useParams<{ id?: string }>();
+  const id = typeof params?.id === "string" ? params.id : "";
   const router = useRouter();
   const [data, setData] = useState<CompareData | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -149,6 +146,10 @@ export default function CompareResultPage({
   const [queryReportIdA, setQueryReportIdA] = useState<string>("");
 
   useEffect(() => {
+    if (!id) {
+      setError("缺少对比 ID");
+      return;
+    }
     try {
       const stored = localStorage.getItem(`taste-compare-${id}`);
       if (stored) {
