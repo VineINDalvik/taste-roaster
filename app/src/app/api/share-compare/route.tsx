@@ -92,25 +92,91 @@ export async function POST(req: NextRequest) {
     const fonts = await loadFonts();
     const matchColor = getMatchColor(data.comparison.matchScore);
 
-    const CW = 26;
-    const lineH = 42;
-    const overviewH = Math.max(1, Math.ceil((data.comparison.overview?.length || 0) / CW)) * lineH;
-    const chemistryH = Math.max(1, Math.ceil((data.comparison.chemistry?.length || 0) / CW)) * lineH;
+    // --- Layout fitting (avoid bottom cut) ---
+    // We intentionally over-estimate height and keep a larger max cap.
+    // If content is still too long, we further shrink content limits.
+    const MAX_HEIGHT = 2600;
+    const CW = 24;
+    const lineH = 48;
+    const EXTRA_SAFETY = 260;
 
-    let pointsH = 0;
-    const sims = data.comparison.similarities?.slice(0, 3) ?? [];
-    const diffs = data.comparison.differences?.slice(0, 3) ?? [];
-    [...sims, ...diffs].forEach((p) => {
-      const a = (p?.point ?? "").length + (p?.detail ?? "").length;
-      pointsH += 24 + Math.max(1, Math.ceil(a / CW)) * lineH;
-    });
+    let maxSims = 3;
+    let maxDiffs = 3;
+    let maxOverviewLen = 200;
+    let maxChemLen = 200;
+    let maxShared = 8;
+    let maxFunLen = 5;
 
-    const sharedH = (data.comparison.sharedWorks?.length ?? 0) > 0 ? 80 : 0;
     const comp = data.comparison;
-    const funItems = [comp.roastOneLiner, comp.dateScene, comp.dangerZone, comp.battleVerdict, comp.memeLine].filter(Boolean);
-    const funH = funItems.length * 56;
-    const fixedH = 72 + 120 + 80 + 60 + 100;
-    const height = Math.min(Math.max(900, fixedH + overviewH + chemistryH + pointsH + sharedH + funH), 2400);
+
+    const estimate = () => {
+      const overviewText = truncateText(comp.overview || "", maxOverviewLen);
+      const chemistryText = truncateText(comp.chemistry || "", maxChemLen);
+
+      const sims = (comp.similarities ?? []).slice(0, maxSims).map((s) => ({
+        point: truncateText(s.point || "", 40),
+        detail: truncateText(s.detail || "", 80),
+      }));
+      const diffs = (comp.differences ?? []).slice(0, maxDiffs).map((d) => ({
+        point: truncateText(d.point || "", 40),
+        detail: truncateText(d.detail || "", 80),
+      }));
+
+      const shared = (comp.sharedWorks ?? []).slice(0, maxShared);
+      const funItems = [
+        comp.roastOneLiner,
+        comp.dateScene,
+        comp.dangerZone,
+        comp.battleVerdict,
+        comp.memeLine,
+      ]
+        .filter(Boolean)
+        .slice(0, maxFunLen) as string[];
+
+      // Height estimate: fixed parts + blocks
+      const overviewH = Math.max(1, Math.ceil(overviewText.length / CW)) * lineH;
+      const chemistryH = Math.max(1, Math.ceil(chemistryText.length / CW)) * lineH;
+
+      let pointsH = 0;
+      [...sims, ...diffs].forEach((p) => {
+        const a = (p.point ?? "").length + (p.detail ?? "").length;
+        // card padding + title + text lines (be conservative)
+        pointsH += 96 + Math.max(1, Math.ceil(a / CW)) * lineH;
+      });
+
+      const sharedH = shared.length > 0 ? 120 : 0;
+      const funH = funItems.length > 0 ? 160 + funItems.length * 64 : 0;
+      const fixedH = 560; // header/vs/badge/dividers/footer + margins (conservative)
+
+      const height = Math.min(
+        Math.max(1100, fixedH + overviewH + chemistryH + pointsH + sharedH + funH + EXTRA_SAFETY),
+        MAX_HEIGHT
+      );
+
+      return {
+        height,
+        overviewText,
+        chemistryText,
+        sims,
+        diffs,
+        shared,
+        funItems,
+      };
+    };
+
+    let fitted = estimate();
+    // If still too tall (hit cap), shrink content gradually to prevent cut
+    for (let i = 0; i < 6 && fitted.height >= MAX_HEIGHT; i++) {
+      if (maxSims > 2) maxSims--;
+      else if (maxDiffs > 2) maxDiffs--;
+      else if (maxOverviewLen > 160) maxOverviewLen -= 20;
+      else if (maxChemLen > 160) maxChemLen -= 20;
+      else if (maxFunLen > 3) maxFunLen--;
+      else if (maxShared > 6) maxShared--;
+      fitted = estimate();
+    }
+
+    const { height, overviewText, chemistryText, sims, diffs, shared, funItems } = fitted;
 
     return new ImageResponse(
       (
@@ -130,7 +196,7 @@ export async function POST(req: NextRequest) {
           <div style={{ position: "absolute", top: -120, right: -80, width: 400, height: 400, borderRadius: "50%", background: "rgba(102,126,234,0.04)" }} />
           <div style={{ position: "absolute", bottom: -80, left: -60, width: 320, height: 320, borderRadius: "50%", background: "rgba(233,69,96,0.04)" }} />
 
-          <div style={{ display: "flex", flexDirection: "column", padding: "48px 56px 64px", position: "relative", zIndex: 1 }}>
+          <div style={{ display: "flex", flexDirection: "column", padding: "48px 56px 96px", position: "relative", zIndex: 1 }}>
             <div style={{ display: "flex", position: "absolute", top: 0, left: 56, right: 56, height: 4, background: "linear-gradient(90deg, transparent, rgba(102,126,234,0.4), rgba(233,69,96,0.4), transparent)" }} />
 
             <div style={{ fontSize: 22, color: "#6b7280", marginBottom: 32, textAlign: "center" }}>
@@ -172,7 +238,7 @@ export async function POST(req: NextRequest) {
             </div>
 
             <div style={{ fontSize: 24, color: "#d1d5db", lineHeight: 1.7, marginBottom: 36 }}>
-              {truncateText(data.comparison.overview || "", 200)}
+              {overviewText}
             </div>
 
             <div style={{ display: "flex", height: 2, marginBottom: 24, background: "linear-gradient(90deg, rgba(255,255,255,0.06), rgba(255,255,255,0.06))" }} />
@@ -187,8 +253,8 @@ export async function POST(req: NextRequest) {
                 <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
                   {sims.map((s, i) => (
                     <div key={i} style={{ display: "flex", flexDirection: "column", padding: "12px 16px", background: "rgba(34,197,94,0.08)", borderRadius: 12, borderLeft: "4px solid rgba(34,197,94,0.5)" }}>
-                      <div style={{ fontSize: 22, fontWeight: 600, color: "#86efac", marginBottom: 4 }}>{truncateText(s.point, 40)}</div>
-                      <div style={{ fontSize: 20, color: "rgba(209,213,219,0.85)", lineHeight: 1.5 }}>{truncateText(s.detail, 80)}</div>
+                      <div style={{ fontSize: 22, fontWeight: 600, color: "#86efac", marginBottom: 4 }}>{s.point}</div>
+                      <div style={{ fontSize: 20, color: "rgba(209,213,219,0.85)", lineHeight: 1.5 }}>{s.detail}</div>
                     </div>
                   ))}
                 </div>
@@ -205,8 +271,8 @@ export async function POST(req: NextRequest) {
                 <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
                   {diffs.map((d, i) => (
                     <div key={i} style={{ display: "flex", flexDirection: "column", padding: "12px 16px", background: "rgba(233,69,96,0.08)", borderRadius: 12, borderLeft: "4px solid rgba(233,69,96,0.5)" }}>
-                      <div style={{ fontSize: 22, fontWeight: 600, color: "#f9a8d4", marginBottom: 4 }}>{truncateText(d.point, 40)}</div>
-                      <div style={{ fontSize: 20, color: "rgba(209,213,219,0.85)", lineHeight: 1.5 }}>{truncateText(d.detail, 80)}</div>
+                      <div style={{ fontSize: 22, fontWeight: 600, color: "#f9a8d4", marginBottom: 4 }}>{d.point}</div>
+                      <div style={{ fontSize: 20, color: "rgba(209,213,219,0.85)", lineHeight: 1.5 }}>{d.detail}</div>
                     </div>
                   ))}
                 </div>
@@ -220,7 +286,7 @@ export async function POST(req: NextRequest) {
                 <span style={{ fontSize: 26, fontWeight: 700, color: "#f5c518" }}>化学反应</span>
               </div>
               <div style={{ fontSize: 22, color: "#d1d5db", lineHeight: 1.7 }}>
-                {truncateText(data.comparison.chemistry || "", 200)}
+                {chemistryText}
               </div>
             </div>
 
@@ -232,27 +298,27 @@ export async function POST(req: NextRequest) {
                   <span style={{ fontSize: 26, fontWeight: 700, color: "#a78bfa" }}>趣味彩蛋</span>
                 </div>
                 <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-                  {data.comparison.roastOneLiner && (
+                  {funItems.includes(comp.roastOneLiner || "") && comp.roastOneLiner && (
                     <div style={{ fontSize: 20, color: "rgba(209,213,219,0.9)", fontStyle: "italic" }}>
                       {`\u201C${truncateText(data.comparison.roastOneLiner, 50)}\u201D`}
                     </div>
                   )}
-                  {data.comparison.dateScene && (
+                  {funItems.includes(comp.dateScene || "") && comp.dateScene && (
                     <div style={{ fontSize: 20, color: "rgba(74,222,128,0.9)" }}>
                       {`💕 ${truncateText(data.comparison.dateScene, 40)}`}
                     </div>
                   )}
-                  {data.comparison.dangerZone && (
+                  {funItems.includes(comp.dangerZone || "") && comp.dangerZone && (
                     <div style={{ fontSize: 20, color: "rgba(233,69,96,0.9)" }}>
                       {`⚠️ ${truncateText(data.comparison.dangerZone, 40)}`}
                     </div>
                   )}
-                  {data.comparison.battleVerdict && (
+                  {funItems.includes(comp.battleVerdict || "") && comp.battleVerdict && (
                     <div style={{ fontSize: 20, color: "rgba(102,126,234,0.9)" }}>
                       {`🏆 ${truncateText(data.comparison.battleVerdict, 40)}`}
                     </div>
                   )}
-                  {data.comparison.memeLine && (
+                  {funItems.includes(comp.memeLine || "") && comp.memeLine && (
                     <div style={{ fontSize: 22, fontWeight: 600, color: "rgba(251,191,36,0.95)", marginTop: 4 }}>
                       {`\u201C${truncateText(data.comparison.memeLine, 35)}\u201D`}
                     </div>
@@ -262,14 +328,14 @@ export async function POST(req: NextRequest) {
             )}
 
             {/* Shared works */}
-            {data.comparison.sharedWorks && data.comparison.sharedWorks.length > 0 && (
+            {shared.length > 0 && (
               <div style={{ display: "flex", flexDirection: "column", marginBottom: 28 }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 12 }}>
                   <span style={{ fontSize: 24 }}>🔗</span>
                   <span style={{ fontSize: 26, fontWeight: 700, color: "#667eea" }}>品味交集</span>
                 </div>
                 <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
-                  {data.comparison.sharedWorks.slice(0, 8).map((w, i) => (
+                  {shared.map((w, i) => (
                     <span key={i} style={{ padding: "6px 14px", background: "rgba(102,126,234,0.15)", borderRadius: 9999, fontSize: 18, color: "#a5b4fc" }}>
                       {truncateText(w, 12)}
                     </span>

@@ -27,6 +27,28 @@ function useCompareResultId(): string {
   }, [router?.params?.id, instance?.router?.params])
 }
 
+/** 读取单人报告 ID（用于双人页提供“回到单人”的入口） */
+function useCompareResultReportIds(): { fromId: string; toId: string } {
+  const router = useRouter()
+  const instance = getCurrentInstance()
+  return useMemo(() => {
+    const p1 = (router?.params as Record<string, string> | undefined) ?? {}
+    const p2 = (instance?.router?.params as Record<string, string> | undefined) ?? {}
+    let fromId = p1.from || p2.from || ''
+    let toId = p1.to || p2.to || ''
+    if (!fromId || !toId) {
+      try {
+        const pages = Taro.getCurrentPages()
+        const page = pages?.[pages.length - 1] as { options?: Record<string, string> } | undefined
+        const opts = page?.options ?? {}
+        fromId = fromId || opts.from || ''
+        toId = toId || opts.to || ''
+      } catch {}
+    }
+    return { fromId, toId }
+  }, [router?.params, instance?.router?.params])
+}
+
 const DIM_KEYS = ['ie', 'ns', 'tf', 'jp'] as const
 const DIM_LABELS: Record<string, [string, string]> = {
   ie: ['I', 'E'],
@@ -52,6 +74,7 @@ function getMatchLabel(score: number) {
 
 export default function CompareResultPage() {
   const id = useCompareResultId()
+  const { fromId, toId } = useCompareResultReportIds()
   const [data, setData] = useState<CompareData | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
@@ -138,6 +161,31 @@ export default function CompareResultPage() {
         >
           ← 返回
         </Text>
+
+        {/* Back to single report entry */}
+        {(fromId || toId) && (
+          <View className='section-card card-glass animate-fade-in-up'>
+            <Text className='section-title text-blue'>↩️ 回到单人报告</Text>
+            <View className='entry-actions'>
+              {fromId ? (
+                <View
+                  className='btn-small card-glass'
+                  onClick={() => Taro.navigateTo({ url: `/pages/result/index?id=${fromId}` })}
+                >
+                  <Text className='btn-action-text'>{personA.name} 单人</Text>
+                </View>
+              ) : null}
+              {toId ? (
+                <View
+                  className='btn-small card-glass'
+                  onClick={() => Taro.navigateTo({ url: `/pages/result/index?id=${toId}` })}
+                >
+                  <Text className='btn-action-text'>{personB.name} 单人</Text>
+                </View>
+              ) : null}
+            </View>
+          </View>
+        )}
 
         {/* Match Score Hero Card */}
         <View className='animate-fade-in-up'>

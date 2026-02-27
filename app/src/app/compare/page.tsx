@@ -99,6 +99,17 @@ function CompareContent() {
 
       setProgressIdx(4);
 
+      // Cache reportB locally so we can jump back to single report from compare page
+      const reportBId: string | null =
+        typeof reportB?.id === "string" ? reportB.id : null;
+      if (reportBId) {
+        try {
+          localStorage.setItem(`taste-report-${reportBId}`, JSON.stringify(reportB));
+        } catch {
+          // ignore storage quota errors
+        }
+      }
+
       const bBookCount = reportB.realCounts?.books || reportB.bookCount || reportB.input?.books?.length || 0;
       const bMovieCount = reportB.realCounts?.movies || reportB.movieCount || reportB.input?.movies?.length || 0;
       const bMusicCount = reportB.realCounts?.music || reportB.musicCount || reportB.input?.music?.length || 0;
@@ -157,10 +168,17 @@ function CompareContent() {
 
       localStorage.setItem(
         `taste-compare-${result.compareId}`,
-        JSON.stringify(result)
+        JSON.stringify({
+          ...result,
+          reportIdA: fromId,
+          reportIdB: reportBId || undefined,
+        })
       );
       recordCompare(myDoubanId);
-      router.push(`/compare/${result.compareId}`);
+      const qs = new URLSearchParams();
+      qs.set("a", fromId);
+      if (reportBId) qs.set("b", reportBId);
+      router.push(`/compare/${result.compareId}?${qs.toString()}`);
     } catch (err) {
       setError(err instanceof Error ? err.message : "对比失败，请重试");
     } finally {

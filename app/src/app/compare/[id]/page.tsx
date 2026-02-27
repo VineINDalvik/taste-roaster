@@ -2,6 +2,7 @@
 
 import { useEffect, useState, use, useRef, useCallback } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 
 interface MBTIDimension {
   letter: string;
@@ -56,6 +57,8 @@ interface CompareData {
   personA: PersonData;
   personB: PersonData;
   comparison: ComparisonData;
+  reportIdA?: string;
+  reportIdB?: string;
 }
 
 const DIM_KEYS = ["ie", "ns", "tf", "jp"] as const;
@@ -96,6 +99,7 @@ export default function CompareResultPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = use(params);
+  const searchParams = useSearchParams();
   const [data, setData] = useState<CompareData | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -139,6 +143,8 @@ export default function CompareResultPage({
 
   const { personA, personB, comparison } = data;
   const matchColor = getMatchColor(comparison.matchScore);
+  const reportIdA = searchParams.get("a") || data.reportIdA || "";
+  const reportIdB = searchParams.get("b") || data.reportIdB || "";
 
   return (
     <main className="min-h-screen px-4 py-8">
@@ -149,6 +155,28 @@ export default function CompareResultPage({
         >
           ← 返回
         </Link>
+
+        {/* Back to single report entry */}
+        <div className="card-glass rounded-xl p-4 animate-fade-in-up">
+          <div className="flex items-center justify-between mb-3">
+            <div className="text-sm font-bold text-white">↩️ 回到单人报告</div>
+            <div className="text-[11px] text-gray-500">（建议先回看单人，再对照理解）</div>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <Link
+              href={reportIdA ? `/result/${reportIdA}` : "/upload"}
+              className="py-3 rounded-xl bg-white/[0.03] hover:bg-white/[0.08] border border-white/10 text-center text-sm text-white transition-colors"
+            >
+              查看 {personA.name} 单人
+            </Link>
+            <Link
+              href={reportIdB ? `/result/${reportIdB}` : "/upload"}
+              className="py-3 rounded-xl bg-white/[0.03] hover:bg-white/[0.08] border border-white/10 text-center text-sm text-white transition-colors"
+            >
+              查看 {personB.name} 单人
+            </Link>
+          </div>
+        </div>
 
         {/* Match Score Hero */}
         <div className="animate-fade-in-up">

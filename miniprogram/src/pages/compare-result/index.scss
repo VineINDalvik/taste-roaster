@@ -23,6 +23,15 @@
   color: #9ca3af;
 }
 
+.entry-actions {
+  display: flex;
+  gap: 20rpx;
+}
+
+.entry-actions .btn-small {
+  flex: 1;
+}
+
 .section-card {
   border-radius: 20rpx;
   padding: 32rpx;

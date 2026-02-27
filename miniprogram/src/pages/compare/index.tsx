@@ -95,9 +95,8 @@ export default function ComparePage() {
         doubanId: doubanIdB.trim(),
       })
 
-      if (reportB.id) {
-        setReport(reportB.id as string, reportB)
-      }
+      const reportBId = typeof (reportB as any).id === 'string' ? ((reportB as any).id as string) : ''
+      if (reportBId) setReport(reportBId, reportB)
 
       setProgressIdx(4)
 
@@ -143,7 +142,9 @@ export default function ComparePage() {
 
       setCompare(result.compareId as string, result)
       recordCompareUsage(myDoubanId)
-      Taro.navigateTo({ url: `/pages/compare-result/index?id=${result.compareId}` })
+      const qs = [`id=${result.compareId}`, `from=${fromId}`]
+      if (reportBId) qs.push(`to=${reportBId}`)
+      Taro.navigateTo({ url: `/pages/compare-result/index?${qs.join('&')}` })
     } catch (err) {
       const msg = err instanceof Error ? err.message : '对比失败'
       const hint = /(超时|timeout|fail|网络|连接)/i.test(msg)
