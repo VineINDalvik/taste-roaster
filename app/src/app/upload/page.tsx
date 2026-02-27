@@ -19,6 +19,7 @@ export default function UploadPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [progressIdx, setProgressIdx] = useState(0);
+  const [showDoubanHelp, setShowDoubanHelp] = useState(false);
 
   const handleAnalyze = async () => {
     if (!doubanId.trim()) return;
@@ -107,6 +108,35 @@ export default function UploadPage() {
         {/* Input */}
         {!isLoading && (
           <div className="space-y-4 animate-fade-in-up animate-delay-100">
+            {/* Mode 1: Get ID from Douban App */}
+            <button
+              type="button"
+              onClick={() => setShowDoubanHelp(true)}
+              className="w-full card-glass rounded-2xl p-4 text-left flex items-center justify-between gap-4 hover:bg-white/[0.06] transition-colors"
+            >
+              <div className="flex items-center gap-3 min-w-0">
+                <div className="w-10 h-10 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center flex-shrink-0">
+                  <span className="text-lg">📱</span>
+                </div>
+                <div className="min-w-0">
+                  <div className="text-sm font-semibold text-white truncate">
+                    从豆瓣 App 获取 ID
+                  </div>
+                  <div className="text-[11px] text-gray-500 truncate mt-0.5">
+                    打开豆瓣 → 复制个人主页 ID → 回来粘贴
+                  </div>
+                </div>
+              </div>
+              <span className="text-gray-500 text-lg flex-shrink-0">→</span>
+            </button>
+
+            {/* Divider */}
+            <div className="flex items-center gap-3">
+              <div className="flex-1 h-px bg-white/10" />
+              <span className="text-[11px] text-gray-500">或直接输入</span>
+              <div className="flex-1 h-px bg-white/10" />
+            </div>
+
             <div className="relative">
               <input
                 type="text"
@@ -190,6 +220,37 @@ export default function UploadPage() {
           </div>
         )}
       </div>
+
+      {showDoubanHelp && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-6"
+          onClick={() => setShowDoubanHelp(false)}
+        >
+          <div
+            className="max-w-sm w-full card-glass rounded-2xl p-5"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="text-white font-bold text-sm mb-3">📱 从豆瓣 App 获取 ID</div>
+            <ol className="text-xs text-gray-400 space-y-2 leading-relaxed list-decimal list-inside">
+              <li>打开豆瓣 App</li>
+              <li>进入「我的」页面</li>
+              <li>点击头像进入个人主页</li>
+              <li>复制地址栏中的 ID（数字或英文）</li>
+              <li>回到这里粘贴到输入框</li>
+            </ol>
+            <div className="mt-4 text-[11px] text-gray-500">
+              例：`douban.com/people/ahbei/` 中的 `ahbei`
+            </div>
+            <button
+              type="button"
+              className="mt-5 w-full py-2.5 rounded-xl accent-gradient text-white text-sm font-medium"
+              onClick={() => setShowDoubanHelp(false)}
+            >
+              我知道了
+            </button>
+          </div>
+        </div>
+      )}
     </main>
   );
 }
