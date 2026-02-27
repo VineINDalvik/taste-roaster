@@ -2,7 +2,7 @@
 
 import { useEffect, useState, use, useRef, useCallback } from "react";
 import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 
 interface MBTIDimension {
   letter: string;
@@ -100,10 +100,10 @@ export default function CompareResultPage({
 }) {
   const { id } = use(params);
   const router = useRouter();
-  const searchParams = useSearchParams();
   const [data, setData] = useState<CompareData | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [hasMySingle, setHasMySingle] = useState<boolean>(false);
+  const [queryReportIdA, setQueryReportIdA] = useState<string>("");
 
   useEffect(() => {
     const stored = localStorage.getItem(`taste-compare-${id}`);
@@ -145,7 +145,17 @@ export default function CompareResultPage({
 
   const { personA, personB, comparison } = data;
   const matchColor = getMatchColor(comparison.matchScore);
-  const reportIdA = searchParams.get("a") || data.reportIdA || "";
+  const reportIdA = queryReportIdA || data.reportIdA || "";
+
+  useEffect(() => {
+    // Avoid Next.js runtime issues with useSearchParams in page.tsx
+    try {
+      const qs = new URLSearchParams(window.location.search);
+      setQueryReportIdA(qs.get("a") || "");
+    } catch {
+      setQueryReportIdA("");
+    }
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
