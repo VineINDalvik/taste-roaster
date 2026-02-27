@@ -8,6 +8,7 @@ import MusicPortrait from "@/components/MusicPortrait";
 import BookPortrait from "@/components/BookPortrait";
 import MoviePortrait from "@/components/MoviePortrait";
 import ShareableCard from "@/components/ShareableCard";
+import PortraitShareableCard from "@/components/PortraitShareableCard";
 import InviteModal from "@/components/InviteModal";
 import { markBasicPaid, markDeepPaid } from "@/lib/payment";
 
@@ -522,9 +523,15 @@ export default function ResultPage({
 
               {report.bookCount > 0 && (
                 report.bookAnalysis ? (
-                  <ShareableCard filename={`阅读画像-${mbtiType}`}>
+                  <PortraitShareableCard
+                    kind="book"
+                    mbtiType={mbtiType}
+                    analysis={ft(report.bookAnalysis)!}
+                    doubanName={report.doubanName}
+                    filename={`阅读画像-${mbtiType}`}
+                  >
                     <BookPortrait analysis={ft(report.bookAnalysis)!} mbtiType={mbtiType} />
-                  </ShareableCard>
+                  </PortraitShareableCard>
                 ) : expanding ? (
                   <ExpandSkeleton icon="📚" label="阅读画像" />
                 ) : null
@@ -532,9 +539,15 @@ export default function ResultPage({
 
               {report.movieCount > 0 && (
                 report.movieAnalysis ? (
-                  <ShareableCard filename={`观影画像-${mbtiType}`}>
+                  <PortraitShareableCard
+                    kind="movie"
+                    mbtiType={mbtiType}
+                    analysis={ft(report.movieAnalysis)!}
+                    doubanName={report.doubanName}
+                    filename={`观影画像-${mbtiType}`}
+                  >
                     <MoviePortrait analysis={ft(report.movieAnalysis)!} mbtiType={mbtiType} />
-                  </ShareableCard>
+                  </PortraitShareableCard>
                 ) : expanding ? (
                   <ExpandSkeleton icon="🎬" label="观影画像" />
                 ) : null
@@ -542,9 +555,15 @@ export default function ResultPage({
 
               {report.musicCount > 0 && (
                 report.musicAnalysis ? (
-                  <ShareableCard filename={`音乐画像-${mbtiType}`}>
+                  <PortraitShareableCard
+                    kind="music"
+                    mbtiType={mbtiType}
+                    analysis={ft(report.musicAnalysis)!}
+                    doubanName={report.doubanName}
+                    filename={`音乐画像-${mbtiType}`}
+                  >
                     <MusicPortrait analysis={ft(report.musicAnalysis)!} mbtiType={mbtiType} />
-                  </ShareableCard>
+                  </PortraitShareableCard>
                 ) : expanding ? (
                   <ExpandSkeleton icon="🎵" label="音乐画像" />
                 ) : null
