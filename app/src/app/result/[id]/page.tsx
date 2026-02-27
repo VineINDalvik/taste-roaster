@@ -592,7 +592,7 @@ export default function ResultPage({
                             </span>
                           </div>
                           <p className="text-xs text-gray-400 mt-0.5 leading-relaxed">
-                            {rec.reason}
+                            {ft(rec.reason)}
                           </p>
                         </div>
                       </a>
