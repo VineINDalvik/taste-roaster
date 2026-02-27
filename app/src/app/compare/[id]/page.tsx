@@ -149,16 +149,31 @@ function normalizeCompareData(raw: any): CompareData | null {
 export default function CompareResultPage({
   params,
 }: {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 }) {
-  const { id } = params;
   const router = useRouter();
+  const [id, setId] = useState<string>("");
   const [data, setData] = useState<CompareData | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [hasMySingle, setHasMySingle] = useState<boolean>(false);
   const [queryReportIdA, setQueryReportIdA] = useState<string>("");
 
   useEffect(() => {
+    let cancelled = false;
+    Promise.resolve(params)
+      .then((p) => {
+        if (!cancelled) setId(p?.id ?? "");
+      })
+      .catch(() => {
+        if (!cancelled) setError("缺少对比 ID");
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [params]);
+
+  useEffect(() => {
+    if (!id) return;
     const stored = localStorage.getItem(`taste-compare-${id}`);
     if (stored) {
       try {
