@@ -5,13 +5,38 @@ import { fixMbtiInText } from "@/lib/mbti-utils";
 export const runtime = "nodejs";
 export const maxDuration = 30;
 
-const FONT_CDN = "https://cdn.jsdelivr.net/gh/googlefonts/noto-cjk@main/Sans/SubsetOTF/SC";
+const FONT_CDNS = [
+  "https://cdn.jsdelivr.net/gh/googlefonts/noto-cjk@main/Sans/SubsetOTF/SC",
+  "https://raw.githubusercontent.com/googlefonts/noto-cjk/main/Sans/SubsetOTF/SC",
+];
 let fontRegular: ArrayBuffer | null = null;
 let fontBold: ArrayBuffer | null = null;
 
+async function fetchWithTimeout(url: string, ms = 15000): Promise<ArrayBuffer> {
+  const ctrl = new AbortController();
+  const t = setTimeout(() => ctrl.abort(), ms);
+  try {
+    const r = await fetch(url, { signal: ctrl.signal });
+    if (!r.ok) throw new Error(`font ${r.status}`);
+    return r.arrayBuffer();
+  } finally {
+    clearTimeout(t);
+  }
+}
+
 async function loadFonts(): Promise<{ regular: ArrayBuffer; bold: ArrayBuffer }> {
-  if (!fontRegular) fontRegular = await fetch(`${FONT_CDN}/NotoSansSC-Regular.otf`).then((r) => r.arrayBuffer());
-  if (!fontBold) fontBold = await fetch(`${FONT_CDN}/NotoSansSC-Bold.otf`).then((r) => r.arrayBuffer());
+  const load = async (name: string): Promise<ArrayBuffer> => {
+    for (const base of FONT_CDNS) {
+      try {
+        return await fetchWithTimeout(`${base}/${name}`);
+      } catch {
+        continue;
+      }
+    }
+    throw new Error(`字体加载失败: ${name}`);
+  };
+  if (!fontRegular) fontRegular = await load("NotoSansSC-Regular.otf");
+  if (!fontBold) fontBold = await load("NotoSansSC-Bold.otf");
   return { regular: fontRegular!, bold: fontBold! };
 }
 

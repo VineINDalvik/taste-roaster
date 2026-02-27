@@ -152,6 +152,8 @@ export default function ResultPage({
   const [expanding, setExpanding] = useState(false);
   const [showInviteModal, setShowInviteModal] = useState(false);
   const [showTipModal, setShowTipModal] = useState(false);
+  const [fullReportGenerating, setFullReportGenerating] = useState(false);
+  const [fullReportPreviewSrc, setFullReportPreviewSrc] = useState<string | null>(null);
   const [basicPaid, setBasicPaid] = useState(false);
   const [deepPaid, setDeepPaid] = useState(false);
   const mbtiType = useMemo(() => {
@@ -179,6 +181,13 @@ export default function ResultPage({
   const [expandFailed, setExpandFailed] = useState(false);
   const [deepUnlockFailed, setDeepUnlockFailed] = useState(false);
 
+  const closeFullReportPreview = useCallback(() => {
+    setFullReportPreviewSrc((prev) => {
+      if (prev) URL.revokeObjectURL(prev);
+      return null;
+    });
+  }, []);
+
   useEffect(() => {
     const stored = localStorage.getItem(`taste-report-${id}`);
     if (stored) {
@@ -197,6 +206,52 @@ export default function ResultPage({
     }
     setLoading(false);
   }, [id]);
+
+  const handleSaveFullReport = useCallback(async () => {
+    if (!report || fullReportGenerating) return;
+    if (!report.bookAnalysis && !report.movieAnalysis && !report.musicAnalysis) {
+      alert("完整报告尚未加载，请稍后重试");
+      return;
+    }
+    setFullReportGenerating(true);
+    try {
+      const res = await fetch("/api/share-report", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          mbtiType,
+          mbtiTitle: ft(report.mbti.title),
+          roast: ft(report.roast),
+          summary: ft(report.summary),
+          doubanName: report.doubanName,
+          bookCount: report.bookCount,
+          movieCount: report.movieCount,
+          musicCount: report.musicCount,
+          bookAnalysis: ft(report.bookAnalysis),
+          movieAnalysis: ft(report.movieAnalysis),
+          musicAnalysis: ft(report.musicAnalysis),
+        }),
+      });
+      if (!res.ok) throw new Error("API error");
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const isMobile = /iPhone|iPad|Android|Mobile/i.test(navigator.userAgent);
+      if (isMobile) {
+        setFullReportPreviewSrc(url);
+      } else {
+        const link = document.createElement("a");
+        link.download = `完整报告-${mbtiType}.png`;
+        link.href = url;
+        link.click();
+        setTimeout(() => URL.revokeObjectURL(url), 5000);
+      }
+    } catch (e) {
+      console.error("share-report failed:", e);
+      alert("生成失败，请直接截图保存");
+    } finally {
+      setFullReportGenerating(false);
+    }
+  }, [report, fullReportGenerating, mbtiType, ft]);
 
   // Auto-trigger expand load when basic is paid but content not yet loaded
   useEffect(() => {
@@ -443,6 +498,28 @@ export default function ResultPage({
                 品味报告
               </h2>
 
+              {/* Full report save (server-rendered image) */}
+              {hasExpandContent && (
+                <div className="card-glass rounded-xl p-4 flex items-center justify-between gap-3">
+                  <div className="min-w-0">
+                    <div className="text-sm font-semibold text-white truncate">
+                      📋 保存完整报告
+                    </div>
+                    <div className="text-[11px] text-gray-500 mt-0.5">
+                      手机端会弹出预览，长按保存
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleSaveFullReport}
+                    disabled={fullReportGenerating}
+                    className="px-4 py-2 rounded-xl accent-gradient text-white text-sm font-medium disabled:opacity-70"
+                  >
+                    {fullReportGenerating ? "生成中..." : "保存"}
+                  </button>
+                </div>
+              )}
+
               {report.bookCount > 0 && (
                 report.bookAnalysis ? (
                   <ShareableCard filename={`阅读画像-${mbtiType}`}>
@@ -508,6 +585,30 @@ export default function ResultPage({
               <ExpandSkeleton icon="📅" label="品味进化时间线" />
             )}
           </>
+        )}
+
+        {fullReportPreviewSrc && (
+          <div
+            className="fixed inset-0 z-50 bg-black/90 flex flex-col items-center justify-center p-4"
+            onClick={closeFullReportPreview}
+          >
+            <p className="text-white text-sm mb-3 animate-pulse">
+              👆 长按图片保存到相册
+            </p>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={fullReportPreviewSrc}
+              alt="完整报告"
+              className="max-w-full max-h-[80vh] rounded-xl shadow-2xl"
+              onClick={(e) => e.stopPropagation()}
+            />
+            <button
+              className="mt-4 px-6 py-2 rounded-xl bg-white/10 text-white text-sm"
+              onClick={closeFullReportPreview}
+            >
+              关闭
+            </button>
+          </div>
         )}
 
         {/* === Deep Analysis === */}

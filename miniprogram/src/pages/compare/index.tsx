@@ -48,6 +48,20 @@ export default function ComparePage() {
   const [showPaywall, setShowPaywall] = useState(false)
   const timerRef = useRef<ReturnType<typeof setInterval>>()
 
+  const withHardTimeout = useCallback(async <T,>(p: Promise<T>, ms: number, label: string) => {
+    let t: ReturnType<typeof setTimeout> | undefined
+    try {
+      return await Promise.race([
+        p,
+        new Promise<T>((_, reject) => {
+          t = setTimeout(() => reject(new Error(`${label}超时`)), ms)
+        }),
+      ])
+    } finally {
+      if (t) clearTimeout(t)
+    }
+  }, [])
+
   useEffect(() => {
     if (fromId) {
       const stored = getReport(fromId)
@@ -91,9 +105,11 @@ export default function ComparePage() {
 
     try {
       // Step 1: Analyze person B
-      const reportB = await callApi<Record<string, unknown>>('/api/analyze', {
-        doubanId: doubanIdB.trim(),
-      })
+      const reportB = await withHardTimeout(
+        callApi<Record<string, unknown>>('/api/analyze', { doubanId: doubanIdB.trim() }),
+        130000,
+        '分析对方数据'
+      )
 
       const reportBId = typeof (reportB as any).id === 'string' ? ((reportB as any).id as string) : ''
       if (reportBId) setReport(reportBId, reportB)
@@ -105,7 +121,7 @@ export default function ComparePage() {
       const bMusicCount = (reportB as any).realCounts?.music || (reportB as any).musicCount || (reportB as any).input?.music?.length || 0
 
       // Step 2: Comparison
-      const result = await callApi<Record<string, unknown>>('/api/compare', {
+      const result = await withHardTimeout(callApi<Record<string, unknown>>('/api/compare', {
         doubanIdA: myDoubanId || undefined,
         doubanIdB: (reportB as any).doubanId || (reportB as any).input?.doubanId || doubanIdB.trim(),
         personA: {
@@ -138,7 +154,7 @@ export default function ComparePage() {
           movieCount: bMovieCount,
           musicCount: bMusicCount,
         },
-      })
+      }), 100000, '生成对比报告')
 
       setCompare(result.compareId as string, result)
       recordCompareUsage(myDoubanId)
