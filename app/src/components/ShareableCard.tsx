@@ -17,29 +17,47 @@ export default function ShareableCard({
   const [generating, setGenerating] = useState(false);
   const [previewSrc, setPreviewSrc] = useState<string | null>(null);
 
+  const closePreview = useCallback(() => {
+    setPreviewSrc((prev) => {
+      if (prev) URL.revokeObjectURL(prev);
+      return null;
+    });
+  }, []);
+
   const handleShare = useCallback(async () => {
     const el = cardRef.current;
     if (!el || generating) return;
 
     setGenerating(true);
     try {
+      const isMobile = /iPhone|iPad|Android|Mobile/i.test(navigator.userAgent);
       const { default: html2canvas } = await import("html2canvas");
       const canvas = await html2canvas(el, {
-        scale: 3,
+        // Mobile browsers are memory-sensitive; avoid huge canvases.
+        scale: isMobile ? 2 : 3,
         backgroundColor: "#1a1a2e",
         useCORS: true,
       });
 
-      const isMobile = /iPhone|iPad|Android|Mobile/i.test(navigator.userAgent);
+      const blob: Blob = await new Promise((resolve, reject) => {
+        canvas.toBlob((b) => {
+          if (b) resolve(b);
+          else reject(new Error("生成失败：toBlob 返回空"));
+        }, "image/png");
+      });
+      const url = URL.createObjectURL(blob);
+
       if (isMobile) {
-        setPreviewSrc(canvas.toDataURL("image/png"));
+        setPreviewSrc(url);
       } else {
         const link = document.createElement("a");
         link.download = `${filename}.png`;
-        link.href = canvas.toDataURL("image/png");
+        link.href = url;
         link.click();
+        setTimeout(() => URL.revokeObjectURL(url), 5000);
       }
-    } catch {
+    } catch (err) {
+      console.error("ShareableCard generate failed:", err);
       alert("生成失败，请直接截图保存");
     } finally {
       setGenerating(false);
@@ -68,7 +86,7 @@ export default function ShareableCard({
       {previewSrc && (
         <div
           className="fixed inset-0 z-50 bg-black/90 flex flex-col items-center justify-center p-4"
-          onClick={() => setPreviewSrc(null)}
+          onClick={closePreview}
         >
           <p className="text-white text-sm mb-3 animate-pulse">
             👆 长按图片保存到相册
@@ -82,7 +100,7 @@ export default function ShareableCard({
           />
           <button
             className="mt-4 px-6 py-2 rounded-xl bg-white/10 text-white text-sm"
-            onClick={() => setPreviewSrc(null)}
+            onClick={closePreview}
           >
             关闭
           </button>
