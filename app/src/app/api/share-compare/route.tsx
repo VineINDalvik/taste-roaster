@@ -1,6 +1,5 @@
 import { ImageResponse } from "next/og";
 import { NextRequest } from "next/server";
-import { SITE_HOST } from "@/lib/site";
 import { getSiteQrTransparentDataUrl } from "@/lib/site-qr";
 
 export const runtime = "nodejs";
@@ -370,9 +369,6 @@ export async function POST(req: NextRequest) {
                 }}
               >
                 <img src={siteQr} width={84} height={84} />
-                <div style={{ display: "flex", marginTop: 6, fontSize: 12, color: "rgba(255,255,255,0.72)", letterSpacing: "0.06em" }}>
-                  {SITE_HOST}
-                </div>
               </div>
 
               <div style={{ display: "flex", flex: 1, justifyContent: "flex-end" }}>
