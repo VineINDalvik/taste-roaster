@@ -2,6 +2,7 @@ import { ImageResponse } from "next/og";
 import { NextRequest } from "next/server";
 import { fixMbtiInText } from "@/lib/mbti-utils";
 import { SITE_HOST } from "@/lib/site";
+import { getSiteQrTransparentDataUrl } from "@/lib/site-qr";
 
 export const runtime = "nodejs";
 export const maxDuration = 30;
@@ -96,6 +97,7 @@ export async function POST(req: NextRequest) {
   try {
     const data: ReportData = await req.json();
     const fonts = await loadFonts();
+    const siteQr = await getSiteQrTransparentDataUrl();
     const correctType = data.mbtiType || "";
 
     const sections = [
@@ -119,7 +121,7 @@ export async function POST(req: NextRequest) {
     const sectionH = sections.reduce((sum, s) => sum + countSentH(s.text) + 124, 0);
     const statsH = 130;
     const footerH = 40 + 28 + 44 + 64;
-    const fixedH = 72 + 40 + 110 + 12 + 40 + 36 + 68 + 80 + 120;
+    const fixedH = 72 + 40 + 110 + 12 + 40 + 36 + 68 + 80 + 120 + 96;
     const height = Math.min(Math.max(1000, fixedH + roastH + statsH + summaryH + sectionH + footerH), 12000);
 
     const stats = [
@@ -203,19 +205,21 @@ export async function POST(req: NextRequest) {
               <div
                 style={{
                   display: "flex",
-                  flexDirection: "row",
+                  flexDirection: "column",
                   alignItems: "center",
                   justifyContent: "center",
-                  padding: "10px 16px",
-                  borderRadius: 9999,
-                  background: "linear-gradient(135deg, rgba(255,255,255,0.16), rgba(255,255,255,0.06))",
-                  border: "1px solid rgba(255,255,255,0.14)",
-                  color: "rgba(255,255,255,0.7)",
-                  fontSize: 16,
-                  letterSpacing: "0.04em",
+                  width: 116,
+                  padding: "10px 10px 8px",
+                  borderRadius: 18,
+                  background: "linear-gradient(135deg, rgba(255,255,255,0.10), rgba(255,255,255,0.03))",
+                  border: "1px solid rgba(255,255,255,0.12)",
+                  boxShadow: "0 12px 30px rgba(0,0,0,0.22)",
                 }}
               >
-                {SITE_HOST}
+                <img src={siteQr} width={84} height={84} />
+                <div style={{ display: "flex", marginTop: 6, fontSize: 12, color: "rgba(255,255,255,0.72)", letterSpacing: "0.06em" }}>
+                  {SITE_HOST}
+                </div>
               </div>
 
               <div style={{ display: "flex", flex: 1, justifyContent: "flex-end" }}>
