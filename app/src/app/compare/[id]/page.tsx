@@ -2,7 +2,7 @@
 
 import { useEffect, useState, use, useRef, useCallback } from "react";
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 
 interface MBTIDimension {
   letter: string;
@@ -99,9 +99,11 @@ export default function CompareResultPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = use(params);
+  const router = useRouter();
   const searchParams = useSearchParams();
   const [data, setData] = useState<CompareData | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [hasMySingle, setHasMySingle] = useState<boolean>(false);
 
   useEffect(() => {
     const stored = localStorage.getItem(`taste-compare-${id}`);
@@ -144,7 +146,36 @@ export default function CompareResultPage({
   const { personA, personB, comparison } = data;
   const matchColor = getMatchColor(comparison.matchScore);
   const reportIdA = searchParams.get("a") || data.reportIdA || "";
-  const reportIdB = searchParams.get("b") || data.reportIdB || "";
+
+  useEffect(() => {
+    let cancelled = false;
+    async function checkMySingle() {
+      if (!reportIdA) {
+        if (!cancelled) setHasMySingle(false);
+        return;
+      }
+      try {
+        const local = localStorage.getItem(`taste-report-${reportIdA}`);
+        if (local) {
+          if (!cancelled) setHasMySingle(true);
+          return;
+        }
+      } catch {
+        // ignore
+      }
+
+      try {
+        const res = await fetch(`/api/report/${reportIdA}`, { method: "GET" });
+        if (!cancelled) setHasMySingle(res.ok);
+      } catch {
+        if (!cancelled) setHasMySingle(false);
+      }
+    }
+    checkMySingle();
+    return () => {
+      cancelled = true;
+    };
+  }, [reportIdA]);
 
   return (
     <main className="min-h-screen px-4 py-8">
@@ -162,20 +193,18 @@ export default function CompareResultPage({
             <div className="text-sm font-bold text-white">↩️ 回到单人报告</div>
             <div className="text-[11px] text-gray-500">（建议先回看单人，再对照理解）</div>
           </div>
-          <div className="grid grid-cols-2 gap-3">
-            <Link
-              href={reportIdA ? `/result/${reportIdA}` : "/upload"}
-              className="py-3 rounded-xl bg-white/[0.03] hover:bg-white/[0.08] border border-white/10 text-center text-sm text-white transition-colors"
-            >
-              查看 {personA.name} 单人
-            </Link>
-            <Link
-              href={reportIdB ? `/result/${reportIdB}` : "/upload"}
-              className="py-3 rounded-xl bg-white/[0.03] hover:bg-white/[0.08] border border-white/10 text-center text-sm text-white transition-colors"
-            >
-              查看 {personB.name} 单人
-            </Link>
-          </div>
+          <button
+            type="button"
+            onClick={() => {
+              if (hasMySingle && reportIdA) router.push(`/result/${reportIdA}`);
+              else router.push("/upload");
+            }}
+            className="w-full py-3 rounded-xl bg-white/[0.03] hover:bg-white/[0.08] border border-white/10 text-center text-sm text-white transition-colors"
+          >
+            {hasMySingle && reportIdA
+              ? `回到 ${personA.name} 的单人结果`
+              : "去输入页（未找到你的单人报告）"}
+          </button>
         </div>
 
         {/* Match Score Hero */}

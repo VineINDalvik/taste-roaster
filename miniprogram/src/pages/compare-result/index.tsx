@@ -2,7 +2,7 @@ import { useEffect, useState, useCallback, useMemo } from 'react'
 import { View, Text } from '@tarojs/components'
 import Taro, { useRouter, useShareAppMessage, getCurrentInstance } from '@tarojs/taro'
 import DualRadar from '@/components/dual-radar'
-import { getCompare, setCompare } from '@/utils/storage'
+import { getCompare, setCompare, getReport, setReport } from '@/utils/storage'
 import { callApi } from '@/utils/api'
 import CompareShareCard from '@/components/compare-share-card'
 import type { CompareData, PersonData, ComparisonData, MBTIDimension } from '@/utils/types'
@@ -78,6 +78,7 @@ export default function CompareResultPage() {
   const [data, setData] = useState<CompareData | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
+  const [checkingSingle, setCheckingSingle] = useState(false)
 
   const loadData = useCallback(() => {
     if (!id) {
@@ -147,6 +148,33 @@ export default function CompareResultPage() {
 
   const { personA, personB, comparison } = data
 
+  const handleBackToSingle = useCallback(async () => {
+    // Requirement: if my single report exists -> go result page; else -> go upload/input page
+    if (!fromId) {
+      Taro.navigateTo({ url: '/pages/upload/index' })
+      return
+    }
+    try {
+      const stored = getReport(fromId)
+      if (stored) {
+        Taro.navigateTo({ url: `/pages/result/index?id=${fromId}` })
+        return
+      }
+    } catch {}
+
+    setCheckingSingle(true)
+    try {
+      const remote = await callApi<Record<string, unknown>>(`/api/report/${fromId}`, undefined, 'GET', { timeout: 10000 })
+      if (remote) {
+        setReport(fromId, remote)
+        Taro.navigateTo({ url: `/pages/result/index?id=${fromId}` })
+        return
+      }
+    } catch {}
+    Taro.navigateTo({ url: '/pages/upload/index' })
+    setCheckingSingle(false)
+  }, [fromId])
+
   useShareAppMessage(() => ({
     title: `${personA.name}(${personA.mbtiType}) vs ${personB.name}(${personB.mbtiType}) 匹配度 ${comparison.matchScore}%！来测测你们的书影音 MBTI`,
     path: `/pages/compare-result/index?id=${id}`,
@@ -163,29 +191,20 @@ export default function CompareResultPage() {
         </Text>
 
         {/* Back to single report entry */}
-        {(fromId || toId) && (
-          <View className='section-card card-glass animate-fade-in-up'>
-            <Text className='section-title text-blue'>↩️ 回到单人报告</Text>
-            <View className='entry-actions'>
-              {fromId ? (
-                <View
-                  className='btn-small card-glass'
-                  onClick={() => Taro.navigateTo({ url: `/pages/result/index?id=${fromId}` })}
-                >
-                  <Text className='btn-action-text'>{personA.name} 单人</Text>
-                </View>
-              ) : null}
-              {toId ? (
-                <View
-                  className='btn-small card-glass'
-                  onClick={() => Taro.navigateTo({ url: `/pages/result/index?id=${toId}` })}
-                >
-                  <Text className='btn-action-text'>{personB.name} 单人</Text>
-                </View>
-              ) : null}
-            </View>
+        <View className='section-card card-glass animate-fade-in-up'>
+          <Text className='section-title text-blue'>↩️ 回到单人</Text>
+          <View
+            className='btn-small card-glass'
+            onClick={handleBackToSingle}
+          >
+            <Text className='btn-action-text'>
+              {checkingSingle ? '检查中...' : '回到我的单人结果'}
+            </Text>
           </View>
-        )}
+          <Text className='section-sub'>
+            若未找到你的单人报告，将自动回到输入页
+          </Text>
+        </View>
 
         {/* Match Score Hero Card */}
         <View className='animate-fade-in-up'>
