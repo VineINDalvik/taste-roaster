@@ -1,5 +1,6 @@
 import { ImageResponse } from "next/og";
 import { NextRequest } from "next/server";
+import { SITE_HOST } from "@/lib/site";
 
 export const runtime = "nodejs";
 export const maxDuration = 30;
@@ -25,13 +26,38 @@ const RADAR_KEYS: [string, string][] = [
   ["kaogu", "考古癖"], ["shangtou", "上头指数"], ["chouxiang", "活人感"],
 ];
 
-const FONT_CDN = "https://cdn.jsdelivr.net/gh/googlefonts/noto-cjk@main/Sans/SubsetOTF/SC";
+const FONT_CDNS = [
+  "https://cdn.jsdelivr.net/gh/googlefonts/noto-cjk@main/Sans/SubsetOTF/SC",
+  "https://raw.githubusercontent.com/googlefonts/noto-cjk/main/Sans/SubsetOTF/SC",
+];
 let fontRegular: ArrayBuffer | null = null;
 let fontBold: ArrayBuffer | null = null;
 
+async function fetchWithTimeout(url: string, ms = 15000): Promise<ArrayBuffer> {
+  const ctrl = new AbortController();
+  const t = setTimeout(() => ctrl.abort(), ms);
+  try {
+    const r = await fetch(url, { signal: ctrl.signal });
+    if (!r.ok) throw new Error(`font ${r.status}`);
+    return r.arrayBuffer();
+  } finally {
+    clearTimeout(t);
+  }
+}
+
 async function loadFonts(): Promise<{ regular: ArrayBuffer; bold: ArrayBuffer }> {
-  if (!fontRegular) fontRegular = await fetch(`${FONT_CDN}/NotoSansSC-Regular.otf`).then((r) => r.arrayBuffer());
-  if (!fontBold) fontBold = await fetch(`${FONT_CDN}/NotoSansSC-Bold.otf`).then((r) => r.arrayBuffer());
+  const load = async (name: string): Promise<ArrayBuffer> => {
+    for (const base of FONT_CDNS) {
+      try {
+        return await fetchWithTimeout(`${base}/${name}`);
+      } catch {
+        continue;
+      }
+    }
+    throw new Error(`字体加载失败: ${name}`);
+  };
+  if (!fontRegular) fontRegular = await load("NotoSansSC-Regular.otf");
+  if (!fontBold) fontBold = await load("NotoSansSC-Bold.otf");
   return { regular: fontRegular!, bold: fontBold! };
 }
 
@@ -81,9 +107,10 @@ export async function POST(req: NextRequest) {
       (
         <div
           style={{
+            position: "relative",
             display: "flex", flexDirection: "column", width: "100%", height: "100%",
             background: "linear-gradient(135deg, #0f0c29 0%, #1a1a2e 30%, #16213e 60%, #0f3460 100%)",
-            padding: "88px 72px 56px", fontFamily: "NotoSansSC", color: "#ffffff",
+            padding: "88px 72px 72px", fontFamily: "NotoSansSC", color: "#ffffff",
           }}
         >
           {/* Header */}
@@ -163,9 +190,32 @@ export async function POST(req: NextRequest) {
 
           {/* Footer */}
           <div style={{ display: "flex", height: 2, background: "rgba(255,255,255,0.06)", marginBottom: 32 }} />
-          <div style={{ display: "flex", justifyContent: "space-between", fontSize: 24 }}>
-            <span style={{ color: "#4b5563" }}>豆瓣书影音 MBTI</span>
-            <span style={{ color: "#667eea" }}>测测你的书影音 MBTI →</span>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 18, fontSize: 24 }}>
+            <div style={{ display: "flex", flex: 1 }}>
+              <span style={{ color: "#4b5563" }}>豆瓣书影音 MBTI</span>
+            </div>
+
+            <div
+              style={{
+                display: "flex",
+                flexDirection: "row",
+                alignItems: "center",
+                justifyContent: "center",
+                padding: "10px 16px",
+                borderRadius: 9999,
+                background: "linear-gradient(135deg, rgba(255,255,255,0.16), rgba(255,255,255,0.06))",
+                border: "1px solid rgba(255,255,255,0.14)",
+                color: "rgba(255,255,255,0.7)",
+                fontSize: 16,
+                letterSpacing: "0.04em",
+              }}
+            >
+              {SITE_HOST}
+            </div>
+
+            <div style={{ display: "flex", flex: 1, justifyContent: "flex-end" }}>
+              <span style={{ color: "#667eea" }}>测测你的书影音 MBTI →</span>
+            </div>
           </div>
         </div>
       ),

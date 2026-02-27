@@ -1,6 +1,7 @@
 import { ImageResponse } from "next/og";
 import { NextRequest } from "next/server";
 import { fixMbtiInText } from "@/lib/mbti-utils";
+import { SITE_HOST } from "@/lib/site";
 
 export const runtime = "nodejs";
 export const maxDuration = 30;
@@ -193,12 +194,33 @@ export async function POST(req: NextRequest) {
 
             <div style={{ display: "flex", height: 2, marginTop: 40, marginBottom: 28, background: "linear-gradient(90deg, rgba(102,126,234,0.3), rgba(233,69,96,0.2), rgba(245,197,24,0.3))" }} />
 
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: 22 }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 18, fontSize: 22 }}>
+              <div style={{ display: "flex", flex: 1, alignItems: "center", gap: 12 }}>
                 <div style={{ display: "flex", width: 8, height: 8, borderRadius: "50%", background: "#667eea" }} />
                 <span style={{ color: "#4b5563" }}>豆瓣书影音 MBTI</span>
               </div>
-              <span style={{ color: "#667eea", opacity: 0.7 }}>品味即人格 →</span>
+
+              <div
+                style={{
+                  display: "flex",
+                  flexDirection: "row",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  padding: "10px 16px",
+                  borderRadius: 9999,
+                  background: "linear-gradient(135deg, rgba(255,255,255,0.16), rgba(255,255,255,0.06))",
+                  border: "1px solid rgba(255,255,255,0.14)",
+                  color: "rgba(255,255,255,0.7)",
+                  fontSize: 16,
+                  letterSpacing: "0.04em",
+                }}
+              >
+                {SITE_HOST}
+              </div>
+
+              <div style={{ display: "flex", flex: 1, justifyContent: "flex-end" }}>
+                <span style={{ color: "#667eea", opacity: 0.7 }}>品味即人格 →</span>
+              </div>
             </div>
           </div>
         </div>

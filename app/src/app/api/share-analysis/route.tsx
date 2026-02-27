@@ -1,16 +1,42 @@
 import { ImageResponse } from "next/og";
 import { NextRequest } from "next/server";
+import { SITE_HOST } from "@/lib/site";
 
 export const runtime = "nodejs";
 export const maxDuration = 30;
 
-const FONT_CDN = "https://cdn.jsdelivr.net/gh/googlefonts/noto-cjk@main/Sans/SubsetOTF/SC";
+const FONT_CDNS = [
+  "https://cdn.jsdelivr.net/gh/googlefonts/noto-cjk@main/Sans/SubsetOTF/SC",
+  "https://raw.githubusercontent.com/googlefonts/noto-cjk/main/Sans/SubsetOTF/SC",
+];
 let fontRegular: ArrayBuffer | null = null;
 let fontBold: ArrayBuffer | null = null;
 
+async function fetchWithTimeout(url: string, ms = 15000): Promise<ArrayBuffer> {
+  const ctrl = new AbortController();
+  const t = setTimeout(() => ctrl.abort(), ms);
+  try {
+    const r = await fetch(url, { signal: ctrl.signal });
+    if (!r.ok) throw new Error(`font ${r.status}`);
+    return r.arrayBuffer();
+  } finally {
+    clearTimeout(t);
+  }
+}
+
 async function loadFonts(): Promise<{ regular: ArrayBuffer; bold: ArrayBuffer }> {
-  if (!fontRegular) fontRegular = await fetch(`${FONT_CDN}/NotoSansSC-Regular.otf`).then((r) => r.arrayBuffer());
-  if (!fontBold) fontBold = await fetch(`${FONT_CDN}/NotoSansSC-Bold.otf`).then((r) => r.arrayBuffer());
+  const load = async (name: string): Promise<ArrayBuffer> => {
+    for (const base of FONT_CDNS) {
+      try {
+        return await fetchWithTimeout(`${base}/${name}`);
+      } catch {
+        continue;
+      }
+    }
+    throw new Error(`字体加载失败: ${name}`);
+  };
+  if (!fontRegular) fontRegular = await load("NotoSansSC-Regular.otf");
+  if (!fontBold) fontBold = await load("NotoSansSC-Bold.otf");
   return { regular: fontRegular!, bold: fontBold! };
 }
 
@@ -109,7 +135,7 @@ export async function POST(req: NextRequest) {
           <div style={{ display: "flex", position: "absolute", bottom: -100, left: -40, width: 240, height: 240, borderRadius: "50%", background: theme.decoColor }} />
 
           {/* Main content */}
-          <div style={{ display: "flex", flexDirection: "column", padding: `${72}px ${56}px ${48}px`, position: "relative", zIndex: 1 }}>
+          <div style={{ display: "flex", flexDirection: "column", padding: `${72}px ${56}px ${72}px`, position: "relative", zIndex: 1 }}>
             {/* Top accent line */}
             <div style={{ display: "flex", position: "absolute", top: 0, left: 56, right: 56, height: 4, background: `linear-gradient(90deg, transparent, ${theme.titleColor}40, transparent)` }} />
 
@@ -158,12 +184,33 @@ export async function POST(req: NextRequest) {
             <div style={{ display: "flex", height: 2, marginTop: 48, marginBottom: 28, background: `linear-gradient(90deg, ${theme.titleColor}30, rgba(255,255,255,0.04), ${theme.titleColor}30)` }} />
 
             {/* Footer */}
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: 22 }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 18, fontSize: 22 }}>
+              <div style={{ display: "flex", flex: 1, alignItems: "center", gap: 12 }}>
                 <div style={{ display: "flex", width: 8, height: 8, borderRadius: "50%", background: theme.titleColor }} />
                 <span style={{ color: "#4b5563" }}>豆瓣书影音 MBTI</span>
               </div>
-              <span style={{ color: theme.titleColor, opacity: 0.7, fontSize: 22 }}>品味即人格 →</span>
+
+              <div
+                style={{
+                  display: "flex",
+                  flexDirection: "row",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  padding: "10px 16px",
+                  borderRadius: 9999,
+                  background: "linear-gradient(135deg, rgba(255,255,255,0.16), rgba(255,255,255,0.06))",
+                  border: "1px solid rgba(255,255,255,0.14)",
+                  color: "rgba(255,255,255,0.7)",
+                  fontSize: 16,
+                  letterSpacing: "0.04em",
+                }}
+              >
+                {SITE_HOST}
+              </div>
+
+              <div style={{ display: "flex", flex: 1, justifyContent: "flex-end" }}>
+                <span style={{ color: theme.titleColor, opacity: 0.7, fontSize: 22 }}>品味即人格 →</span>
+              </div>
             </div>
           </div>
         </div>
