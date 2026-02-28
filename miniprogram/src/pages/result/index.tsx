@@ -539,9 +539,12 @@ export default function ResultPage() {
                 className='explore-card card-glass'
                 onClick={() => {
                   if (item.name === '赛博神算子') {
-                    Taro.setClipboardData({ data: 'https://cyber-oracle-nine.vercel.app', success: () => {
-                      Taro.showToast({ title: '链接已复制，可在浏览器打开', icon: 'none' })
-                    }})
+                    Taro.setClipboardData({
+                      data: 'https://cyber.vinex.top',
+                      success: () => {
+                        Taro.showToast({ title: '链接已复制，可在浏览器打开', icon: 'none' })
+                      },
+                    })
                   }
                 }}
               >

@@ -751,7 +751,7 @@ export default function ResultPage({
             <div className="grid grid-cols-2 gap-3 w-full">
               {[
                 { icon: "🎧", name: "网易云音乐", desc: "听歌品味分析", color: "#e94560", badge: "即将上线" },
-                { icon: "🔮", name: "赛博神算子", desc: "AI 塔罗占卜", color: "#a855f7", badge: "可体验", href: "https://cyber-oracle-nine.vercel.app" },
+                { icon: "🔮", name: "赛博神算子", desc: "AI 塔罗占卜", color: "#a855f7", badge: "可体验", href: "https://cyber.vinex.top" },
               ].map((item) => (
                 <a
                   key={item.name}
