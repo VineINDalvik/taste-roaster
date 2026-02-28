@@ -74,13 +74,27 @@ function getMatchLabel(score: number) {
 
 export default function CompareResultPage() {
   const id = useCompareResultId()
-  const { fromId, toId } = useCompareResultReportIds()
+  const { fromId } = useCompareResultReportIds()
   const [data, setData] = useState<CompareData | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const [checkingSingle, setCheckingSingle] = useState(false)
 
-  const loadData = useCallback(() => {
+  const withHardTimeout = useCallback(async <T,>(p: Promise<T>, ms: number, label: string) => {
+    let t: ReturnType<typeof setTimeout> | undefined
+    try {
+      return await Promise.race([
+        p,
+        new Promise<T>((_, reject) => {
+          t = setTimeout(() => reject(new Error(`${label}超时`)), ms)
+        }),
+      ])
+    } finally {
+      if (t) clearTimeout(t)
+    }
+  }, [])
+
+  const loadData = useCallback(async () => {
     if (!id) {
       setError('缺少对比 ID')
       setLoading(false)
@@ -95,32 +109,37 @@ export default function CompareResultPage() {
         const parsed = typeof stored === 'string' ? JSON.parse(stored) : stored
         if (parsed?.personA && parsed?.personB && parsed?.comparison) {
           setData(parsed)
-          setLoading(false)
           return
         }
       } catch {
         setError('对比数据损坏')
-        setLoading(false)
         return
       }
     }
 
-    callApi<CompareData>(`/api/compare/${id}`, undefined, 'GET', { timeout: 15000 })
-      .then(remote => {
-        if (remote?.personA && remote?.personB && remote?.comparison) {
-          setData(remote)
-          setCompare(id, remote)
-        } else {
-          setError('对比报告数据不完整')
-        }
-      })
-      .catch((err: unknown) => {
-        const msg = err instanceof Error ? err.message : ''
-        const isNetwork = /(超时|timeout|fail|网络|连接|域名)/i.test(msg)
-        setError(isNetwork ? '网络请求失败，请检查网络后重试' : '对比报告不存在或已过期')
-      })
-      .finally(() => setLoading(false))
-  }, [id])
+    try {
+      // Taro.request timeout is not always reliable on some networks/devices.
+      // We add an extra hard-timeout so "loading" won't hang forever.
+      const remote = await withHardTimeout(
+        callApi<CompareData>(`/api/compare/${id}`, undefined, 'GET', { timeout: 20000 }),
+        25000,
+        '加载对比报告'
+      )
+
+      if ((remote as any)?.personA && (remote as any)?.personB && (remote as any)?.comparison) {
+        setData(remote)
+        setCompare(id, remote)
+      } else {
+        setError('对比报告数据不完整')
+      }
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : ''
+      const isNetwork = /(超时|timeout|fail|网络|连接|域名|request:fail)/i.test(msg)
+      setError(isNetwork ? '网络请求失败，请检查网络后重试' : '对比报告不存在或已过期')
+    } finally {
+      setLoading(false)
+    }
+  }, [id, withHardTimeout])
 
   useEffect(() => {
     loadData()

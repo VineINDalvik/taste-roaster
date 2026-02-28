@@ -164,7 +164,7 @@ export default function ComparePage() {
     } catch (err) {
       const msg = err instanceof Error ? err.message : '对比失败'
       const hint = /(超时|timeout|fail|网络|连接)/i.test(msg)
-        ? '（分析对方数据约 30-60 秒，国内网络建议开启 VPN 后重试）'
+        ? '（分析对方数据约 30-60 秒，网络较慢可稍后重试）'
         : ''
       setError(msg + hint)
     } finally {
@@ -237,7 +237,7 @@ export default function ComparePage() {
               <Text className='hint-text'>
                 对方的豆瓣标记需为公开 · 分析约需 40-90 秒
               </Text>
-              <Text className='hint-sub'>国内网络可能较慢，建议开启 VPN 后使用</Text>
+              <Text className='hint-sub'>网络较慢可稍后重试</Text>
               {(() => {
                 try {
                   const stored = getReport(fromId)

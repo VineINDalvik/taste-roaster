@@ -426,7 +426,7 @@ export default function ResultPage() {
               <View className='section-card card-glass center-text animate-fade-in-up animate-delay-300'>
                 <Text className='loading-emoji'>🔮</Text>
                 <Text className='loading-sub'>加载失败，网络可能较慢</Text>
-                <Text className='unlock-hint'>建议开启 VPN 后重试</Text>
+                <Text className='unlock-hint'>网络较慢可稍后重试</Text>
                 <View className='btn-unlock' style={{ marginTop: '24rpx' }} onClick={handleDeepUnlock}>
                   <Text className='btn-action-text'>点击重试</Text>
                 </View>
