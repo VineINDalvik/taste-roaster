@@ -119,9 +119,14 @@ export async function POST(req: NextRequest) {
     const summaryH = Math.max(1, Math.ceil((data.summary?.length || 0) / CW)) * 40;
     const sectionH = sections.reduce((sum, s) => sum + countSentH(s.text) + 124, 0);
     const statsH = 130;
-    const footerH = 40 + 28 + 44 + 64;
-    const fixedH = 72 + 40 + 110 + 12 + 40 + 36 + 68 + 80 + 120 + 96;
-    const height = Math.min(Math.max(1000, fixedH + roastH + statsH + summaryH + sectionH + footerH), 12000);
+    // Footer includes QR block; keep a larger buffer to avoid bottom clipping.
+    const footerH = 40 + 28 + 44 + 64 + 160;
+    const fixedH = 72 + 40 + 110 + 12 + 40 + 36 + 68 + 80 + 120;
+    const EXTRA_SAFETY = 260;
+    const height = Math.min(
+      Math.max(1100, fixedH + roastH + statsH + summaryH + sectionH + footerH + EXTRA_SAFETY),
+      12000
+    );
 
     const stats = [
       { val: data.bookCount, label: "本书", icon: "📚", color: "#fbbf24" },
@@ -148,7 +153,7 @@ export async function POST(req: NextRequest) {
             </div>
           ))}
 
-          <div style={{ display: "flex", flexDirection: "column", padding: "72px 56px 80px", position: "relative", zIndex: 1 }}>
+          <div style={{ display: "flex", flexDirection: "column", padding: "72px 56px 140px", position: "relative", zIndex: 1 }}>
             <div style={{ display: "flex", position: "absolute", top: 0, left: 56, right: 56, height: 4, background: "linear-gradient(90deg, transparent, rgba(102,126,234,0.4), rgba(233,69,96,0.4), transparent)" }} />
 
             <div style={{ display: "flex", justifyContent: "center", fontSize: 24, color: "#6b7280", marginBottom: 40 }}>
