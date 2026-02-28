@@ -109,10 +109,12 @@ export default function CompareResultPage() {
         const parsed = typeof stored === 'string' ? JSON.parse(stored) : stored
         if (parsed?.personA && parsed?.personB && parsed?.comparison) {
           setData(parsed)
+          setLoading(false)
           return
         }
       } catch {
         setError('对比数据损坏')
+        setLoading(false)
         return
       }
     }
