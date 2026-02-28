@@ -639,7 +639,6 @@ export default function ResultPage({
               <div className="card-glass rounded-xl p-5 text-center space-y-3 animate-fade-in-up animate-delay-300">
                 <div className="text-xl">🔮</div>
                 <p className="text-sm text-gray-400">加载失败，网络可能较慢</p>
-                <p className="text-xs text-gray-500">建议开启 VPN 后重试</p>
                 <button
                   onClick={handleDeepUnlock}
                   className="mt-3 px-6 py-2 rounded-xl bg-gradient-to-r from-[#e94560] to-[#764ba2] text-white text-sm font-medium"

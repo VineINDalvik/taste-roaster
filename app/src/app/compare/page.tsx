@@ -260,7 +260,7 @@ function CompareContent() {
 
             <div className="card-glass rounded-xl p-4 text-center space-y-1">
               <p className="text-xs text-gray-500">
-                对方的豆瓣标记需为公开状态 · 分析约需 40-90 秒 · 国内建议开 VPN
+                对方的豆瓣标记需为公开状态 · 分析约需 40-90 秒 · 网络较慢可稍后重试
               </p>
               {(() => {
                 const s = localStorage.getItem(`taste-report-${fromId}`);

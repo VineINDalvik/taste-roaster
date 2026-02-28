@@ -191,9 +191,9 @@ export async function POST(req: NextRequest) {
 
           {/* Footer */}
           <div style={{ display: "flex", height: 2, background: "rgba(255,255,255,0.06)", marginBottom: 32 }} />
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 18, fontSize: 24 }}>
-            <div style={{ display: "flex", flex: 1 }}>
-              <span style={{ color: "#4b5563" }}>豆瓣书影音 MBTI</span>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, fontSize: 20, lineHeight: 1.2 }}>
+            <div style={{ display: "flex", flex: 1, minWidth: 0 }}>
+              <span style={{ color: "#4b5563", whiteSpace: "nowrap" }}>豆瓣书影音 MBTI</span>
             </div>
 
             <div
@@ -202,19 +202,19 @@ export async function POST(req: NextRequest) {
                 flexDirection: "column",
                 alignItems: "center",
                 justifyContent: "center",
-                width: 116,
-                padding: "10px 10px 8px",
+                width: 96,
+                padding: "8px 8px 8px",
                 borderRadius: 18,
                 background: "linear-gradient(135deg, rgba(255,255,255,0.10), rgba(255,255,255,0.03))",
                 border: "1px solid rgba(255,255,255,0.12)",
                 boxShadow: "0 12px 30px rgba(0,0,0,0.22)",
               }}
             >
-              <img src={siteQr} width={84} height={84} />
+              <img src={siteQr} width={72} height={72} />
             </div>
 
-            <div style={{ display: "flex", flex: 1, justifyContent: "flex-end" }}>
-              <span style={{ color: "#667eea" }}>测测你的书影音 MBTI →</span>
+            <div style={{ display: "flex", flex: 1, minWidth: 0, justifyContent: "flex-end" }}>
+              <span style={{ color: "#667eea", whiteSpace: "nowrap" }}>测测你的书影音 MBTI →</span>
             </div>
           </div>
         </div>

@@ -185,10 +185,10 @@ export async function POST(req: NextRequest) {
             <div style={{ display: "flex", height: 2, marginTop: 48, marginBottom: 28, background: `linear-gradient(90deg, ${theme.titleColor}30, rgba(255,255,255,0.04), ${theme.titleColor}30)` }} />
 
             {/* Footer */}
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 18, fontSize: 22 }}>
-              <div style={{ display: "flex", flex: 1, alignItems: "center", gap: 12 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, fontSize: 20, lineHeight: 1.2 }}>
+              <div style={{ display: "flex", flex: 1, minWidth: 0, alignItems: "center", gap: 12 }}>
                 <div style={{ display: "flex", width: 8, height: 8, borderRadius: "50%", background: theme.titleColor }} />
-                <span style={{ color: "#4b5563" }}>豆瓣书影音 MBTI</span>
+                <span style={{ color: "#4b5563", whiteSpace: "nowrap" }}>豆瓣书影音 MBTI</span>
               </div>
 
               <div
@@ -197,19 +197,19 @@ export async function POST(req: NextRequest) {
                   flexDirection: "column",
                   alignItems: "center",
                   justifyContent: "center",
-                  width: 116,
-                  padding: "10px 10px 8px",
+                  width: 96,
+                  padding: "8px 8px 8px",
                   borderRadius: 18,
                   background: "linear-gradient(135deg, rgba(255,255,255,0.10), rgba(255,255,255,0.03))",
                   border: "1px solid rgba(255,255,255,0.12)",
                   boxShadow: "0 12px 30px rgba(0,0,0,0.22)",
                 }}
               >
-                <img src={siteQr} width={84} height={84} />
+                <img src={siteQr} width={72} height={72} />
               </div>
 
-              <div style={{ display: "flex", flex: 1, justifyContent: "flex-end" }}>
-                <span style={{ color: theme.titleColor, opacity: 0.7, fontSize: 22 }}>品味即人格 →</span>
+              <div style={{ display: "flex", flex: 1, minWidth: 0, justifyContent: "flex-end" }}>
+                <span style={{ color: theme.titleColor, opacity: 0.7, fontSize: 20, whiteSpace: "nowrap" }}>品味即人格 →</span>
               </div>
             </div>
           </div>
